@@ -4,7 +4,8 @@ import Math;
 import worldofcake.ISequencer;
 import worldofcake.IControlPanel;
 import worldofcake.Event;
-import worldofcake.Utils;  
+import worldofcake.Utils;
+import worldofcake.NoteCalculator;
 
 class Ball {
     public static var COUNTER:Int = 0;
@@ -26,7 +27,7 @@ class Ball {
         this.id = COUNTER++;
         this.dx = 2;
         this.dy = 2;
-        this.rad = 10;
+        this.rad = 5;
         this.width = w;
         this.height = h;
     }
@@ -76,7 +77,7 @@ class Gbloink implements ISequencer implements IControlPanel {
     private var balls:Array<Ball>;
     private var blocks:Array<Block>;
 
-    private var noteCalc:Utils.NoteCalculator;
+    private var noteCalc:NoteCalculator;
 
     public var areaWidth:Int;
     public var areaHeight:Int;
@@ -85,7 +86,7 @@ class Gbloink implements ISequencer implements IControlPanel {
         this.areaWidth = width;
         this.areaHeight = height;
         this.events = [];
-        this.noteCalc = new Utils.NoteCalculator();
+        this.noteCalc = new NoteCalculator();
 
         // Create some initial balls
         balls = [
@@ -242,6 +243,9 @@ class Gbloink implements ISequencer implements IControlPanel {
         ball.x += ball.dx;
         ball.y += ball.dy;
     }
- 
+
+    public function setDirty():Void {
+        dirty = true;
+    }
 }
 
