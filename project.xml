@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
 	
-	<meta title="Gbloink" package="net.synaesmedia.gbloink" version="1.0.0" company="Gilbert Lister Research" />
-	<app main="gbloink.GbloinkMain" path="Export" file="Gbloink" />
+	<meta title="Zewp!" package="net.synaesmedia.zewp" version="1.0.0" company="Gilbert Lister Research" />
+	<app main="kdiagram.KDiagramMain" path="Export" file="Zewp" />
 	
 	<source path="Source" />
 	

@@ -146,6 +146,12 @@ class Gbloink implements ISequencer implements IControlPanel {
         }
     }
 
+    // Add this to the Gbloink class with the other IControlPanel methods
+    public function keyPressed(uid:Int, key:String):Void {
+        // For now, just an empty implementation
+        // We can add specific keyboard controls for Gbloink later if needed
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Public helper methods
     ///////////////////////////////////////////////////////////////////////////

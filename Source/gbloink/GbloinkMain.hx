@@ -83,5 +83,7 @@ class GbloinkMain extends Sprite {
             view.redraw(Gbloink.PLAY_AREA_UID);
         }
     }
+
+    public function keyPressed(uid:Int, key:String):Void {}
 }
 

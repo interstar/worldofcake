@@ -7,4 +7,5 @@ interface IControlPanel {
     function mouseUp(uid:Int, x:Int, y:Int):Void;
     function newValue(uid:Int, value:Float):Void;
     function buttonPressed(uid:Int):Void;
+    function keyPressed(uid:Int, key:String):Void;
 } 
