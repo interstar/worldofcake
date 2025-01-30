@@ -19,8 +19,9 @@ class Ball {
     public var rad:Float;
     public var width:Float;
     public var height:Float;
+    public var channel:Int;
 
-    public function new(x:Float, y:Float, colour:Int, w:Float, h:Float) {
+    public function new(x:Float, y:Float, colour:Int, w:Float, h:Float, channel:Int) {
         this.x = x;
         this.y = y;
         this.colour = colour;
@@ -30,6 +31,7 @@ class Ball {
         this.rad = 5;
         this.width = w;
         this.height = h;
+        this.channel = channel;
     }
 }
 
@@ -88,11 +90,11 @@ class Gbloink implements ISequencer implements IControlPanel {
         this.events = [];
         this.noteCalc = new NoteCalculator();
 
-        // Create some initial balls
+        // Create some initial balls with different channels
         balls = [
-            new Ball(200, 200, 0xFF0000, width, height),
-            new Ball(300, 200, 0x00FF00, width, height),
-            new Ball(400, 200, 0x0000FF, width, height)
+            new Ball(200, 200, 0xFF0000, width, height, 1),  // Red ball - channel 1
+            new Ball(300, 300, 0x00FF00, width, height, 2),  // Green ball - channel 2
+            new Ball(400, 400, 0x0000FF, width, height, 3)   // Blue ball - channel 3
         ];
         blocks = [];
     }
@@ -179,8 +181,8 @@ class Gbloink implements ISequencer implements IControlPanel {
     // Private utility
     ///////////////////////////////////////////////////////////////////////////
 
-    private function pushEvent(evtType:Int, data1:Int, data2:Int):Void {
-        events.push(new Event(currentTime, evtType, data1, data2));
+    private function pushEvent(evtType:Int, channel:Int, data2:Int, data3:Int):Void {
+        events.push(new Event(currentTime, evtType, channel, data2, data3));
     }
 
     private function removeBlock(block:Block):Void {
@@ -230,7 +232,7 @@ class Gbloink implements ISequencer implements IControlPanel {
             // Horizontal
             if (block.hit(tx + ball.dx, ball.y, ball.rad)) {
                 var note = noteCalc.transform(ball.y);
-                pushEvent(0, note, 100); // 0 => noteOn?
+                pushEvent(0, ball.channel, note, 100); // Note event with channel
                 if (ball.dx > 0) ball.x = block.left - ball.rad;
                 else             ball.x = block.right + ball.rad;
                 ball.dx = -ball.dx;
@@ -238,7 +240,7 @@ class Gbloink implements ISequencer implements IControlPanel {
             // Vertical
             if (block.hit(ball.x, ty + ball.dy, ball.rad)) {
                 var note2 = noteCalc.transform(ball.y);
-                pushEvent(0, note2, 100);
+                pushEvent(0, ball.channel, note2, 100);
                 if (ball.dy > 0) ball.y = block.top - ball.rad;
                 else             ball.y = block.bottom + ball.rad;
                 ball.dy = -ball.dy;

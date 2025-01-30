@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
 	
-	<meta title="Zewp!" package="net.synaesmedia.zewp" version="1.0.0" company="Gilbert Lister Research" />
-	<app main="kdiagram.KDiagramMain" path="Export" file="Zewp" />
+	<meta title="Gbloink!" package="net.synaesmedia.zewp" version="1.0.0" company="Gilbert Lister Research" />
+	<app main="tileland.TileLandMain" path="Export" file="Zewp" />
 	
 	<source path="Source" />
 	
 	<haxelib name="openfl" />
+	
+	<haxedef name="HXCPP_CHECK_POINTER"/>
+	<haxedef name="HXCPP_STACK_TRACE"/>
+	<haxedef name="HXCPP_STACK_LINE"/>
+	<haxedef name="debug" />
 	
 	<assets path="Assets" rename="assets" />
 	

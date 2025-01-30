@@ -6,13 +6,17 @@ import openfl.events.MouseEvent;
 import openfl.utils.Timer;
 import openfl.events.TimerEvent;
 import openfl.events.KeyboardEvent;
+import worldofcake.IInstrument;
+import platform.MonitorInstrument;
 
 class KDiagramMain extends Sprite {
     private var sequencer:KDiagramSequencer;
     private var view:KDiagramView;
     private var audioTimer:Timer;
+    private var monitor:IInstrument;
     
-    private static inline var AUDIO_INTERVAL:Float = 10;
+    // Audio thread runs at 1000Hz (every 1ms)
+    private static inline var AUDIO_INTERVAL:Float = 1;
     private var lastAudioTime:Float = 0;
     private var frameCount:Int = 0;
 
@@ -42,6 +46,9 @@ class KDiagramMain extends Sprite {
 
         // Add keyboard handling
         stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+
+        // Only create monitor
+        monitor = new MonitorInstrument();
     }
 
     private function onMouseDown(e:MouseEvent):Void {
@@ -60,11 +67,7 @@ class KDiagramMain extends Sprite {
         // Check for and process any events
         while (sequencer.hasEventBefore(lastAudioTime + (AUDIO_INTERVAL / 1000))) {
             var event = sequencer.getNextEvent();
-            if (event.type == KDiagramSequencer.NOTE_EVENT_TYPE) {
-                trace('Note Event: note=${event.data1} velocity=${event.data2}');
-            } else {
-                trace('CC Event: controller=${event.data1} value=${event.data2}');
-            }
+            monitor.send(event);
         }
         lastAudioTime += AUDIO_INTERVAL / 1000;
         frameCount++;

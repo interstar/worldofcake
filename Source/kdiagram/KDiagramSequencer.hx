@@ -4,6 +4,25 @@ import worldofcake.ISequencer;
 import worldofcake.IControlPanel;
 import worldofcake.Event;
 
+class Cursor {
+    public var x:Float;
+    public var y:Float;
+    public var targetX:Float;
+    public var targetY:Float;
+    public var channel:Int;
+    public var color:Int;
+    public var isMoving:Bool;
+    public var currentNode:Int;
+    public var cursorSpeed:Float;  // Add speed field
+    
+    public function new(channel:Int, color:Int) {
+        this.channel = channel;
+        this.color = color;
+        this.isMoving = false;
+        this.cursorSpeed = 200.0;  // Pixels per second
+    }
+}
+
 class KDiagramSequencer implements ISequencer implements IControlPanel {
     // Constants
     public static inline var PLAY_AREA_UID:Int = 1;
@@ -16,18 +35,14 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
     
     // Network and cursor state
     private var network:Network;
-    private var currentNode:Int;
-    private var cursorX:Float;
-    private var cursorY:Float;
-    private var targetX:Float;
-    private var targetY:Float;
-    private var cursorSpeed:Float;
-    private var isMoving:Bool;
+    private var cursors:Array<Cursor>;
     
     // Sequencer state
     private var currentTime:Float;
     private var events:Array<Event>;
     private var dirty:Bool;
+    
+    private var selectedCursorIndex:Int = 0;  // Default to first cursor
     
     public function new(width:Int, height:Int) {
         this.areaWidth = width;
@@ -35,25 +50,34 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
         this.currentTime = 0.0;
         this.events = [];
         this.dirty = true;
-        this.cursorSpeed = 200.0; // pixels per second
         
         // Create network with reasonable defaults
-        network = new Network(width, height, height * 0.4, 15, 6);
+        network = new Network(width, height, height * 0.45, 12, 4);
         
-        // Start at node 0 and immediately begin moving to next node
-        currentNode = 0;
-        var startNode = network.getNode(currentNode);
-        cursorX = startNode.x;
-        cursorY = startNode.y;
+        // Create three cursors with different channels and colors
+        cursors = [
+            new Cursor(1, 0xFF0000),  // Red cursor - channel 1
+            new Cursor(2, 0x00FF00),  // Green cursor - channel 2
+            new Cursor(3, 0x0000FF)   // Blue cursor - channel 3
+        ];
         
-        // Choose first destination
-        var nextNode = network.nextFrom(currentNode);
-        if (nextNode != -1) {
-            currentNode = nextNode;
-            var node = network.getNode(currentNode);
-            targetX = node.x;
-            targetY = node.y;
-            isMoving = true;
+        // Space cursors out more since we have fewer nodes
+        for (i in 0...cursors.length) {
+            var cursor = cursors[i];
+            cursor.currentNode = i * 4;  // Adjust spacing for fewer nodes
+            var node = network.getNode(cursor.currentNode);
+            cursor.x = node.x;
+            cursor.y = node.y;
+            
+            // Start them moving
+            var nextNode = network.nextFrom(cursor.currentNode);
+            if (nextNode != -1) {
+                cursor.currentNode = nextNode;
+                var destNode = network.getNode(nextNode);
+                cursor.targetX = destNode.x;
+                cursor.targetY = destNode.y;
+                cursor.isMoving = true;
+            }
         }
     }
     
@@ -61,45 +85,64 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
     public function advanceTime(delta:Float):Void {
         currentTime += delta;
         
-        if (isMoving) {
-            // Move cursor towards target
-            var dx = targetX - cursorX;
-            var dy = targetY - cursorY;
-            var distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance < cursorSpeed * delta) {
-                // Arrived at target node
-                cursorX = targetX;
-                cursorY = targetY;
-                isMoving = false;
+        for (cursor in cursors) {
+            if (cursor.isMoving) {
+                // Move cursor towards target
+                var dx = cursor.targetX - cursor.x;
+                var dy = cursor.targetY - cursor.y;
+                var distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Generate Note-On event for arrival
+                if (distance < cursor.cursorSpeed * delta) {
+                    // Arrived at target node
+                    cursor.x = cursor.targetX;
+                    cursor.y = cursor.targetY;
+                    cursor.isMoving = false;
+                    
+                    // Generate Note-On event for arrival
+                    events.push(new Event(
+                        currentTime,
+                        NOTE_EVENT_TYPE,
+                        cursor.channel,
+                        60 + cursor.currentNode,  // Note number based on node
+                        100  // Velocity
+                    ));
+                    
+                    // Choose next node
+                    var nextNode = network.nextFrom(cursor.currentNode);
+                    if (nextNode != -1) {
+                        cursor.currentNode = nextNode;
+                        var node = network.getNode(cursor.currentNode);
+                        cursor.targetX = node.x;
+                        cursor.targetY = node.y;
+                        cursor.isMoving = true;
+                    }
+                } else {
+                    // Move towards target
+                    var moveDistance = cursor.cursorSpeed * delta;
+                    var factor = moveDistance / distance;
+                    cursor.x += dx * factor;
+                    cursor.y += dy * factor;
+                }
+                
+                // Generate CC events for position
                 events.push(new Event(
                     currentTime,
-                    NOTE_EVENT_TYPE,
-                    60 + Std.int((cursorY / areaHeight) * 24), // Note number based on Y position
-                    100  // Velocity
+                    CC_EVENT_TYPE,
+                    cursor.channel,
+                    1,  // CC number for X position
+                    Std.int((cursor.x / areaWidth) * 127)
                 ));
-                
-                // Choose next node
-                var nextNode = network.nextFrom(currentNode);
-                if (nextNode != -1) {
-                    currentNode = nextNode;
-                    var node = network.getNode(currentNode);
-                    targetX = node.x;
-                    targetY = node.y;
-                    isMoving = true;
-                }
-            } else {
-                // Move towards target
-                var moveDistance = cursorSpeed * delta;
-                var factor = moveDistance / distance;
-                cursorX += dx * factor;
-                cursorY += dy * factor;
+                events.push(new Event(
+                    currentTime,
+                    CC_EVENT_TYPE,
+                    cursor.channel,
+                    2,  // CC number for Y position
+                    Std.int((cursor.y / areaHeight) * 127)
+                ));
             }
-            
-            dirty = true;
         }
+        
+        dirty = true;
     }
     
     public function hasEventBefore(timeLimit:Float):Bool {
@@ -115,21 +158,21 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
         if (uid == PLAY_AREA_UID) {
             var selectedNode = network.selected(x, y);
             if (selectedNode != -1) {
-                currentNode = selectedNode;
-                var node = network.getNode(currentNode);
-                cursorX = node.x;
-                cursorY = node.y;
+                var cursor = cursors[selectedCursorIndex];
+                cursor.currentNode = selectedNode;
+                var node = network.getNode(selectedNode);
+                cursor.x = node.x;
+                cursor.y = node.y;
                 
                 // Choose next destination and start moving
-                var nextNode = network.nextFrom(currentNode);
+                var nextNode = network.nextFrom(selectedNode);
                 if (nextNode != -1) {
-                    currentNode = nextNode;
-                    var destNode = network.getNode(currentNode);
-                    targetX = destNode.x;
-                    targetY = destNode.y;
-                    isMoving = true;
+                    cursor.currentNode = nextNode;
+                    var destNode = network.getNode(nextNode);
+                    cursor.targetX = destNode.x;
+                    cursor.targetY = destNode.y;
+                    cursor.isMoving = true;
                 }
-                
                 dirty = true;
             }
         }
@@ -144,20 +187,9 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
     
     // Helper methods
     public function generateEvents():Void {
-        // Generate CC events for cursor position
-        events.push(new Event(
-            currentTime,
-            CC_EVENT_TYPE,
-            0,  // CC number for X
-            Std.int((cursorX / areaWidth) * 127)
-        ));
-        
-        events.push(new Event(
-            currentTime,
-            CC_EVENT_TYPE,
-            1,  // CC number for Y
-            Std.int((cursorY / areaHeight) * 127)
-        ));
+        // We're already generating events in advanceTime()
+        // This method is called after drawing, but we don't need
+        // to generate additional events here
     }
     
     public function consumeDirty():Bool {
@@ -170,59 +202,72 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
         return network;
     }
     
-    public function getCursorPosition():{x:Float, y:Float} {
-        return {x: cursorX, y: cursorY};
+    public function getCursors():Array<Cursor> {
+        return cursors;
     }
     
     // Add to KDiagramSequencer class
     public function keyPressed(uid:Int, key:String):Void {
         if (uid == PLAY_AREA_UID) {
             switch (key) {
+                case "1", "2", "3":
+                    selectedCursorIndex = Std.parseInt(key) - 1;
+                    dirty = true;
+                
                 case " ":  // Space - recreate network
-                    network = new Network(areaWidth, areaHeight, areaHeight * 0.4, 15, 6);
-                    // Reset cursor to node 0 and start moving
-                    currentNode = 0;
-                    var startNode = network.getNode(currentNode);
-                    cursorX = startNode.x;
-                    cursorY = startNode.y;
-                    var nextNode = network.nextFrom(currentNode);
-                    if (nextNode != -1) {
-                        currentNode = nextNode;
-                        var node = network.getNode(currentNode);
-                        targetX = node.x;
-                        targetY = node.y;
-                        isMoving = true;
+                    network = new Network(areaWidth, areaHeight, areaHeight * 0.45, 12, 4);
+                    // Reset cursors to different nodes like in constructor
+                    for (i in 0...cursors.length) {
+                        var cursor = cursors[i];
+                        cursor.currentNode = i * 4;  // Space them out by 4 nodes
+                        var node = network.getNode(cursor.currentNode);
+                        cursor.x = node.x;
+                        cursor.y = node.y;
+                        var nextNode = network.nextFrom(cursor.currentNode);
+                        if (nextNode != -1) {
+                            cursor.currentNode = nextNode;
+                            var destNode = network.getNode(nextNode);
+                            cursor.targetX = destNode.x;
+                            cursor.targetY = destNode.y;
+                            cursor.isMoving = true;
+                        }
                     }
                     dirty = true;
                 
                 case "[":  // Rotate network counter-clockwise
                     network.rotate(-0.1);
-                    rotateCursor(-0.1);
+                    rotateCursors(-0.1);
                     dirty = true;
                 
                 case "]":  // Rotate network clockwise
                     network.rotate(0.1);
-                    rotateCursor(0.1);
+                    rotateCursors(0.1);
                     dirty = true;
             }
         }
     }
     
-    private function rotateCursor(deltaAngle:Float):Void {
-        // Rotate current cursor position
-        var dx = cursorX - network.centerX;
-        var dy = cursorY - network.centerY;
-        var cos = Math.cos(deltaAngle);
-        var sin = Math.sin(deltaAngle);
-        cursorX = network.centerX + (dx * cos - dy * sin);
-        cursorY = network.centerY + (dx * sin + dy * cos);
-        
-        // Rotate target position if we're moving
-        if (isMoving) {
-            dx = targetX - network.centerX;
-            dy = targetY - network.centerY;
-            targetX = network.centerX + (dx * cos - dy * sin);
-            targetY = network.centerY + (dx * sin + dy * cos);
+    private function rotateCursors(deltaAngle:Float):Void {
+        for (cursor in cursors) {
+            // Rotate current cursor position
+            var dx = cursor.x - network.centerX;
+            var dy = cursor.y - network.centerY;
+            var cos = Math.cos(deltaAngle);
+            var sin = Math.sin(deltaAngle);
+            cursor.x = network.centerX + (dx * cos - dy * sin);
+            cursor.y = network.centerY + (dx * sin + dy * cos);
+            
+            // Rotate target position if we're moving
+            if (cursor.isMoving) {
+                dx = cursor.targetX - network.centerX;
+                dy = cursor.targetY - network.centerY;
+                cursor.targetX = network.centerX + (dx * cos - dy * sin);
+                cursor.targetY = network.centerY + (dx * sin + dy * cos);
+            }
         }
+    }
+    
+    public function getSelectedCursorIndex():Int {
+        return selectedCursorIndex;
     }
 } 

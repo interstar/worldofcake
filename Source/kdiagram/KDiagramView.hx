@@ -6,10 +6,11 @@ import worldofcake.IControlPanelView;
 
 class KDiagramView extends Sprite implements IControlPanelView {
     private var engine:KDiagramSequencer;
-    private var nodeColor:Int = 0x3264D2;  // Blue nodes
+    private var nodeColor:Int = 0x999999;  // Greyish nodes
     private var arcColor:Int = 0xFFC864;   // Orange arcs
     private var cursorColor:Int = 0x32C850; // Green cursor
     private var networkColor:Int = 0xC8C864; // Yellow-ish network circle
+    private var selectedCursorBorderColor:Int = 0xFFFFFF;  // White border for selected cursor
 
     public function new(engine:KDiagramSequencer) {
         super();
@@ -69,12 +70,24 @@ class KDiagramView extends Sprite implements IControlPanelView {
                 g.endFill();
             }
 
-            // Draw cursor
-            var cursorPos = engine.getCursorPosition();
-            g.lineStyle(2, cursorColor);
-            g.beginFill(cursorColor);
-            g.drawCircle(cursorPos.x, cursorPos.y, 8);
-            g.endFill();
+            // Draw cursors
+            var selectedIndex = engine.getSelectedCursorIndex();
+            for (i in 0...engine.getCursors().length) {
+                var cursor = engine.getCursors()[i];
+                
+                // Draw larger circle with white border for selected cursor
+                if (i == selectedIndex) {
+                    g.lineStyle(2, selectedCursorBorderColor);
+                    g.beginFill(cursor.color);
+                    g.drawCircle(cursor.x, cursor.y, 10);
+                    g.endFill();
+                } else {
+                    g.lineStyle(1, cursor.color);
+                    g.beginFill(cursor.color);
+                    g.drawCircle(cursor.x, cursor.y, 8);
+                    g.endFill();
+                }
+            }
 
             // Generate events after drawing
             engine.generateEvents();

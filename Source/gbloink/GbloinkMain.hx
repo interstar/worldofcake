@@ -5,6 +5,8 @@ import openfl.events.Event;
 import openfl.events.MouseEvent;
 import openfl.utils.Timer;
 import openfl.events.TimerEvent;
+import worldofcake.IInstrument;
+import platform.MonitorInstrument;
 
 /**
  * The OpenFL entry point.
@@ -14,9 +16,10 @@ class GbloinkMain extends Sprite {
     private var sequencer:Gbloink;
     private var view:GbloinkView;
     private var audioTimer:Timer;
+    private var monitor:IInstrument;
     
-    // Audio thread runs at 100Hz (every 10ms)
-    private static inline var AUDIO_INTERVAL:Float = 10;
+    // Audio thread runs at 1000Hz (every 1ms)
+    private static inline var AUDIO_INTERVAL:Float = 1;
     private var lastAudioTime:Float = 0;
     private var frameCount:Int = 0;  // Debug counter
 
@@ -33,7 +36,7 @@ class GbloinkMain extends Sprite {
         view = new GbloinkView(sequencer);
         addChild(view);
 
-        // Set up the "audio thread" timer (100Hz)
+        // Set up the "audio thread" timer (1000Hz)
         audioTimer = new Timer(AUDIO_INTERVAL);
         audioTimer.addEventListener(TimerEvent.TIMER, onAudioTick);
         audioTimer.start();
@@ -44,6 +47,7 @@ class GbloinkMain extends Sprite {
         // Set up mouse handling
         stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
 
+        monitor = new MonitorInstrument();
     }
 
     private function onMouseDown(e:MouseEvent):Void {
@@ -65,8 +69,7 @@ class GbloinkMain extends Sprite {
         // Check for and process any events
         while (sequencer.hasEventBefore(lastAudioTime + (AUDIO_INTERVAL / 1000))) {
             var event = sequencer.getNextEvent();
-            // Print event details (simulating MIDI output)
-            trace('Event: type=${event.type} note=${event.data1} velocity=${event.data2}');
+            monitor.send(event);
         }
         lastAudioTime += AUDIO_INTERVAL / 1000;
         frameCount++;

@@ -4,6 +4,27 @@ import worldofcake.ISequencer;
 import worldofcake.IControlPanel;
 import worldofcake.Event;
 
+class Zewp {
+    public var x:Float;
+    public var y:Float;
+    public var length:Float;
+    public var velocity:Float;
+    public var color:Int;
+    public var channel:Int;
+    public var ccNumber:Int;
+    
+    public function new(x:Float, y:Float, length:Float, velocity:Float, color:Int, 
+                       channel:Int, ccNumber:Int) {
+        this.x = x;
+        this.y = y;
+        this.length = length;
+        this.velocity = velocity;
+        this.color = color;
+        this.channel = channel;
+        this.ccNumber = ccNumber;
+    }
+}
+
 class ZewpSequencer implements ISequencer implements IControlPanel {
     // Constants
     public static inline var PLAY_AREA_UID:Int = 1;
@@ -34,13 +55,12 @@ class ZewpSequencer implements ISequencer implements IControlPanel {
         this.events = [];
         this.dirty = true;
         
-        // Initialize zewps (12 grey zewps, shorter and faster)
-        zewps = [];
-        for (i in 0...12) {
-            var x = 100 + Math.random() * (width - 200);  // Keep away from edges
-            var y = 100 + Math.random() * (height - 200);
-            zewps.push(new Zewp(x, y, 10, 4, 0x808080));  // Length 10, speed 4, grey color
-        }
+        // Create zewps with different channels and CC numbers
+        zewps = [
+            new Zewp(100, 100, 20, 4, 0x808080, 1, 10),  // Channel 1, CC 10
+            new Zewp(200, 200, 20, 4, 0x808080, 1, 11),  // Channel 1, CC 11
+            new Zewp(300, 300, 20, 4, 0x808080, 1, 12)   // Channel 1, CC 12
+        ];
         
         // Initialize blocks (20 blocks)
         blocks = [];
@@ -107,25 +127,13 @@ class ZewpSequencer implements ISequencer implements IControlPanel {
     
     // Helper methods
     public function generateEvents():Void {
-        // Generate CC events for each zewp's position
-        for (i in 0...zewps.length) {
-            var zewp = zewps[i];
-            var channel = i * 2;  // Use two CC channels per zewp
-            
-            // X position
+        for (zewp in zewps) {
             events.push(new Event(
                 currentTime,
                 CC_EVENT_TYPE,
-                channel,     // CC number for X
-                Std.int((zewp.x / areaWidth) * 127)  // CC value 0-127
-            ));
-            
-            // Y position
-            events.push(new Event(
-                currentTime,
-                CC_EVENT_TYPE,
-                channel + 1, // CC number for Y
-                Std.int((zewp.y / areaHeight) * 127)  // CC value 0-127
+                zewp.channel,
+                zewp.ccNumber,
+                Std.int((zewp.y / areaHeight) * 127)  // Value
             ));
         }
     }
