@@ -6,8 +6,10 @@ import worldofcake.Event;
 import tileland.Tile;
 import tileland.Cursor;
 import tileland.Direction;
+import worldofcake.ISequencerControl;
+import tileland.TileLandLayout;
 
-class TileLandSequencer implements ISequencer implements IControlPanel {
+class TileLandSequencer implements ISequencerControl {
     // Constants
     public static inline var PLAY_AREA_UID:Int = 1;
     
@@ -28,19 +30,16 @@ class TileLandSequencer implements ISequencer implements IControlPanel {
     
     // Add to fields
     private var cursors:Array<Cursor>;
-    private var cursorSpeed:Float = 16.0; // Adjusted from 100.0 to match current speed
     
-    public function new(width:Int, height:Int) {
-        this.areaWidth = width;
-        this.areaHeight = height;
+    public function new() {  // No parameters needed
+        this.areaWidth = TileLandLayout.PLAY_AREA_WIDTH;
+        this.areaHeight = TileLandLayout.PLAY_AREA_HEIGHT;
+        this.tileSize = TileLandLayout.TILE_SIZE;
+        this.rows = TileLandLayout.GRID_ROWS;
+        this.cols = TileLandLayout.GRID_COLS;
         this.currentTime = 0.0;
         this.events = [];
         this.dirty = true;
-        
-        // Initialize grid
-        tileSize = 50;  // 50x50 pixel tiles
-        rows = Std.int(height / tileSize);
-        cols = Std.int(width / tileSize);
         
         // Create tiles
         tiles = [];
@@ -63,7 +62,7 @@ class TileLandSequencer implements ISequencer implements IControlPanel {
         // Initialize cursor positions
         for (cursor in cursors) {
             var tile = tiles[cursor.tileY][cursor.tileX];
-            cursor.updatePosition(tile, 0.0, rows, cols, cursorSpeed);
+            cursor.updatePosition(tile, 0.0, rows, cols);
         }
     }
     
@@ -80,7 +79,7 @@ class TileLandSequencer implements ISequencer implements IControlPanel {
             }
             
             var tile = tiles[cursor.tileY][cursor.tileX];
-            cursor.updatePosition(tile, delta, rows, cols, cursorSpeed);
+            cursor.updatePosition(tile, delta, rows, cols);
             
             // Generate CC events for position
             events.push(new Event(
@@ -113,8 +112,11 @@ class TileLandSequencer implements ISequencer implements IControlPanel {
     // IControlPanel implementation
     public function mouseDown(uid:Int, x:Int, y:Int):Void {
         if (uid == PLAY_AREA_UID) {
+            trace('Sequencer mouseDown at ${x},${y}');
+            // Coordinates are already in play area local space
             var col = Std.int(x / tileSize);
             var row = Std.int(y / tileSize);
+            trace('Converting to tile ${col},${row}');
             if (row >= 0 && row < rows && col >= 0 && col < cols) {
                 tiles[row][col].flip();
                 dirty = true;
@@ -137,12 +139,39 @@ class TileLandSequencer implements ISequencer implements IControlPanel {
     public function mouseDragged(uid:Int, x:Int, y:Int):Void {}
     public function mouseUp(uid:Int, x:Int, y:Int):Void {}
     public function textSubmitted(uid:Int, text:String):Void {}
-    public function newValue(uid:Int, value:Float):Void {}
+    public function newValue(uid:Int, value:Float):Void {
+        if (uid >= 10 && uid <= 12) {  // Speed sliders
+            var cursorIndex = uid - 10;
+            cursors[cursorIndex].speed = value;  // Update cursor's speed directly
+            dirty = true;
+        }
+    }
     public function buttonPressed(uid:Int):Void {}
     public function keyPressed(uid:Int, key:String):Void {}
     
     // Add getter for cursors
     public function getCursors():Array<Cursor> {
         return cursors;
+    }
+    
+    // Add these methods
+    public function getRows():Int {
+        return rows;
+    }
+    
+    public function getCols():Int {
+        return cols;
+    }
+    
+    public function getTile(col:Int, row:Int):Tile {
+        return tiles[row][col];
+    }
+    
+    public function getCursorSpeed(index:Int):Float {
+        return cursors[index].speed;
+    }
+    
+    public function getBaseChannel():Int {
+        return 1;  // Default channel, adjust as needed
     }
 } 

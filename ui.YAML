@@ -1,0 +1,314 @@
+# ui_layouts.yaml
+# Reference layouts for all WorldOfCake apps
+
+# Common settings used across apps
+common:
+  standardWindow:
+    width: 800
+    height: 600
+  playAreaStandard:
+    x: 20
+    y: 20
+    width: 600
+    height: 600
+
+# TileLand app
+tileland:
+  window:
+    width: 800
+    height: 600
+    title: "TileLand"
+  
+  components:
+    playArea:
+      type: PlayArea
+      uid: 1
+      x: 20
+      y: 20
+      width: 600
+      height: 600
+
+    speedControls:
+      - type: Slider
+        uid: 10
+        x: 640
+        y: 50
+        width: 30
+        height: 150
+        label: "Red Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+      - type: Slider
+        uid: 11
+        x: 680
+        y: 50
+        width: 30
+        height: 150
+        label: "Green Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+      - type: Slider
+        uid: 12
+        x: 720
+        y: 50
+        width: 30
+        height: 150
+        label: "Blue Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+    channelControl:
+      type: Slider
+      uid: 20
+      x: 640
+      y: 250
+      width: 120
+      height: 30
+      label: "MIDI Channel"
+      min: 1
+      max: 14
+      vertical: false
+      defaultValue: 1
+
+# Gbloink app
+gbloink:
+  window:
+    width: 800
+    height: 700
+    title: "Gbloink!"
+  
+  components:
+    playArea:
+      type: PlayArea
+      uid: 1
+      x: 20
+      y: 20
+      width: 600
+      height: 600
+      virtualWidth: 800
+      virtualHeight: 600
+
+    speedControls:
+      - type: Slider
+        uid: 10
+        x: 640
+        y: 50
+        width: 30
+        height: 150
+        label: "Red Ball Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+      - type: Slider
+        uid: 11
+        x: 680
+        y: 50
+        width: 30
+        height: 150
+        label: "Green Ball Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+      - type: Slider
+        uid: 12
+        x: 720
+        y: 50
+        width: 30
+        height: 150
+        label: "Blue Ball Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+    channelControl:
+      type: Slider
+      uid: 20
+      x: 640
+      y: 250
+      width: 120
+      height: 30
+      label: "MIDI Channel"
+      min: 1
+      max: 14
+      vertical: false
+      defaultValue: 1
+
+# Zewp app
+zewp:
+  window:
+    width: 800
+    height: 700
+    title: "Zewp"
+  
+  components:
+    playArea:
+      type: PlayArea
+      uid: 1
+      x: 20
+      y: 20
+      width: 600
+      height: 600
+      virtualWidth: 800
+      virtualHeight: 600
+
+    speedControl:
+      type: Slider
+      uid: 10
+      x: 640
+      y: 50
+      width: 30
+      height: 150
+      label: "Zewp Speed"
+      min: 1.0
+      max: 32.0
+      vertical: true
+      defaultValue: 16.0
+
+    channelControl:
+      type: Slider
+      uid: 20
+      x: 640
+      y: 250
+      width: 120
+      height: 30
+      label: "MIDI Channel"
+      min: 1
+      max: 16
+      vertical: false
+      defaultValue: 1
+
+# TimeSlider app
+timeslider:
+  window:
+    width: 800
+    height: 700
+    title: "TimeSlider"
+  
+  components:
+    playArea:
+      type: PlayArea
+      uid: 1
+      x: 20
+      y: 20
+      width: 600
+      height: 600
+      virtualWidth: 800
+      virtualHeight: 600
+
+    speedControls:
+      - type: Slider
+        uid: 10
+        x: 640
+        y: 50
+        width: 30
+        height: 150
+        label: "Min Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 4.0
+
+      - type: Slider
+        uid: 11
+        x: 680
+        y: 50
+        width: 30
+        height: 150
+        label: "Max Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+    channelControl:
+      type: Slider
+      uid: 20
+      x: 640
+      y: 250
+      width: 120
+      height: 30
+      label: "MIDI Channel"
+      min: 1
+      max: 16
+      vertical: false
+      defaultValue: 1
+
+# KDiagram app
+kdiagram:
+  window:
+    width: 800
+    height: 700
+    title: "KDiagram"
+  
+  components:
+    playArea:
+      type: PlayArea
+      uid: 1
+      x: 20
+      y: 20
+      width: 600
+      height: 600
+      virtualWidth: 800
+      virtualHeight: 600
+
+    speedControls:
+      - type: Slider
+        uid: 10
+        x: 640
+        y: 50
+        width: 30
+        height: 150
+        label: "Red Cursor Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+      - type: Slider
+        uid: 11
+        x: 680
+        y: 50
+        width: 30
+        height: 150
+        label: "Green Cursor Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+      - type: Slider
+        uid: 12
+        x: 720
+        y: 50
+        width: 30
+        height: 150
+        label: "Blue Cursor Speed"
+        min: 1.0
+        max: 32.0
+        vertical: true
+        defaultValue: 16.0
+
+    channelControl:
+      type: Slider
+      uid: 20
+      x: 640
+      y: 250
+      width: 120
+      height: 30
+      label: "MIDI Channel"
+      min: 1
+      max: 14
+      vertical: false

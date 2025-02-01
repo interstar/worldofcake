@@ -8,6 +8,7 @@ class Cursor {
     public var direction:Direction;
     public var channel:Int;
     public var color:Int;
+    public var speed:Float;
     
     // Add progress through current tile (0.0 to 1.0)
     public var progress:Float;
@@ -23,12 +24,13 @@ class Cursor {
         this.channel = channel;
         this.color = color;
         this.progress = 0.0;
+        this.speed = 16.0;
     }
     
-    public function updatePosition(tile:Tile, delta:Float, maxRows:Int, maxCols:Int, speed:Float):Void {
+    public function updatePosition(tile:Tile, delta:Float, rows:Int, cols:Int):Void {
         // Store grid dimensions
-        this.maxRows = maxRows;
-        this.maxCols = maxCols;
+        this.maxRows = rows;
+        this.maxCols = cols;
         
         // Move along curve
         progress += delta * speed;
