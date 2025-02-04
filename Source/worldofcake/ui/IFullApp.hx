@@ -1,13 +1,16 @@
 package worldofcake.ui;
 
+import worldofcake.IControlPanelView;
+import worldofcake.WindowPoint;
+
 interface IFullApp {
     // Platform event entry points
-    function handleMouseDown(screenX:Float, screenY:Float):Void;
-    function handleMouseDrag(screenX:Float, screenY:Float):Void;
-    function handleMouseUp(screenX:Float, screenY:Float):Void;
-    function handleKeyPressed(key:String):Void;
+    public function handleMouseDown(windowPoint:WindowPoint):Void;
+    public function handleMouseDrag(windowPoint:WindowPoint):Void;
+    public function handleMouseUp(windowPoint:WindowPoint):Void;
+    public function handleKeyPressed(key:String):Void;
     
     // View management
-    function getView():IControlPanelView;
-    function resize(width:Float, height:Float):Void;
+    public function getView():IControlPanelView;
+    public function resize(width:Float, height:Float):Void;
 } 

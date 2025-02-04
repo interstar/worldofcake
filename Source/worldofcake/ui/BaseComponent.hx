@@ -2,6 +2,11 @@ package worldofcake.ui;
 
 import worldofcake.ISequencerControl;
 import worldofcake.CoordinateMapper;
+import worldofcake.WindowPoint;
+import worldofcake.PanelPoint;
+import worldofcake.ComposedCoordinateMapper;
+import worldofcake.BasePoint;
+import worldofcake.LocalPoint;
 
 class BaseComponent {
     public var uid:Int;
@@ -9,84 +14,148 @@ class BaseComponent {
     public var y:Float;
     public var width:Float;
     public var height:Float;
-    public var visible:Bool;
     
-    public var windowToPanelMapper:CoordinateMapper;  // Window -> Panel space
-    public var panelToLocalMapper:CoordinateMapper;   // Panel -> Component local space
-    private var sequencer:ISequencerControl;
+    public var sequencer:ISequencerControl;
+    private var windowToPanelMapper:CoordinateMapper;
+    private var panelToLocalMapper:CoordinateMapper;
+    private var windowToLocalMapper:CoordinateMapper;
     
-    public function new(uid:Int, x:Float, y:Float, width:Float, height:Float,
-                       windowMapper:CoordinateMapper, sequencer:ISequencerControl) {
+    public function new(uid:Int, x:Float, y:Float, width:Float, height:Float, 
+                       windowToPanelMapper:CoordinateMapper,
+                       localMinPoint:LocalPoint, localMaxPoint:LocalPoint, 
+                       sequencer:ISequencerControl) {
+        trace('BaseComponent constructor start for ${uid}');
         this.uid = uid;
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
-        this.visible = true;
-        this.windowToPanelMapper = windowMapper;
+        this.windowToPanelMapper = windowToPanelMapper;
         this.sequencer = sequencer;
         
-        // Create mapper for panel->local space
-        this.panelToLocalMapper = new CoordinateMapper(
-            x, x + width,       // space1: panel x range
-            y, y + height,      // space1: panel y range
-            0, width,           // space2: local x range
-            0, height          // space2: local y range
-        );
-    }
-    
-    public function handleMouseDown(screenX:Float, screenY:Float):Bool {
-        if (!hitTest(screenX, screenY)) return false;
+        trace('  windowToPanelMapper = ${windowToPanelMapper != null}');
         
-        // Map through coordinate spaces: window -> panel -> local
-        var panelPos = windowToPanelMapper.space1ToSpace2(screenX, screenY);
-        var localPos = panelToLocalMapper.space1ToSpace2(panelPos.x, panelPos.y);
-        return onLocalMouseDown(localPos.x, localPos.y);
+        // Create the component's coordinate mappers
+        panelToLocalMapper = new CoordinateMapper(
+            new BasePoint(0,0),
+            new BasePoint(width,height),
+            localMinPoint, localMaxPoint);
+        windowToLocalMapper = new ComposedCoordinateMapper(windowToPanelMapper, panelToLocalMapper);
+        trace('BaseComponent constructor end for ${uid}');
     }
     
-    public function handleMouseDrag(screenX:Float, screenY:Float):Bool {
-        var panelPos = windowToPanelMapper.space1ToSpace2(screenX, screenY);
-        var localPos = panelToLocalMapper.space1ToSpace2(panelPos.x, panelPos.y);
-        return onLocalMouseDrag(localPos.x, localPos.y);
+    
+    public function handleMouseDown(point:WindowPoint):Bool {
+        var panelPoint = windowToPanel(point);
+        // Test if point is in panel bounds
+        if (inBounds(panelPoint)) {
+            sequencer.mouseDown(uid, panelToLocal(panelPoint));
+            return true;
+        }
+        return false;
     }
     
-    public function handleMouseUp(screenX:Float, screenY:Float):Bool {
-        var panelPos = windowToPanelMapper.space1ToSpace2(screenX, screenY);
-        var localPos = panelToLocalMapper.space1ToSpace2(panelPos.x, panelPos.y);
-        return onLocalMouseUp(localPos.x, localPos.y);
+    public function handleMouseDrag(windowPoint:WindowPoint):Bool {
+        if (!hitTest(windowPoint)) return false;
+        
+        var panelPoint = PanelPoint.fromMap(
+            windowToPanelMapper.space1ToSpace2(windowPoint.x, windowPoint.y)
+        );
+        return onLocalMouseDrag(panelPoint);
     }
     
-    private function onLocalMouseDown(relX:Float, relY:Float):Bool { return false; }
-    private function onLocalMouseDrag(relX:Float, relY:Float):Bool { return false; }
-    private function onLocalMouseUp(relX:Float, relY:Float):Bool { return false; }
+    public function handleMouseUp(windowPoint:WindowPoint):Bool {
+        if (!hitTest(windowPoint)) return false;
+        
+        var panelPoint = PanelPoint.fromMap(
+            windowToPanelMapper.space1ToSpace2(windowPoint.x, windowPoint.y)
+        );
+        return onLocalMouseUp(panelPoint);
+    }
     
-    public function hitTest(vx:Float, vy:Float):Bool {
+    // Protected methods that subclasses override - these receive panel coordinates
+    private function onLocalMouseDown(point:PanelPoint):Bool { return false; }
+    private function onLocalMouseDrag(point:PanelPoint):Bool { return false; }
+    private function onLocalMouseUp(point:PanelPoint):Bool { return false; }
+    
+    public function hitTest(windowPoint:WindowPoint):Bool {
         // Convert window coordinates to panel space before hit testing
-        var panelPos = windowToPanelMapper.space1ToSpace2(vx, vy);
+        var panelPos = windowToPanelMapper.space1ToSpace2(windowPoint.x, windowPoint.y);
         
         // Now test against panel-space bounds
-        var hit = panelPos.x >= x && panelPos.x <= x + width && 
-                  panelPos.y >= y && panelPos.y <= y + height;
-                  
+        var hit = (panelPos.x >= x && panelPos.x < x + width &&
+                  panelPos.y >= y && panelPos.y < y + height    );
+                    
         trace('  HitTest component ${uid}:');
-        trace('    Window pos: ${vx},${vy}');
+        trace('    Window pos: ${windowPoint.x},${windowPoint.y}');
         trace('    Panel pos: ${panelPos.x},${panelPos.y}');
         trace('    Component bounds: x=${x},y=${y} w=${width},h=${height}');
         trace('    Hit: ${hit}');
-        
         return hit;
     }
 
-    public function mapToWindow(x:Float, y:Float):{x:Float, y:Float} {
-        // Reverse the mapping chain:
-        // First local->panel, then panel->window
-        var panelPos = panelToLocalMapper.space1ToSpace2(x, y);
-        return windowToPanelMapper.space1ToSpace2(panelPos.x, panelPos.y);
+    public function panelToWindow(panelPoint:PanelPoint):WindowPoint {
+        // Convert directly from panel to window using windowToPanelMapper
+        var windowPos = windowToPanelMapper.space2ToSpace1(panelPoint.x, panelPoint.y);
+        return new WindowPoint(windowPos.x, windowPos.y);
     }
 
-    public function getWindowDimensions():{width:Float, height:Float} {
-        var panelDims = panelToLocalMapper.space1ToSpace2(width, height);
-        var windowDims = windowToPanelMapper.space1ToSpace2(panelDims.x, panelDims.y);
-        return {width: windowDims.x, height: windowDims.y};
+    public function localToPanel(localPoint:LocalPoint):PanelPoint {
+        // Convert directly from local to panel using panelToLocalMapper
+        var panelPos = panelToLocalMapper.space2ToSpace1(localPoint.x, localPoint.y);
+        return new PanelPoint(panelPos.x, panelPos.y);
     }
+
+    public function localToWindow(localPoint:LocalPoint):WindowPoint {
+        // Convert directly from local to window using windowToLocalMapper
+        var windowPos = windowToLocalMapper.space2ToSpace1(localPoint.x, localPoint.y);
+        return new WindowPoint(windowPos.x, windowPos.y);
+    }
+
+    public function windowToLocal(windowPoint:WindowPoint):LocalPoint {
+        // Convert directly from window to local using windowToLocalMapper
+        var localPos = windowToLocalMapper.space1ToSpace2(windowPoint.x, windowPoint.y);
+        return new LocalPoint(localPos.x, localPos.y);
+    }
+
+    public function windowToPanel(windowPoint:WindowPoint):PanelPoint {
+        // Convert directly from window to panel using windowToPanelMapper
+        var panelPos = windowToPanelMapper.space1ToSpace2(windowPoint.x, windowPoint.y);
+        return new PanelPoint(panelPos.x, panelPos.y);
+    }
+
+    public function panelToLocal(panelPoint:PanelPoint):LocalPoint {
+        // Convert directly from panel to local using panelToLocalMapper
+        var localPos = panelToLocalMapper.space1ToSpace2(panelPoint.x, panelPoint.y);
+        return new LocalPoint(localPos.x, localPos.y);
+    }
+
+
+    public function getWindowSize():WindowPoint {
+        // Convert component's local dimensions to window space
+        var windowSize = windowToLocalMapper.space2ToSpace1(width, height);
+        return new WindowPoint(windowSize.x, windowSize.y);
+    }
+
+    private function inBounds(point:PanelPoint):Bool {
+        return point.x >= x && point.x <= x + width &&
+               point.y >= y && point.y <= y + height;
+    }
+
+    public function panelLengthToWindowLength(panelLength:Float):Float {
+        return windowToPanelMapper.length2To1(panelLength);
+    }
+
+    public function windowLengthToPanelLength(windowLength:Float):Float {
+        return windowToPanelMapper.length1To2(windowLength);
+    }
+
+    public function localLengthToWindowLength(localLength:Float):Float {
+        return windowToLocalMapper.length2To1(localLength);
+    }
+
+    public function windowLengthToLocalLength(windowLength:Float):Float {
+        return windowToLocalMapper.length1To2(windowLength);
+    }
+
 } 
