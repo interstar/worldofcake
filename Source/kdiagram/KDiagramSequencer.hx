@@ -3,35 +3,40 @@ package kdiagram;
 import worldofcake.ISequencer;
 import worldofcake.IControlPanel;
 import worldofcake.Event;
+import worldofcake.ISequencerControl;
+import worldofcake.CoordinateMapper;
+import worldofcake.LocalPoint;
+import worldofcake.PanelPoint;
+import worldofcake.BasePoint;
 
-class Cursor {
-    public var x:Float;
-    public var y:Float;
-    public var targetX:Float;
-    public var targetY:Float;
+private class Cursor {
+    public var pos:LocalPoint;
+    public var target:LocalPoint;
     public var channel:Int;
     public var color:Int;
     public var isMoving:Bool;
     public var currentNode:Int;
-    public var cursorSpeed:Float;  // Add speed field
+    public var cursorSpeed:Float;
     
     public function new(channel:Int, color:Int) {
         this.channel = channel;
         this.color = color;
         this.isMoving = false;
-        this.cursorSpeed = 200.0;  // Pixels per second
+        this.cursorSpeed = 0.2;
+        this.pos = new LocalPoint(0, 0);
+        this.target = new LocalPoint(0, 0);
     }
 }
 
-class KDiagramSequencer implements ISequencer implements IControlPanel {
+class KDiagramSequencer implements ISequencerControl {
     // Constants
     public static inline var PLAY_AREA_UID:Int = 1;
     public static inline var CC_EVENT_TYPE:Int = 1;
     public static inline var NOTE_EVENT_TYPE:Int = 0;
-    
-    // Dimensions
-    public var areaWidth:Int;
-    public var areaHeight:Int;
+    public static inline var SPEED_SLIDER_1_UID:Int = 10;
+    public static inline var SPEED_SLIDER_2_UID:Int = 11;
+    public static inline var SPEED_SLIDER_3_UID:Int = 12;
+    public static inline var CHANNEL_SLIDER_UID:Int = 20;
     
     // Network and cursor state
     private var network:Network;
@@ -42,17 +47,15 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
     private var events:Array<Event>;
     private var dirty:Bool;
     
-    private var selectedCursorIndex:Int = 0;  // Default to first cursor
+    private var selectedCursorIndex:Int = 0;
     
-    public function new(width:Int, height:Int) {
-        this.areaWidth = width;
-        this.areaHeight = height;
+    public function new() {
         this.currentTime = 0.0;
         this.events = [];
         this.dirty = true;
         
-        // Create network with reasonable defaults
-        network = new Network(width, height, height * 0.45, 12, 4);
+        // Create network with -1 to 1 coordinates
+        network = new Network(0.9, 12, 4);  // radius, nodeCount, arcsPerNode
         
         // Create three cursors with different channels and colors
         cursors = [
@@ -66,19 +69,22 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
             var cursor = cursors[i];
             cursor.currentNode = i * 4;  // Adjust spacing for fewer nodes
             var node = network.getNode(cursor.currentNode);
-            cursor.x = node.x;
-            cursor.y = node.y;
+            cursor.pos = new LocalPoint(node.pos.x, node.pos.y);
             
             // Start them moving
             var nextNode = network.nextFrom(cursor.currentNode);
             if (nextNode != -1) {
                 cursor.currentNode = nextNode;
                 var destNode = network.getNode(nextNode);
-                cursor.targetX = destNode.x;
-                cursor.targetY = destNode.y;
+                cursor.target = new LocalPoint(destNode.pos.x, destNode.pos.y);
                 cursor.isMoving = true;
             }
         }
+        
+        // Set default speeds
+        cursors[0].cursorSpeed = 16.0 * 10;  // Default speed from ui.YAML
+        cursors[1].cursorSpeed = 16.0 * 10;
+        cursors[2].cursorSpeed = 16.0 * 10;
     }
     
     // ISequencer implementation
@@ -88,14 +94,13 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
         for (cursor in cursors) {
             if (cursor.isMoving) {
                 // Move cursor towards target
-                var dx = cursor.targetX - cursor.x;
-                var dy = cursor.targetY - cursor.y;
+                var dx = cursor.target.x - cursor.pos.x;
+                var dy = cursor.target.y - cursor.pos.y;
                 var distance = Math.sqrt(dx * dx + dy * dy);
                 
                 if (distance < cursor.cursorSpeed * delta) {
                     // Arrived at target node
-                    cursor.x = cursor.targetX;
-                    cursor.y = cursor.targetY;
+                    cursor.pos = cursor.target;
                     cursor.isMoving = false;
                     
                     // Generate Note-On event for arrival
@@ -112,16 +117,17 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
                     if (nextNode != -1) {
                         cursor.currentNode = nextNode;
                         var node = network.getNode(cursor.currentNode);
-                        cursor.targetX = node.x;
-                        cursor.targetY = node.y;
+                        cursor.target = new LocalPoint(node.pos.x, node.pos.y);
                         cursor.isMoving = true;
                     }
                 } else {
                     // Move towards target
                     var moveDistance = cursor.cursorSpeed * delta;
                     var factor = moveDistance / distance;
-                    cursor.x += dx * factor;
-                    cursor.y += dy * factor;
+                    cursor.pos = new LocalPoint(
+                        cursor.pos.x + dx * factor,
+                        cursor.pos.y + dy * factor
+                    );
                 }
                 
                 // Generate CC events for position
@@ -130,14 +136,14 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
                     CC_EVENT_TYPE,
                     cursor.channel,
                     1,  // CC number for X position
-                    Std.int((cursor.x / areaWidth) * 127)
+                    Std.int((cursor.pos.x * 127))
                 ));
                 events.push(new Event(
                     currentTime,
                     CC_EVENT_TYPE,
                     cursor.channel,
                     2,  // CC number for Y position
-                    Std.int((cursor.y / areaHeight) * 127)
+                    Std.int((cursor.pos.y * 127))
                 ));
             }
         }
@@ -154,23 +160,22 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
     }
     
     // IControlPanel implementation
-    public function mouseDown(uid:Int, x:Int, y:Int):Void {
+    public function mouseDown(uid:Int, point:LocalPoint):Void {
         if (uid == PLAY_AREA_UID) {
-            var selectedNode = network.selected(x, y);
+            var selectedNode = network.selected(point);
+            trace('Selected node: ${selectedNode}');
             if (selectedNode != -1) {
                 var cursor = cursors[selectedCursorIndex];
                 cursor.currentNode = selectedNode;
                 var node = network.getNode(selectedNode);
-                cursor.x = node.x;
-                cursor.y = node.y;
+                cursor.pos = new LocalPoint(node.pos.x, node.pos.y);
                 
                 // Choose next destination and start moving
                 var nextNode = network.nextFrom(selectedNode);
                 if (nextNode != -1) {
                     cursor.currentNode = nextNode;
                     var destNode = network.getNode(nextNode);
-                    cursor.targetX = destNode.x;
-                    cursor.targetY = destNode.y;
+                    cursor.target = new LocalPoint(destNode.pos.x, destNode.pos.y);
                     cursor.isMoving = true;
                 }
                 dirty = true;
@@ -178,11 +183,27 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
         }
     }
     
-    // Unused IControlPanel methods
-    public function mouseDragged(uid:Int, x:Int, y:Int):Void {}
-    public function mouseUp(uid:Int, x:Int, y:Int):Void {}
+    public function mouseDragged(uid:Int, point:LocalPoint):Void {}
+    
+    public function mouseUp(uid:Int, point:LocalPoint):Void {}
+    
     public function textSubmitted(uid:Int, text:String):Void {}
-    public function newValue(uid:Int, value:Float):Void {}
+    public function newValue(uid:Int, value:Float):Void {
+        switch(uid) {
+            case SPEED_SLIDER_1_UID: // Red cursor speed
+                cursors[0].cursorSpeed = value * 0.01;  // Changed from value * 10
+            case SPEED_SLIDER_2_UID: // Green cursor speed 
+                cursors[1].cursorSpeed = value * 0.01;
+            case SPEED_SLIDER_3_UID: // Blue cursor speed
+                cursors[2].cursorSpeed = value * 0.01;
+            case CHANNEL_SLIDER_UID: // MIDI channel
+                var channel = Std.int(value);
+                for (cursor in cursors) {
+                    cursor.channel = channel;
+                }
+        }
+        dirty = true;
+    }
     public function buttonPressed(uid:Int):Void {}
     
     // Helper methods
@@ -215,20 +236,18 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
                     dirty = true;
                 
                 case " ":  // Space - recreate network
-                    network = new Network(areaWidth, areaHeight, areaHeight * 0.45, 12, 4);
+                    network = new Network(0.9, 12, 4);  // radius, nodeCount, arcsPerNode
                     // Reset cursors to different nodes like in constructor
                     for (i in 0...cursors.length) {
                         var cursor = cursors[i];
                         cursor.currentNode = i * 4;  // Space them out by 4 nodes
                         var node = network.getNode(cursor.currentNode);
-                        cursor.x = node.x;
-                        cursor.y = node.y;
+                        cursor.pos = new LocalPoint(node.pos.x, node.pos.y);
                         var nextNode = network.nextFrom(cursor.currentNode);
                         if (nextNode != -1) {
                             cursor.currentNode = nextNode;
                             var destNode = network.getNode(nextNode);
-                            cursor.targetX = destNode.x;
-                            cursor.targetY = destNode.y;
+                            cursor.target = new LocalPoint(destNode.pos.x, destNode.pos.y);
                             cursor.isMoving = true;
                         }
                     }
@@ -249,25 +268,36 @@ class KDiagramSequencer implements ISequencer implements IControlPanel {
     
     private function rotateCursors(deltaAngle:Float):Void {
         for (cursor in cursors) {
-            // Rotate current cursor position
-            var dx = cursor.x - network.centerX;
-            var dy = cursor.y - network.centerY;
+            // Rotate current cursor position around origin (0,0)
             var cos = Math.cos(deltaAngle);
             var sin = Math.sin(deltaAngle);
-            cursor.x = network.centerX + (dx * cos - dy * sin);
-            cursor.y = network.centerY + (dx * sin + dy * cos);
+            var newX = cursor.pos.x * cos - cursor.pos.y * sin;
+            var newY = cursor.pos.x * sin + cursor.pos.y * cos;
+            cursor.pos = new LocalPoint(newX, newY);
             
             // Rotate target position if we're moving
             if (cursor.isMoving) {
-                dx = cursor.targetX - network.centerX;
-                dy = cursor.targetY - network.centerY;
-                cursor.targetX = network.centerX + (dx * cos - dy * sin);
-                cursor.targetY = network.centerY + (dx * sin + dy * cos);
+                newX = cursor.target.x * cos - cursor.target.y * sin;
+                newY = cursor.target.x * sin + cursor.target.y * cos;
+                cursor.target = new LocalPoint(newX, newY);
             }
         }
     }
     
     public function getSelectedCursorIndex():Int {
         return selectedCursorIndex;
+    }
+    
+    public function makePlayAreaMapper(controlID:Int, panelXMin:Float, panelYMin:Float, 
+                                     panelXMax:Float, panelYMax:Float):CoordinateMapper {
+        if (controlID == PLAY_AREA_UID) {
+            return new CoordinateMapper(
+                new BasePoint(panelXMin, panelYMin),  // Space 1 min (panel)
+                new BasePoint(panelXMax, panelYMax),  // Space 1 max (panel)
+                new BasePoint(-1.0, -1.0),           // Space 2 min (local)
+                new BasePoint(1.0, 1.0)              // Space 2 max (local)
+            );
+        }
+        return null;
     }
 } 

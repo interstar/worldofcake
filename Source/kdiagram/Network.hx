@@ -1,5 +1,7 @@
 package kdiagram;
 
+import worldofcake.LocalPoint;
+
 class Network {
     public var nodes:Array<Node>;
     public var radius:Float;
@@ -7,10 +9,9 @@ class Network {
     public var centerX:Float;
     public var centerY:Float;
     
-    public function new(areaWidth:Float, areaHeight:Float, networkRadius:Float, nodeCount:Int, arcsPerNode:Int) {
-        this.centerX = areaWidth / 2;
-        this.centerY = areaHeight / 2;
-        this.radius = networkRadius;
+    public function new(radius:Float, nodeCount:Int, arcsPerNode:Int) {
+        trace('Network: creating with radius=${radius} in local coordinates (-1 to 1)');
+        this.radius = radius;
         this.nodes = [];
         
         // Create nodes
@@ -18,7 +19,7 @@ class Network {
             var angle = Math.random() * Math.PI * 2;
             // Radius varies between 20% and 80% of network radius
             var nodeRadius = (0.2 + 0.6 * Math.random()) * radius;
-            var node = new Node(angle, nodeRadius, centerX, centerY);
+            var node = new Node(angle, nodeRadius);  // No center coordinates needed
             
             // Add random arcs
             var arcCount = Math.floor(Math.random() * arcsPerNode);
@@ -45,11 +46,9 @@ class Network {
         return dest;
     }
     
-    public function selected(x:Float, y:Float):Int {
+    public function selected(point:LocalPoint):Int {
         for (i in 0...nodes.length) {
-            if (nodes[i].hit(x, y)) {
-                return i;
-            }
+            if (nodes[i].hit(point)) return i;
         }
         return -1;
     }

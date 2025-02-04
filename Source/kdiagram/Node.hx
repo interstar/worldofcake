@@ -1,30 +1,30 @@
 package kdiagram;
 
+import worldofcake.LocalPoint;
+
 class Node {
-    public var x:Float;
-    public var y:Float;
+    public var pos:LocalPoint;
     public var angle:Float;
-    public var radius:Float;
+    public var distanceFromCenter:Float;  // Renamed from radius
     public var currentWait:Int;
     public var arcs:Array<Arc>;
+    public static inline var HIT_RADIUS:Float = 0.04;  // In local coordinates (-1 to 1)
     
-    private var centerX:Float;
-    private var centerY:Float;
-    
-    public function new(angle:Float, radius:Float, centerX:Float, centerY:Float) {
+    public function new(angle:Float, distanceFromCenter:Float) {
         this.angle = angle;
-        this.radius = radius;
-        this.centerX = centerX;
-        this.centerY = centerY;
+        this.distanceFromCenter = distanceFromCenter;  // Renamed
+        this.pos = new LocalPoint(0, 0);
         this.currentWait = 0;
         this.arcs = [];
         updatePosition();
     }
     
     public function updatePosition():Void {
-        // Convert polar to cartesian, relative to center
-        x = centerX + Math.cos(angle) * radius;
-        y = centerY + Math.sin(angle) * radius;
+        // Simple polar to cartesian, origin is (0,0)
+        pos = new LocalPoint(
+            Math.cos(angle) * distanceFromCenter,  // Using new name
+            Math.sin(angle) * distanceFromCenter
+        );
     }
     
     public function addArc(destination:Int, length1:Int, length2:Int):Void {
@@ -68,10 +68,16 @@ class Node {
         }
     }
     
-    public function hit(px:Float, py:Float):Bool {
-        var dx = Math.abs(x - px);
-        var dy = Math.abs(y - py);
-        return (dx < 10 && dy < 10);  // 20x20 hit area
+    public function hit(point:LocalPoint):Bool {
+        var dx = pos.x - point.x;
+        var dy = pos.y - point.y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        
+        trace('Testing node at (${pos.x},${pos.y}) against click at (${point.x},${point.y})');
+        trace('  Distance: ${distance}, Hit radius: ${HIT_RADIUS}');
+        var hit = (distance < HIT_RADIUS);
+        trace('  Hit: ${hit}');
+        return hit;
     }
     
     public function rotate(deltaAngle:Float):Void {
