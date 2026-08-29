@@ -1,6 +1,7 @@
 package kdiagram;
 
 import worldofcake.LocalPoint;
+import worldofcake.IRandomSource;
 
 class Node {
     public var pos:LocalPoint;
@@ -31,7 +32,7 @@ class Node {
         arcs.push(new Arc(destination, length1, length2));
     }
     
-    public function chooseNext():Int {
+    public function chooseNext(random:IRandomSource):Int {
         if (arcs.length == 0) return -1;
         
         // Calculate inverse probabilities based on visit counts
@@ -42,7 +43,7 @@ class Node {
         var tot2 = total;
         
         // Choose based on inverse probabilities
-        var find = Math.floor(Math.random() * tot2);
+        var find = Math.floor(random.nextFloat() * tot2);
         var tracker = 0;
         
         for (i in 0...arcs.length) {
@@ -73,11 +74,7 @@ class Node {
         var dy = pos.y - point.y;
         var distance = Math.sqrt(dx * dx + dy * dy);
         
-        trace('Testing node at (${pos.x},${pos.y}) against click at (${point.x},${point.y})');
-        trace('  Distance: ${distance}, Hit radius: ${HIT_RADIUS}');
-        var hit = (distance < HIT_RADIUS);
-        trace('  Hit: ${hit}');
-        return hit;
+        return distance < HIT_RADIUS;
     }
     
     public function rotate(deltaAngle:Float):Void {

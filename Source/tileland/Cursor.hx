@@ -1,8 +1,10 @@
 package tileland;
 
+import worldofcake.LocalPoint;
+
 class Cursor {
-    public var x:Float;
-    public var y:Float;
+    /** Current position in TileLand local play-area coordinates. */
+    public var position:LocalPoint;
     public var tileX:Int;
     public var tileY:Int;
     public var direction:Direction;
@@ -25,6 +27,7 @@ class Cursor {
         this.color = color;
         this.progress = 0.0;
         this.speed = 16.0;
+        this.position = new LocalPoint(0, 0);
     }
     
     public function updatePosition(tile:Tile, delta:Float, rows:Int, cols:Int):Void {
@@ -54,82 +57,84 @@ class Cursor {
         var endY:Float = 0;
         
         // Set points to match exactly how curves are drawn in TileLandView
-        switch [tile.type, direction] {
-            case [1, North]: // Moving from top to left
-                startX = tile.x + tile.size/2;
-                startY = tile.y;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x;
-                endY = tile.y + tile.size/2;
+        var isA = tile.type == TileOrientation.A;
+        switch [isA, direction] {
+            case [true, North]: // Moving from top to left
+                startX = tile.position.x + tile.size/2;
+                startY = tile.position.y;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x;
+                endY = tile.position.y + tile.size/2;
                 
-            case [1, South]: // Moving from bottom to right
-                startX = tile.x + tile.size/2;
-                startY = tile.y + tile.size;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x + tile.size;
-                endY = tile.y + tile.size/2;
+            case [true, South]: // Moving from bottom to right
+                startX = tile.position.x + tile.size/2;
+                startY = tile.position.y + tile.size;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x + tile.size;
+                endY = tile.position.y + tile.size/2;
                 
-            case [1, East]: // Moving from right to bottom
-                startX = tile.x + tile.size;
-                startY = tile.y + tile.size/2;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x + tile.size/2;
-                endY = tile.y + tile.size;
+            case [true, East]: // Moving from right to bottom
+                startX = tile.position.x + tile.size;
+                startY = tile.position.y + tile.size/2;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x + tile.size/2;
+                endY = tile.position.y + tile.size;
                 
-            case [1, West]: // Moving from left to top
-                startX = tile.x;
-                startY = tile.y + tile.size/2;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x + tile.size/2;
-                endY = tile.y;
+            case [true, West]: // Moving from left to top
+                startX = tile.position.x;
+                startY = tile.position.y + tile.size/2;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x + tile.size/2;
+                endY = tile.position.y;
                 
-            case [2, North]: // Moving from top to right
-                startX = tile.x + tile.size/2;
-                startY = tile.y;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x + tile.size;
-                endY = tile.y + tile.size/2;
+            case [false, North]: // Moving from top to right
+                startX = tile.position.x + tile.size/2;
+                startY = tile.position.y;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x + tile.size;
+                endY = tile.position.y + tile.size/2;
                 
-            case [2, South]: // Moving from bottom to left
-                startX = tile.x + tile.size/2;
-                startY = tile.y + tile.size;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x;
-                endY = tile.y + tile.size/2;
+            case [false, South]: // Moving from bottom to left
+                startX = tile.position.x + tile.size/2;
+                startY = tile.position.y + tile.size;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x;
+                endY = tile.position.y + tile.size/2;
                 
-            case [2, East]: // Moving from right to top
-                startX = tile.x + tile.size;
-                startY = tile.y + tile.size/2;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x + tile.size/2;
-                endY = tile.y;
+            case [false, East]: // Moving from right to top
+                startX = tile.position.x + tile.size;
+                startY = tile.position.y + tile.size/2;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x + tile.size/2;
+                endY = tile.position.y;
                 
-            case [2, West]: // Moving from left to bottom
-                startX = tile.x;
-                startY = tile.y + tile.size/2;
-                controlX = tile.x + tile.size/2;
-                controlY = tile.y + tile.size/2;
-                endX = tile.x + tile.size/2;
-                endY = tile.y + tile.size;
+            case [false, West]: // Moving from left to bottom
+                startX = tile.position.x;
+                startY = tile.position.y + tile.size/2;
+                controlX = tile.position.x + tile.size/2;
+                controlY = tile.position.y + tile.size/2;
+                endX = tile.position.x + tile.size/2;
+                endY = tile.position.y + tile.size;
                 
             case _:
-                x = tile.x + tile.size/2;
-                y = tile.y + tile.size/2;
+                position = new LocalPoint(tile.position.x + tile.size/2, tile.position.y + tile.size/2);
                 return;
         }
         
         // Quadratic Bézier formula to match curveTo in TileLandView
         var t = progress;
         var mt = 1 - t;
-        x = mt*mt*startX + 2*mt*t*controlX + t*t*endX;
-        y = mt*mt*startY + 2*mt*t*controlY + t*t*endY;
+        position = new LocalPoint(
+            mt*mt*startX + 2*mt*t*controlX + t*t*endX,
+            mt*mt*startY + 2*mt*t*controlY + t*t*endY
+        );
     }
     
     private function getNextDirection(tileType:Int, currentDir:Direction):Direction {

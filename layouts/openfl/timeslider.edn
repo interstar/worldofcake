@@ -1,0 +1,26 @@
+{:generator-version 1
+ :application {:id "timeslider"
+               :package "timeslider"
+               :generated-package "generated.timeslider"
+               :composition-kind :timeslider
+               :composition-class "TimeSliderCompositionGenerated"
+               :layout-class "TimeSliderLayoutGenerated"}
+ :geometry {:panel-width 800.0
+            :panel-height 600.0
+            :padding-left 24.0
+            :padding-right 24.0
+            :padding-top 28.0
+            :padding-bottom 48.0
+            :root-gap 12.0
+            :nested-gap 0.0}
+ :sequencer {:minimum-travel-time 120.0
+             :maximum-travel-time 0.5}
+ :components
+ {"cc1label" {:kind :drawn-label :text "CC1"}
+  "cc1track" {:kind :timeslider-track :channel 1 :cc-number 1}
+  "cc2label" {:kind :drawn-label :text "CC2"}
+  "cc2track" {:kind :timeslider-track :channel 1 :cc-number 2}
+  "cc3label" {:kind :drawn-label :text "CC3"}
+  "cc3track" {:kind :timeslider-track :channel 1 :cc-number 3}
+  "cc4label" {:kind :drawn-label :text "CC4"}
+  "cc4track" {:kind :timeslider-track :channel 1 :cc-number 4}}}

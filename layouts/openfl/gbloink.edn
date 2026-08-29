@@ -1,0 +1,32 @@
+{:generator-version 1
+ :application {:id "gbloink"
+               :package "gbloink"
+               :generated-package "generated.gbloink"
+               :composition-kind :gbloink-world
+               :sequencer-class "Gbloink"
+               :view-class "GbloinkView"
+               :composition-class "GbloinkCompositionGenerated"
+               :layout-class "GbloinkLayoutGenerated"}
+ :geometry {:panel-width 930.0
+            :panel-height 600.0
+            :outer-padding 50.0
+            :root-gap 20.0
+            :nested-gap 10.0}
+ :components
+ {"playarea" {:kind :play-area
+              :uid-expression "Gbloink.PLAY_AREA_UID"
+              :local-width 700.0
+              :local-height 500.0}
+  "redspeed" {:kind :slider :uid 10 :minimum 0.5 :maximum 4.0 :default 2.0
+              :vertical true :colour "0xFF0000"}
+  "greenspeed" {:kind :slider :uid 11 :minimum 0.5 :maximum 4.0 :default 2.0
+                :vertical true :colour "0x00FF00"}
+  "bluespeed" {:kind :slider :uid 12 :minimum 0.5 :maximum 4.0 :default 2.0
+               :vertical true :colour "0x0000FF"}
+  "scaleselect" {:kind :semantic-select :uid 23 :default-index 0 :presentation "compact"
+                 :choices [{:value 0 :label "Chromatic" :colour "0x606874"}
+                           {:value 1 :label "Major" :colour "0x606874"}
+                           {:value 2 :label "Minor" :colour "0x606874"}
+                           {:value 3 :label "Harm minor" :colour "0x606874"}
+                           {:value 4 :label "Mel minor" :colour "0x606874"}
+                           {:value 5 :label "Min blues" :colour "0x606874"}]}}}

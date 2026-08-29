@@ -1,0 +1,24 @@
+{:generator-version 1
+ :application {:id "zewp"
+               :package "zewp"
+               :generated-package "generated.zewp"
+               :composition-kind :worldofcake-components
+               :sequencer-class "ZewpSequencer"
+               :view-class "ZewpView"
+               :composition-class "ZewpCompositionGenerated"
+               :layout-class "ZewpLayoutGenerated"}
+ :geometry {:panel-width 800.0
+            :panel-height 600.0
+            :padding-left 20.0 :padding-right 20.0
+            :padding-top 20.0 :padding-bottom 20.0
+            :root-gap 20.0
+            :nested-gap 10.0}
+ :components
+ {"playarea" {:kind :play-area
+              :uid-expression "ZewpSequencer.PLAY_AREA_UID"
+              :local-min-x 0.0 :local-min-y 0.0
+              :local-max-x 600.0 :local-max-y 560.0}
+  "population" {:kind :slider :uid 10 :minimum 0.0 :maximum 40.0 :default 10.0
+                :vertical true :colour "0xB0B0B0"}
+  "speed" {:kind :slider :uid 11 :minimum 0.333333 :maximum 1.5 :default 1.0
+           :vertical true :colour "0x40C0FF"}}}

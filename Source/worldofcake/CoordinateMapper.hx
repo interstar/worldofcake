@@ -15,35 +15,30 @@ class CoordinateMapper {
         yMapper = new OneDMapper(space1Min.y, space1Max.y, space2Min.y, space2Max.y);
     }
     
-    public function space1ToSpace2(x:Float, y:Float):{x:Float, y:Float} {
-        trace('CoordinateMapper:');
-        trace('  Space1: (${xMapper.space1Min},${yMapper.space1Min}) -> (${xMapper.space1Max},${yMapper.space1Max})');
-        trace('  Space2: (${xMapper.space2Min},${yMapper.space2Min}) -> (${xMapper.space2Max},${yMapper.space2Max})');
-        trace('  Mapping (${x},${y})');
+    public function forward(x:Float, y:Float):{x:Float, y:Float} {
         var result = {
-            x: xMapper.space1ToSpace2(x),
-            y: yMapper.space1ToSpace2(y)
+            x: xMapper.forward(x),
+            y: yMapper.forward(y)
         };
-        trace('  Result: (${result.x},${result.y})');
         return result;
     }
     
-    public function space2ToSpace1(x:Float, y:Float):{x:Float, y:Float} {
+    public function backward(x:Float, y:Float):{x:Float, y:Float} {
         return {
-            x: xMapper.space2ToSpace1(x),
-            y: yMapper.space2ToSpace1(y)
+            x: xMapper.backward(x),
+            y: yMapper.backward(y)
         };
     }
 
     // Map a length/distance from space1 to space2
-    public function length1To2(length:Float):Float {        
+    public function lengthForward(length:Float):Float {        
         var space1Range = xMapper.getSpace1Range();
         var space2Range = xMapper.getSpace2Range();
         return (length / space1Range) * space2Range;
     }
 
     // Map a length/distance from space2 to space1
-    public function length2To1(length:Float):Float {        
+    public function lengthBackward(length:Float):Float {        
         var space1Range = xMapper.getSpace1Range();
         var space2Range = xMapper.getSpace2Range();
         return (length / space2Range) * space1Range;

@@ -14,11 +14,11 @@ class OneDMapper {
         this.space2Max = space2Max;
     }
     
-    public function space1ToSpace2(value:Float):Float {
+    public function forward(value:Float):Float {
         return space2Min + (value - space1Min) * (space2Max - space2Min) / (space1Max - space1Min);
     }
     
-    public function space2ToSpace1(value:Float):Float {
+    public function backward(value:Float):Float {
         var proportion = (value - space2Min) / (space2Max - space2Min);
         var result = space1Min + proportion * (space1Max - space1Min);
         return result;

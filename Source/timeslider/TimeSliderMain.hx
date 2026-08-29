@@ -5,14 +5,23 @@ import openfl.events.Event;
 import openfl.events.MouseEvent;
 import openfl.utils.Timer;
 import openfl.events.TimerEvent;
+import worldofcake.LocalPoint;
+import worldofcake.ui.ResponsivePanelHost;
+import generated.timeslider.TimeSliderCompositionGenerated;
+import generated.timeslider.TimeSliderLayoutGenerated;
+#if !woc_preview
 import worldofcake.IInstrument;
 import platform.MonitorInstrument;
+#end
 
 class TimeSliderMain extends Sprite {
     private var sequencer:TimeSliderSequencer;
     private var view:TimeSliderView;
     private var audioTimer:Timer;
+    private var panelHost:ResponsivePanelHost;
+    #if !woc_preview
     private var monitor:IInstrument;
+    #end
     
     // Audio thread runs at 1000Hz (every 1ms)
     private static inline var AUDIO_INTERVAL:Float = 1;
@@ -27,11 +36,11 @@ class TimeSliderMain extends Sprite {
     private function init(e:Event):Void {
         removeEventListener(Event.ADDED_TO_STAGE, init);
 
-        // Initialize sequencer with speed range
-        // minSpeed = 0.1 (slow), maxSpeed = 0.5 (fast)
-        sequencer = new TimeSliderSequencer(800, 600, 1, 0.0001);
+        // Panel dimensions and travel-time defaults are generated from the Layla layout/configuration.
+        sequencer = TimeSliderCompositionGenerated.createSequencer();
         view = new TimeSliderView(sequencer);
         addChild(view);
+        panelHost = new ResponsivePanelHost(stage, view, TimeSliderLayoutGenerated.PANEL_WIDTH, TimeSliderLayoutGenerated.PANEL_HEIGHT);
 
         // Set up the "audio thread" timer (100Hz)
         audioTimer = new Timer(AUDIO_INTERVAL);
@@ -43,14 +52,23 @@ class TimeSliderMain extends Sprite {
 
         // Set up mouse handling
         stage.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
+        stage.addEventListener(Event.RESIZE, onResize);
 
-        // Only create monitor
+        #if !woc_preview
         monitor = new MonitorInstrument();
+        #end
     }
 
     private function onMouseDown(e:MouseEvent):Void {
-        sequencer.mouseDown(TimeSliderSequencer.PLAY_AREA_UID, 
-                          Std.int(e.localX), Std.int(e.localY));
+        var point = panelHost.stageToDesign(e.stageX, e.stageY);
+        sequencer.mouseDown(
+            TimeSliderSequencer.PLAY_AREA_UID,
+            new LocalPoint(point.x, point.y)
+        );
+    }
+
+    private function onResize(e:Event):Void {
+        panelHost.resize(stage.stageWidth, stage.stageHeight);
     }
 
     private function onAudioTick(e:TimerEvent):Void {
@@ -64,7 +82,9 @@ class TimeSliderMain extends Sprite {
         // Check for and process any events
         while (sequencer.hasEventBefore(lastAudioTime + (AUDIO_INTERVAL / 1000))) {
             var event = sequencer.getNextEvent();
+            #if !woc_preview
             monitor.send(event);
+            #end
         }
         lastAudioTime += AUDIO_INTERVAL / 1000;
         frameCount++;

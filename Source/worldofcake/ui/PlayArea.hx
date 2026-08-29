@@ -7,21 +7,29 @@ import worldofcake.PanelPoint;
 import worldofcake.BasePoint;
 import worldofcake.LocalPoint;
 import openfl.display.Sprite;
+import openfl.geom.Rectangle;
 
 class PlayArea extends Sprite implements IComponent {
-    private var componentCommon:BaseComponent;
+    private var componentCommon:ComponentCommon;
     
-    public function new(uid:Int, x:Float, y:Float, width:Float, height:Float,
+    public function new(uid:Int, pos:PanelPoint, size:PanelPoint,
                        mapper:CoordinateMapper, 
                        localMinPoint:LocalPoint, localMaxPoint:LocalPoint,
                        sequencer:ISequencerControl) {
         super();
-        componentCommon = new BaseComponent(uid, x, y, width, height, mapper,
+        componentCommon = new ComponentCommon(uid, pos, size, mapper,
                                           localMinPoint, localMaxPoint, sequencer);
                                           
-        var windowPos = panelToWindow(new PanelPoint(x, y));
+        var windowPos = panelToWindow(pos);
         this.x = windowPos.x;
         this.y = windowPos.y;
+        // OpenFL sprites do not clip their graphics to a nominal component size.
+        // Keep every custom renderer inside the generated play-area rectangle.
+        this.scrollRect = new Rectangle(
+            0, 0,
+            componentCommon.panelLengthToWindowLength(size.x),
+            componentCommon.panelLengthToWindowLength(size.y)
+        );
     }
     
     // Implement IComponent by delegating to componentCommon
@@ -35,7 +43,7 @@ class PlayArea extends Sprite implements IComponent {
     public function panelToLocal(p:PanelPoint):LocalPoint return componentCommon.panelToLocal(p);
     
     public function handleMouseDown(p:WindowPoint):Bool return componentCommon.handleMouseDown(p);
-    public function handleMouseDrag(p:WindowPoint):Bool return componentCommon.handleMouseDrag(p);
+    public function handleMouseDragged(p:WindowPoint):Bool return componentCommon.handleMouseDragged(p);
     public function handleMouseUp(p:WindowPoint):Bool return componentCommon.handleMouseUp(p);
     
     public function panelLengthToWindowLength(l:Float):Float return componentCommon.panelLengthToWindowLength(l);
@@ -43,6 +51,18 @@ class PlayArea extends Sprite implements IComponent {
     
     public function localLengthToWindowLength(l:Float):Float return componentCommon.localLengthToWindowLength(l);
     public function windowLengthToLocalLength(l:Float):Float return componentCommon.windowLengthToLocalLength(l);
+    
+    public function getPosition():PanelPoint {
+        return componentCommon.getPosition();
+    }
+    
+    public function getSize():PanelPoint {
+        return componentCommon.getSize();
+    }
+    
+    public function getMaxPoint():PanelPoint {
+        return componentCommon.getMaxPoint();
+    }
     
     private function onLocalMouseDown(point:PanelPoint):Bool {
         componentCommon.sequencer.mouseDown(componentCommon.uid, panelToLocal(point));

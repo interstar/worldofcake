@@ -9,6 +9,7 @@ import worldofcake.ComposedCoordinateMapper;
 import worldofcake.CoordinateMapper;
 import worldofcake.ui.Slider;
 import worldofcake.ui.PlayArea;
+import worldofcake.ui.SemanticSelect;
 import worldofcake.LocalPoint;
 
 class KDiagramView extends Sprite implements IControlPanelView {
@@ -16,7 +17,8 @@ class KDiagramView extends Sprite implements IControlPanelView {
     private var playArea:PlayArea;
     private var speedSliders:Array<Slider>;
     private var channelSlider:Slider;
-    private var nodeColor:Int = 0x999999;  // Greyish nodes
+    private var semanticSelect:SemanticSelect;
+    private var nodeColor:Int = 0x787878;  // Match Rack node fill
     private var arcColor:Int = 0xFFC864;   // Orange arcs
     private var cursorColor:Int = 0x32C850; // Green cursor
     private var networkColor:Int = 0xC8C864; // Yellow-ish network circle
@@ -34,10 +36,11 @@ class KDiagramView extends Sprite implements IControlPanelView {
     
     public function needsRedraw(uid:Int):Bool {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
+            if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
             return sequencer.consumeDirty();
         }
         // Add UIDs for sliders (10-12 for speed, 20 for channel)
-        return (uid >= 10 && uid <= 12) || uid == 20;
+        return (uid >= 10 && uid <= 12) || uid == 20 || uid == KDiagramSequencer.CURSOR_SELECT_UID;
     }
     
     public function redraw(uid:Int):Void {
@@ -50,6 +53,8 @@ class KDiagramView extends Sprite implements IControlPanelView {
         } else if (uid == 20) {
             // Channel slider needs redrawing
             channelSlider.redraw();
+        } else if (uid == KDiagramSequencer.CURSOR_SELECT_UID) {
+            semanticSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
         }
     }
     
@@ -58,7 +63,7 @@ class KDiagramView extends Sprite implements IControlPanelView {
         g.clear();
         
         // Draw background
-        g.beginFill(0x000000);
+        g.beginFill(0x12141A);
         g.drawRect(0, 0, KDiagramLayout.PLAY_AREA_WIDTH, KDiagramLayout.PLAY_AREA_HEIGHT);
         g.endFill();
         
@@ -66,8 +71,8 @@ class KDiagramView extends Sprite implements IControlPanelView {
         var network = sequencer.getNetwork();
         
         // Use PlayArea's coordinate mapping
-        var centerWindowPoint = playArea.localToWindow(new LocalPoint(0, 0));
-        var edgeWindowPoint = playArea.localToWindow(new LocalPoint(network.radius, 0));
+        var centerWindowPoint = localToPlayAreaDisplay(new LocalPoint(0, 0));
+        var edgeWindowPoint = localToPlayAreaDisplay(new LocalPoint(network.radius, 0));
         var networkWindowRadius = edgeWindowPoint.x - centerWindowPoint.x;
 
         g.lineStyle(1, networkColor);
@@ -86,15 +91,20 @@ class KDiagramView extends Sprite implements IControlPanelView {
             var size = (i == selectedIndex) ? 8 : 6;
             
             // Convert cursor position to window space
-            var cursorWindowPoint = playArea.localToWindow(cursor.pos);
+            var cursorWindowPoint = localToPlayAreaDisplay(cursor.pos);
             
             g.beginFill(cursor.color);
             g.drawCircle(cursorWindowPoint.x, cursorWindowPoint.y, size);
             g.endFill();
+
+            if (i == selectedIndex) {
+                g.lineStyle(2, selectedCursorBorderColor);
+                g.drawCircle(cursorWindowPoint.x, cursorWindowPoint.y, size + 3);
+            }
             
             if (cursor.isMoving) {
                 // Convert target position to window space
-                var targetWindowPoint = playArea.localToWindow(cursor.target);
+                var targetWindowPoint = localToPlayAreaDisplay(cursor.target);
                 
                 g.lineStyle(1, cursor.color);
                 g.moveTo(cursorWindowPoint.x, cursorWindowPoint.y);
@@ -104,11 +114,7 @@ class KDiagramView extends Sprite implements IControlPanelView {
     }
 
     private function drawNode(graphics:Graphics, node:Node, selected:Bool) {
-        // Convert node position from local to window space
-        
-        var windowPos = playArea.localToWindow(node.pos);
-
-        // Transform the hit radius - this is a length, not a coordinate!
+        var windowPos = localToPlayAreaDisplay(node.pos);
         var windowRadius = playArea.localLengthToWindowLength(Node.HIT_RADIUS);
         
         graphics.beginFill(nodeColor);
@@ -119,7 +125,7 @@ class KDiagramView extends Sprite implements IControlPanelView {
         graphics.lineStyle(1, arcColor);
         for (arc in node.arcs) {
             var toNode = sequencer.getNetwork().nodes[arc.destination];
-            var toWindowPos = playArea.localToWindow(toNode.pos);
+            var toWindowPos = localToPlayAreaDisplay(toNode.pos);
             
             graphics.moveTo(windowPos.x, windowPos.y);
             graphics.lineTo(toWindowPos.x, toWindowPos.y);
@@ -131,8 +137,28 @@ class KDiagramView extends Sprite implements IControlPanelView {
         this.channelSlider = channelSlider;
     }
 
+    public function addSlider(slider:Slider):Void {
+        speedSliders.push(slider);
+        addChild(slider);
+    }
+
+    public function setChannelSlider(slider:Slider):Void {
+        channelSlider = slider;
+        addChild(slider);
+    }
+
+    public function setSemanticSelect(select:SemanticSelect):Void {
+        semanticSelect = select;
+        addChild(select);
+    }
+
     public function setPlayArea(playArea:PlayArea):Void {
         this.playArea = playArea;
         addChild(playArea);
     }
-} 
+
+    private function localToPlayAreaDisplay(point:LocalPoint):LocalPoint {
+        var windowPoint = playArea.localToWindow(point);
+        return new LocalPoint(windowPoint.x - playArea.x, windowPoint.y - playArea.y);
+    }
+}

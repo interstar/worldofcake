@@ -1,0 +1,23 @@
+{:generator-version 1
+ :application {:id "kdiagram" :package "kdiagram" :generated-package "generated.kdiagram"
+               :composition-kind :worldofcake-components
+               :composition-class "KDiagramCompositionGenerated"
+               :layout-class "KDiagramLayoutGenerated"
+               :sequencer-class "KDiagramSequencer" :view-class "KDiagramView"}
+ :geometry {:panel-width 800.0 :panel-height 640.0
+            :padding-left 20.0 :padding-right 20.0 :padding-top 20.0 :padding-bottom 20.0
+            :root-gap 20.0 :nested-gap 0.0 :gaps-by-depth {0 20.0 1 0.0 2 10.0}}
+ :components
+ {"playarea" {:kind :play-area :uid-expression "KDiagramSequencer.PLAY_AREA_UID"
+              :local-min-x -1.0 :local-min-y 1.0 :local-max-x 1.0 :local-max-y -1.0}
+  "redspeed" {:kind :slider :uid 10 :minimum 0.1 :maximum 8.0 :default 2.0 :vertical true :colour "0xFF0000"}
+  "greenspeed" {:kind :slider :uid 11 :minimum 0.1 :maximum 8.0 :default 2.0 :vertical true :colour "0x00FF00"}
+  "bluespeed" {:kind :slider :uid 12 :minimum 0.1 :maximum 8.0 :default 2.0 :vertical true :colour "0x0000FF"}
+  "channel" {:kind :slider :uid 20 :minimum 1.0 :maximum 14.0 :default 7.0 :vertical false :colour "0x808080" :view-hook "setChannelSlider"}
+  "selectcursor" {:kind :semantic-select :uid 30 :default-index 0 :presentation "segmented"
+                  :choices [{:value 0 :label "R" :colour "0xFF0000"}
+                            {:value 1 :label "G" :colour "0x00FF00"}
+                            {:value 2 :label "B" :colour "0x0000FF"}]}
+  "controltop" {:kind :spacer} "controlmiddle" {:kind :spacer}
+  "selectgap" {:kind :spacer} "controlbottom" {:kind :spacer}
+  "speedend" {:kind :spacer} "channelend" {:kind :spacer}}}

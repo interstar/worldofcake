@@ -3,7 +3,7 @@ package worldofcake.ui;
 import worldofcake.CoordinateMapper;
 import worldofcake.ISequencerControl;
 
-class Button extends BaseComponent {
+class Button extends ComponentCommon {
     private var label:String;
     
     public function new(uid:Int, x:Float, y:Float, width:Float, height:Float, 

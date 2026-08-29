@@ -1,0 +1,18 @@
+{:generator-version 1
+ :application {:id "tileland" :package "tileland" :generated-package "generated.tileland"
+               :composition-kind :worldofcake-components
+               :composition-class "TileLandCompositionGenerated"
+               :layout-class "TileLandLayoutGenerated"
+               :sequencer-class "TileLandSequencer" :view-class "TileLandView"}
+ :geometry {:panel-width 800.0 :panel-height 640.0
+            :padding-left 20.0 :padding-right 20.0 :padding-top 20.0 :padding-bottom 20.0
+            :root-gap 20.0 :nested-gap 0.0 :gaps-by-depth {0 20.0 1 0.0 2 10.0}}
+ :components
+ {"playarea" {:kind :play-area :uid-expression "TileLandSequencer.PLAY_AREA_UID"
+              :local-min-x 0.0 :local-min-y 0.0 :local-max-x 600.0 :local-max-y 600.0}
+  "redspeed" {:kind :slider :uid 10 :minimum 1.0 :maximum 80.0 :default 16.0 :vertical true :colour "0xFF0000"}
+  "greenspeed" {:kind :slider :uid 11 :minimum 1.0 :maximum 80.0 :default 16.0 :vertical true :colour "0x00FF00"}
+  "bluespeed" {:kind :slider :uid 12 :minimum 1.0 :maximum 80.0 :default 16.0 :vertical true :colour "0x0000FF"}
+  "channel" {:kind :slider :uid 20 :minimum 1.0 :maximum 14.0 :default 1.0 :vertical false :colour "0x808080" :view-hook "setChannelSlider"}
+  "controltop" {:kind :spacer} "controlmiddle" {:kind :spacer}
+  "controlbottom" {:kind :spacer} "speedend" {:kind :spacer} "channelend" {:kind :spacer}}}

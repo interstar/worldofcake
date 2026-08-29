@@ -16,19 +16,31 @@ class ComposedCoordinateMapper extends CoordinateMapper {
         this.second = second;
     }
     
-    override public function space1ToSpace2(x:Float, y:Float):{x:Float, y:Float} {
-        var intermediate = first.space1ToSpace2(x, y);
-        return second.space1ToSpace2(intermediate.x, intermediate.y);
+    override public function forward(x:Float, y:Float):{x:Float, y:Float} {
+        var intermediate = first.forward(x, y);
+        return second.forward(intermediate.x, intermediate.y);
     }
 
-    override public function space2ToSpace1(x:Float, y:Float):{x:Float, y:Float} {
-        var intermediate = second.space2ToSpace1(x, y);
-        return first.space2ToSpace1(intermediate.x, intermediate.y);
+    override public function backward(x:Float, y:Float):{x:Float, y:Float} {
+        var intermediate = second.backward(x, y);
+        return first.backward(intermediate.x, intermediate.y);
     }
     
     
     override public function getSpacesDescription():String {
         return 'composed: first[${first.getSpacesDescription()}] ' +
                'second[${second.getSpacesDescription()}]';
+    }
+
+    override public function lengthForward(length:Float):Float {
+        // Map through first mapper's spaces, then second mapper's spaces
+        var intermediateLength = first.lengthForward(length);
+        return second.lengthForward(intermediateLength);
+    }
+
+    override public function lengthBackward(length:Float):Float {
+        // Map backwards through second mapper's spaces, then first mapper's spaces
+        var intermediateLength = second.lengthBackward(length);
+        return first.lengthBackward(intermediateLength);
     }
 } 

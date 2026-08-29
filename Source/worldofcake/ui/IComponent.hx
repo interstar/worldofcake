@@ -20,9 +20,13 @@ interface IComponent {
     
     // Input handling
     function handleMouseDown(windowPoint:WindowPoint):Bool;
-    function handleMouseDrag(windowPoint:WindowPoint):Bool;
+    function handleMouseDragged(windowPoint:WindowPoint):Bool;
     function handleMouseUp(windowPoint:WindowPoint):Bool;
     
     // Properties
     function getUID():Int;
+
+    public function getPosition():PanelPoint;
+    public function getSize():PanelPoint;
+    public function getMaxPoint():PanelPoint;
 } 

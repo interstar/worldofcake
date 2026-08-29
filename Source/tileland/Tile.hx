@@ -1,19 +1,22 @@
 package tileland;
 
+import worldofcake.LocalPoint;
+
 class Tile {
-    public var type:Int;  // 1 or 2 for the two orientations
-    public var x:Float;
-    public var y:Float;
+    public var type:TileOrientation;
+    /** Top-left position in TileLand's local play-area coordinate space. */
+    public var position:LocalPoint;
+    /** Square edge length in TileLand local play-area units (not a window or panel size). */
     public var size:Float;
     
-    public function new(type:Int, x:Float, y:Float, size:Float) {
+    public function new(type:TileOrientation, position:LocalPoint, size:Float) {
         this.type = type;
-        this.x = x;
-        this.y = y;
+        this.position = position;
         this.size = size;
     }
+
     
     public function flip():Void {
-        type = (type == 1) ? 2 : 1;
+        type = (type == TileOrientation.A) ? TileOrientation.B : TileOrientation.A;
     }
 } 

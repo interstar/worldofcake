@@ -2,7 +2,7 @@
 <project>
 	
 	<meta title="Gbloink!" package="net.synaesmedia.zewp" version="1.0.0" company="Gilbert Lister Research" />
-	<app main="tileland.TileLandMain" path="Export" file="Zewp" />
+	<app main="gbloink.GbloinkMain" path="Export" file="Gbloink" />
 	
 	<source path="Source" />
 	

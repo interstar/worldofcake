@@ -1,0 +1,12 @@
+<
+  playarea/kdiagramplayarea(600)
+  [
+    controltop/spacer(30)
+    <redspeed/speedslider(3) greenspeed/speedslider(3) bluespeed/speedslider(3) speedend/spacer(2)>(150)
+    controlmiddle/spacer(30)
+    <channel/channelslider(12) channelend/spacer(1)>(30)
+    selectgap/spacer(30)
+    selectcursor/semanticselect(50)
+    controlbottom/spacer(280)
+  ](140)
+>
