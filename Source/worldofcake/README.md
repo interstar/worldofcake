@@ -40,7 +40,7 @@ A good example of this last principle : when the View updates a parameter in the
 
 As stated above, the use of the worldofcake UI components is optional. (Though only an option on platforms that support OpenFL).And you may take what you like from the framework. 
 
-Typically, you would make some kind of "World" class that implements IFullApp. Much of this can be written in Haxe and be run cross-platform. As can most of the IControlPanelView.
+Typically, you would make some kind of "World" class that implements ISequencerWorld. Much of this can be written in Haxe and be run cross-platform. As can most of the IControlPanelView.
 
 
 A World file can be accompanied by a Layout file which specifies in code, the important dimensions and positions of the UI components.
@@ -99,7 +99,7 @@ Currently there are 5 sequencers apps :
 
 ## Standard App Structure
 1. **Main**: Entry point, creates World
-2. **World**: Implements IFullApp
+2. **World**: Implements ISequencerWorld
    - Creates and manages components
    - Handles mouse events
    - Routes events to appropriate components

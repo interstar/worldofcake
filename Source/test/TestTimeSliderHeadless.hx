@@ -20,7 +20,13 @@ class TestTimeSliderHeadless {
     }
 
     static function clickFirst(app:TimeSliderSequencer):Void {
+        app.mouseDown(TimeSliderSequencer.trackUid(0), new LocalPoint(176, 52));
+    }
+
+    static function testLegacyPlayAreaClick():Void {
+        var app = make();
         app.mouseDown(TimeSliderSequencer.PLAY_AREA_UID, new LocalPoint(200, 100));
+        check("timeslider legacy play-area destination", near(app.getSliders()[0].destination, 52));
     }
 
     static function testCadence():Void {
@@ -60,6 +66,7 @@ class TestTimeSliderHeadless {
     }
 
     public static function main():Void {
+        testLegacyPlayAreaClick();
         testCadence();
         testPauseAndInvalidDelta();
         testStateRoundTrip();

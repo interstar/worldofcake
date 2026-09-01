@@ -32,6 +32,19 @@ class ZewpView extends Sprite implements IControlPanelView {
         return uid == ZewpSequencer.POPULATION_UID || uid == ZewpSequencer.SPEED_UID;
     }
 
+
+    public function redrawDirty():Void {
+        if (needsRedraw(ZewpSequencer.PLAY_AREA_UID)) {
+            redraw(ZewpSequencer.PLAY_AREA_UID);
+        }
+
+        for (uid in [ZewpSequencer.POPULATION_UID, ZewpSequencer.SPEED_UID]) {
+            if (needsRedraw(uid)) {
+                redraw(uid);
+            }
+        }
+    }
+
     public function redraw(uid:Int):Void {
         if (uid == ZewpSequencer.PLAY_AREA_UID) {
             redrawPlayArea();

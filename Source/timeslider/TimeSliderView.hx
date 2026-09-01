@@ -42,6 +42,13 @@ class TimeSliderView extends Sprite implements IControlPanelView {
         return false;
     }
 
+
+    public function redrawDirty():Void {
+        if (needsRedraw(TimeSliderSequencer.PLAY_AREA_UID)) {
+            redraw(TimeSliderSequencer.PLAY_AREA_UID);
+        }
+    }
+
     public function redraw(uid:Int):Void {
         if (uid == TimeSliderSequencer.PLAY_AREA_UID) {
             var g:Graphics = this.graphics;

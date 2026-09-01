@@ -17,7 +17,7 @@ class ZewpWorld extends ComponentWorldBase {
         sequencer.keyPressed(ZewpSequencer.PLAY_AREA_UID, key);
     }
 
-    public function getSequencer():ZewpSequencer {
+    override public function getSequencer():ZewpSequencer {
         return sequencer;
     }
 }

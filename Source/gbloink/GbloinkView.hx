@@ -50,6 +50,13 @@ class GbloinkView extends Sprite implements IControlPanelView {
         return sequencer.needsRedraw(componentId);
     }
     
+
+    public function redrawDirty():Void {
+        if (needsRedraw(Gbloink.PLAY_AREA_UID)) {
+            redraw(Gbloink.PLAY_AREA_UID);
+        }
+    }
+
     public function redraw(componentId:Int):Void {
         if (componentId == Gbloink.PLAY_AREA_UID) {
             if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getScaleIndex());

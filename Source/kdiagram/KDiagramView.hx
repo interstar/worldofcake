@@ -45,6 +45,19 @@ class KDiagramView extends Sprite implements IControlPanelView {
         return (uid >= 10 && uid <= 12) || uid == 20 || uid == KDiagramSequencer.CURSOR_SELECT_UID || uid == KDiagramSequencer.SCALE_SELECT_UID;
     }
     
+
+    public function redrawDirty():Void {
+        if (needsRedraw(KDiagramSequencer.PLAY_AREA_UID)) {
+            redraw(KDiagramSequencer.PLAY_AREA_UID);
+        }
+
+        for (uid in [10, 11, 12, 20, KDiagramSequencer.CURSOR_SELECT_UID, KDiagramSequencer.SCALE_SELECT_UID]) {
+            if (needsRedraw(uid)) {
+                redraw(uid);
+            }
+        }
+    }
+
     public function redraw(uid:Int):Void {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
             redrawPlayArea();

@@ -44,7 +44,14 @@ class TimeSlider {
         left → `minSpeed` (slow, many seconds), right → `maxSpeed` (fast, ~1 s or less).
     **/
     public function setDestination(px:Float, py:Float):Void {
-        var u = (px - bounds.left) / bounds.width();
+        setDestinationLocal(px - bounds.left, py - bounds.top);
+    }
+
+    /**
+        Set destination from coordinates local to this track component.
+    **/
+    public function setDestinationLocal(px:Float, py:Float):Void {
+        var u = px / bounds.width();
         if (u < 0.001) {
             u = 0.001;
         }
@@ -52,7 +59,7 @@ class TimeSlider {
             u = 1.0;
         }
 
-        var targetY = py - bounds.top;
+        var targetY = py;
         if (targetY < 0) {
             targetY = 0;
         }
@@ -105,6 +112,7 @@ class TimeSlider {
 
 class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public static inline var PLAY_AREA_UID:Int = 1;
+    public static inline var TRACK_UID_BASE:Int = 10;
     public static inline var CC_EVENT_TYPE:Int = 1;
     public static inline var BASE_CC:Int = 20;
     /** Four parallel tracks (OpenFL + Rack). */
@@ -240,11 +248,30 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
         } catch (_:Dynamic) {}
     }
 
+    public static function trackUid(index:Int):Int {
+        return TRACK_UID_BASE + index;
+    }
+
+    public static function trackIndexForUid(uid:Int):Int {
+        return uid - TRACK_UID_BASE;
+    }
+
     public function mouseDown(uid:Int, point:LocalPoint):Void {
-        if (uid != PLAY_AREA_UID) {
+        if (uid == PLAY_AREA_UID) {
+            mouseDownInLegacyPlayArea(point);
             return;
         }
 
+        var index = trackIndexForUid(uid);
+        if (index < 0 || index >= sliders.length) {
+            return;
+        }
+
+        sliders[index].setDestinationLocal(point.x, point.y);
+        dirty = true;
+    }
+
+    private function mouseDownInLegacyPlayArea(point:LocalPoint):Void {
         for (slider in sliders) {
             if (slider.hit(point.x, point.y)) {
                 slider.setDestination(point.x, point.y);

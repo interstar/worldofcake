@@ -14,7 +14,7 @@ class GbloinkWorld extends ComponentWorldBase {
         setComponents(GbloinkCompositionGenerated.build(sequencer, getWindowToPanelMapper(), view));
     }
 
-    public function getSequencer():Gbloink return sequencer;
+    override public function getSequencer():Gbloink return sequencer;
 
     override public function handleKeyPressed(key:String):Void {
         sequencer.keyPressed(Gbloink.PLAY_AREA_UID, key);

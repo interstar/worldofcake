@@ -14,5 +14,5 @@ class TileLandWorld extends ComponentWorldBase {
     }
 
     override public function handleKeyPressed(key:String):Void sequencer.keyPressed(TileLandSequencer.PLAY_AREA_UID, key);
-    public function getSequencer():TileLandSequencer return sequencer;
+    override public function getSequencer():TileLandSequencer return sequencer;
 }

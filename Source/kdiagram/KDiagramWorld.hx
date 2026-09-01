@@ -14,5 +14,5 @@ class KDiagramWorld extends ComponentWorldBase {
     }
 
     override public function handleKeyPressed(key:String):Void sequencer.keyPressed(KDiagramSequencer.PLAY_AREA_UID, key);
-    public function getSequencer():KDiagramSequencer return sequencer;
+    override public function getSequencer():KDiagramSequencer return sequencer;
 }

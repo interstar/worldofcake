@@ -28,6 +28,19 @@ class TileLandView extends Sprite implements IControlPanelView {
         return (uid >= 10 && uid <= 12) || uid == 20;
     }
 
+
+    public function redrawDirty():Void {
+        if (needsRedraw(TileLandSequencer.PLAY_AREA_UID)) {
+            redraw(TileLandSequencer.PLAY_AREA_UID);
+        }
+
+        for (uid in [10, 11, 12, 20]) {
+            if (needsRedraw(uid)) {
+                redraw(uid);
+            }
+        }
+    }
+
     public function redraw(uid:Int):Void {
         if (uid == TileLandSequencer.PLAY_AREA_UID) {
             redrawPlayArea();
