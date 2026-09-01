@@ -7,6 +7,8 @@
     <channel/channelslider(12) channelend/spacer(1)>(30)
     selectgap/spacer(30)
     selectcursor/semanticselect(50)
-    controlbottom/spacer(280)
+    scalegap/spacer(30)
+    scaleselect/semanticselect(70)
+    controlbottom/spacer(180)
   ](140)
 >

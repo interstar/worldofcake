@@ -3,11 +3,13 @@ package kdiagram;
 import haxe.Json;
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
+import worldofcake.SequencerCore;
 import worldofcake.CoordinateMapper;
 import worldofcake.LocalPoint;
 import worldofcake.PanelPoint;
 import worldofcake.BasePoint;
 import worldofcake.IRandomSource;
+import worldofcake.NoteCalculator;
 import worldofcake.SystemRandomSource;
 
 private class Cursor {
@@ -29,10 +31,11 @@ private class Cursor {
     }
 }
 
-class KDiagramSequencer implements ISequencerControl {
+class KDiagramSequencer extends SequencerCore implements ISequencerControl {
     // Constants
     public static inline var PLAY_AREA_UID:Int = 1;
     public static inline var CURSOR_SELECT_UID:Int = 30;
+    public static inline var SCALE_SELECT_UID:Int = 31;
     public static inline var CC_EVENT_TYPE:Int = 1;
     public static inline var NOTE_EVENT_TYPE:Int = 0;
     public static inline var SPEED_SLIDER_1_UID:Int = 10;
@@ -43,26 +46,20 @@ class KDiagramSequencer implements ISequencerControl {
     public static inline var NETWORK_NODE_COUNT:Int = 12;
     /** ~one leaf with no outgoing arcs; all other nodes get ≥1 exit. */
     public static inline var NETWORK_DEAD_END_RATIO:Float = 1.0 / 12.0;
+    private static var SCALE_NAMES:Array<String> = ["chromatic", "major", "minor", "harmonic_minor", "melodic_minor", "minor_blues"];
     
     // Network and cursor state
     private var network:Network;
     private var cursors:Array<Cursor>;
-    
-    // Sequencer state
-    private var currentTime:Float;
-    private var events:Array<Event>;
-    private var dirty:Bool;
-    private var paused:Bool;
+    private var noteCalc:NoteCalculator;
     
     private var selectedCursorIndex:Int = 0;
     private var random:IRandomSource;
     
     public function new(?random:IRandomSource) {
         this.random = random == null ? new SystemRandomSource() : random;
-        this.currentTime = 0.0;
-        this.events = [];
-        this.dirty = true;
-        this.paused = false;
+        super(true);
+        noteCalc = new NoteCalculator(2.0);
         
         selectedCursorIndex = 0;
         cursors = [
@@ -74,27 +71,13 @@ class KDiagramSequencer implements ISequencerControl {
     }
     
     // ISequencer implementation
-    public function pause():Void {
-        paused = true;
-    }
-
-    public function resume():Void {
-        paused = false;
-    }
-
     public function reset():Void {
-        currentTime = 0;
-        events = [];
-        paused = false;
+        resetTransport();
         resetNetwork();
     }
 
-    public function advanceTime(delta:Float):Void {
-        if (paused || !Math.isFinite(delta) || delta <= 0) {
-            return;
-        }
-        var startTime = currentTime;
-        currentTime += delta;
+    override function advanceModel(delta:Float):Bool {
+        var startTime = currentTime - delta;
         
         for (cursor in cursors) {
             var remaining = delta;
@@ -114,7 +97,7 @@ class KDiagramSequencer implements ISequencerControl {
                         startTime + elapsed,
                         NOTE_EVENT_TYPE,
                         cursor.channel,
-                        60 + cursor.currentNode,
+                        noteForLocalY(cursor.pos.y),
                         100
                     ));
                     var nextNode = network.nextFrom(cursor.currentNode);
@@ -156,17 +139,9 @@ class KDiagramSequencer implements ISequencerControl {
             }
         }
         
-        dirty = true;
+        return true;
     }
     
-    public function hasEventBefore(timeLimit:Float):Bool {
-        return events.length > 0 && events[0].timestamp <= timeLimit;
-    }
-    
-    public function getNextEvent():Event {
-        return events.shift();
-    }
-
     public function peekNextEventType():Int {
         return events.length == 0 ? -1 : events[0].type;
     }
@@ -191,14 +166,6 @@ class KDiagramSequencer implements ISequencerControl {
         if (events.length > 0) {
             events.shift();
         }
-    }
-
-    public function getLogicalTime():Float {
-        return currentTime;
-    }
-
-    public function isPaused():Bool {
-        return paused;
     }
 
     public function exportStateJson():String {
@@ -236,6 +203,7 @@ class KDiagramSequencer implements ISequencerControl {
         var out = new StringBuf();
         out.add('{"v":2,"kind":"kdiagram","currentTime":'); out.add(currentTime);
         out.add(',"paused":'); out.add(paused ? 'true' : 'false');
+        out.add(',"scale":"'); out.add(noteCalc.current); out.add('"');
         out.add(',"selectedCursorIndex":'); out.add(selectedCursorIndex);
         out.add(',"networkRadius":'); out.add(network == null ? 0.9 : network.radius);
         out.add(',"nodes":[');
@@ -261,6 +229,9 @@ class KDiagramSequencer implements ISequencerControl {
             }
             currentTime = Reflect.hasField(o, "currentTime") ? Std.parseFloat(Std.string(Reflect.field(o, "currentTime"))) : 0;
             paused = Reflect.hasField(o, "paused") && Reflect.field(o, "paused") == true;
+            if (Reflect.hasField(o, "scale")) {
+                noteCalc.setCurrent(cast Reflect.field(o, "scale"));
+            }
             selectedCursorIndex = Reflect.hasField(o, "selectedCursorIndex") ? Std.int(Reflect.field(o, "selectedCursorIndex")) : 0;
             if (selectedCursorIndex < 0) {
                 selectedCursorIndex = 0;
@@ -389,6 +360,24 @@ class KDiagramSequencer implements ISequencerControl {
         return (i >= 0 && i < cursors.length) ? cursors[i].channel : 1;
     }
 
+    public function noteForLocalY(y:Float):Int {
+        return noteCalc.transform(1.0 - y);
+    }
+
+    public function getScaleName():String {
+        return noteCalc.current;
+    }
+
+    public function setScale(scaleName:String):Void {
+        noteCalc.setCurrent(scaleName);
+        dirty = true;
+    }
+
+    public function getScaleIndex():Int {
+        var index = SCALE_NAMES.indexOf(noteCalc.current);
+        return index < 0 ? 0 : index;
+    }
+
     public function getCursorIsMoving(i:Int):Bool {
         return (i >= 0 && i < cursors.length) && cursors[i].isMoving;
     }
@@ -476,6 +465,9 @@ class KDiagramSequencer implements ISequencerControl {
             }
         } else if (uid == CURSOR_SELECT_UID) {
             setSelectedCursorIndex(Std.int(Math.round(value)));
+        } else if (uid == SCALE_SELECT_UID) {
+            var index = Std.int(Math.max(0, Math.min(SCALE_NAMES.length - 1, Math.round(value))));
+            setScale(SCALE_NAMES[index]);
         }
         dirty = true;
     }
@@ -486,12 +478,6 @@ class KDiagramSequencer implements ISequencerControl {
         // We're already generating events in advanceTime()
         // This method is called after drawing, but we don't need
         // to generate additional events here
-    }
-    
-    public function consumeDirty():Bool {
-        var wasDirty = dirty;
-        dirty = false;
-        return wasDirty;
     }
     
     public function getNetwork():Network {

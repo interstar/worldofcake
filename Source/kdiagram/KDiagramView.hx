@@ -17,7 +17,8 @@ class KDiagramView extends Sprite implements IControlPanelView {
     private var playArea:PlayArea;
     private var speedSliders:Array<Slider>;
     private var channelSlider:Slider;
-    private var semanticSelect:SemanticSelect;
+    private var cursorSelect:SemanticSelect;
+    private var scaleSelect:SemanticSelect;
     private var nodeColor:Int = 0x787878;  // Match Rack node fill
     private var arcColor:Int = 0xFFC864;   // Orange arcs
     private var cursorColor:Int = 0x32C850; // Green cursor
@@ -36,11 +37,12 @@ class KDiagramView extends Sprite implements IControlPanelView {
     
     public function needsRedraw(uid:Int):Bool {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
-            if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
+            if (cursorSelect != null) cursorSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
+            if (scaleSelect != null) scaleSelect.setSelectedIndex(sequencer.getScaleIndex());
             return sequencer.consumeDirty();
         }
         // Add UIDs for sliders (10-12 for speed, 20 for channel)
-        return (uid >= 10 && uid <= 12) || uid == 20 || uid == KDiagramSequencer.CURSOR_SELECT_UID;
+        return (uid >= 10 && uid <= 12) || uid == 20 || uid == KDiagramSequencer.CURSOR_SELECT_UID || uid == KDiagramSequencer.SCALE_SELECT_UID;
     }
     
     public function redraw(uid:Int):Void {
@@ -54,7 +56,9 @@ class KDiagramView extends Sprite implements IControlPanelView {
             // Channel slider needs redrawing
             channelSlider.redraw();
         } else if (uid == KDiagramSequencer.CURSOR_SELECT_UID) {
-            semanticSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
+            if (cursorSelect != null) cursorSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
+        } else if (uid == KDiagramSequencer.SCALE_SELECT_UID) {
+            if (scaleSelect != null) scaleSelect.setSelectedIndex(sequencer.getScaleIndex());
         }
     }
     
@@ -147,9 +151,18 @@ class KDiagramView extends Sprite implements IControlPanelView {
         addChild(slider);
     }
 
-    public function setSemanticSelect(select:SemanticSelect):Void {
-        semanticSelect = select;
+    public function setCursorSelect(select:SemanticSelect):Void {
+        cursorSelect = select;
         addChild(select);
+    }
+
+    public function setScaleSelect(select:SemanticSelect):Void {
+        scaleSelect = select;
+        addChild(select);
+    }
+
+    public function setSemanticSelect(select:SemanticSelect):Void {
+        setCursorSelect(select);
     }
 
     public function setPlayArea(playArea:PlayArea):Void {

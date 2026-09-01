@@ -1,1 +1,20 @@
 /build/
+Source/generated/
+
+# Local VCV Rack SDK caches and legacy per-module build outputs.
+/derivatives/Rack-SDK-*/
+/derivatives/Rack-SDK-*.zip
+/derivatives/vcvrack/__pycache__/
+/derivatives/vcvrack/*/build/
+/derivatives/vcvrack/*/native/
+/derivatives/vcvrack/*/dist/
+/derivatives/vcvrack/*/plugin.so
+/derivatives/vcvrack/*/plugin.dll
+/derivatives/vcvrack/*/plugin.dylib
+/derivatives/vcvrack/*/libwinpthread-1.dll
+
+# OpenFL/Lime build output and local scratch/debug dumps.
+/Export/
+/out.txt
+/derivatives/vcvrack/diagnostics/
+/derivatives/vcvrack/postmortem/

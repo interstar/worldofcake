@@ -7,12 +7,13 @@ import tileland.Tile;
 import tileland.Cursor;
 import tileland.Direction;
 import worldofcake.ISequencerControl;
+import worldofcake.SequencerCore;
 import tileland.TileLandLayout;
 import worldofcake.LocalPoint;
 import worldofcake.IRandomSource;
 import worldofcake.SystemRandomSource;
 
-class TileLandSequencer implements ISequencerControl {
+class TileLandSequencer extends SequencerCore implements ISequencerControl {
     // Constants
     public static inline var PLAY_AREA_UID:Int = 1;
     
@@ -25,17 +26,10 @@ class TileLandSequencer implements ISequencerControl {
     
     // Game objects
     private var tiles:Array<Array<Tile>>;
-    private var dirty:Bool;
     /** Increments whenever semantic tile visuals change. */
     private var visualVersion:Int;
     
-    // Sequencer state
-    private var currentTime:Float;
-    /** Same visibility as `Gbloink.events` so Rack `*RackApi` can peek/pop. */
-    public var events:Array<Event>;
-    private var paused:Bool;
-    
-    // Add to fields
+    // Cursor state
     private var cursors:Array<Cursor>;
     private var random:IRandomSource;
     
@@ -46,11 +40,8 @@ class TileLandSequencer implements ISequencerControl {
         this.tileSize = TileLandLayout.TILE_SIZE;
         this.rows = TileLandLayout.GRID_ROWS;
         this.cols = TileLandLayout.GRID_COLS;
-        this.currentTime = 0.0;
-        this.events = [];
-        this.dirty = true;
+        super(true);
         this.visualVersion = 0;
-        this.paused = false;
         buildGridAndCursors();
     }
 
@@ -77,29 +68,13 @@ class TileLandSequencer implements ISequencerControl {
         }
     }
 
-    public function pause():Void {
-        paused = true;
-    }
-
-    public function resume():Void {
-        paused = false;
-    }
-
     public function reset():Void {
-        currentTime = 0;
-        events = [];
-        paused = false;
+        resetTransport();
         buildGridAndCursors();
-        dirty = true;
     }
     
     // ISequencer implementation
-    public function advanceTime(delta:Float):Void {
-        if (paused || !Math.isFinite(delta) || delta <= 0) {
-            return;
-        }
-        currentTime += delta;
-        
+    override function advanceModel(delta:Float):Bool {
         for (cursor in cursors) {
             advanceCursor(cursor, delta);
             
@@ -116,11 +91,11 @@ class TileLandSequencer implements ISequencerControl {
                 1,  // CC event type
                 cursor.channel,
                 2,  // CC number for Y position
-                Std.int((cursor.position.y / areaHeight) * 127)
+                Std.int(((areaHeight - cursor.position.y) / areaHeight) * 127)
             ));
         }
         
-        dirty = true;
+        return true;
     }
 
     /**
@@ -158,22 +133,6 @@ class TileLandSequencer implements ISequencerControl {
         }
     }
     
-    public function hasEventBefore(timeLimit:Float):Bool {
-        return events.length > 0 && events[0].timestamp <= timeLimit;
-    }
-    
-    public function getNextEvent():Event {
-        return events.shift();
-    }
-
-    public function getLogicalTime():Float {
-        return currentTime;
-    }
-
-    public function isPaused():Bool {
-        return paused;
-    }
-
     static function dirToStr(d:Direction):String {
         return switch (d) {
             case North: "n";
@@ -299,12 +258,6 @@ class TileLandSequencer implements ISequencerControl {
     }
     
     // Helper methods
-    public function consumeDirty():Bool {
-        var wasDirty = dirty;
-        dirty = false;
-        return wasDirty;
-    }
-
     public function getVisualVersion():Int return visualVersion;
     
     public function getTiles():Array<Array<Tile>> {

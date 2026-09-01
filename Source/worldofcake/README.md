@@ -123,4 +123,4 @@ Currently there are 5 sequencers apps :
 
 Rack and VST hosts should not call Haxe from a hard real-time audio callback. The current native boundary under `bridge/` uses a control thread, two bounded SPSC command queues (GUI/message and host/audio), prepared event queues, continuous-control snapshots, visual snapshots, and JSON persistence mailboxes. The host audio side consumes prepared native data only.
 
-This runner contract is already proven for the five current apps. Rack modules should use this boundary rather than the older direct `*RackApi` pattern where `Module::process()` entered Haxe under a mutex.
+This runner contract is already proven for the five current apps. Rack modules should use this boundary rather than the older direct-Haxe facade pattern where `Module::process()` entered Haxe under a mutex.

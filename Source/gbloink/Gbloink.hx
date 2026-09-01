@@ -2,6 +2,7 @@ package gbloink;
 
 import Math;
 import worldofcake.ISequencerControl;
+import worldofcake.SequencerCore;
 import worldofcake.Event;
 import worldofcake.Utils;
 import worldofcake.NoteCalculator;
@@ -82,7 +83,7 @@ class Block {
     }
 }
 
-class Gbloink implements ISequencerControl {
+class Gbloink extends SequencerCore implements ISequencerControl {
     public static inline var PLAY_AREA_UID:Int = 1;
     /** Optional toolbar (OpenFL, Rack, …): clear blocks / toggle pause. */
     public static inline var BTN_CLEAR_BLOCKS:Int = 20;
@@ -96,16 +97,11 @@ class Gbloink implements ISequencerControl {
     /** Applied to default `(2,2)` motion and to `setBallSpeed` targets. */
     private static inline var BALL_SPEED_SCALE:Float = 0.25;
 
-    private var dirty:Bool;
-    private var currentTime:Float;
-    /** When true, `advanceTime` does not move balls or advance `currentTime`. */
-    private var paused:Bool;
     /** When true, bouncing off the play-area border emits the same note events as block hits. */
     private var edgeNotesEnabled:Bool;
     
     private var areaSize:LocalPoint;
     private var random:IRandomSource;
-    public var events:Array<Event>;
     public var noteCalc:NoteCalculator;
     public var balls:Array<Ball>;
     public var blocks:Array<Block>;
@@ -113,11 +109,8 @@ class Gbloink implements ISequencerControl {
     public function new(size:LocalPoint, ?random:IRandomSource) {
         this.areaSize = size;
         this.random = random == null ? new SystemRandomSource() : random;
-        this.events = [];
-        this.noteCalc = new NoteCalculator();
-        this.dirty = false;
-        this.currentTime = 0;
-        this.paused = false;
+        super(false);
+        this.noteCalc = new NoteCalculator(size.y);
         this.edgeNotesEnabled = false;
 
         // Spread across 700×500 local space so all three are easy to see (OpenFL + Rack + future ports).
@@ -141,40 +134,26 @@ class Gbloink implements ISequencerControl {
     // ISequencer methods
     ///////////////////////////////////////////////////////////////////////////
 
-    public function pause():Void {
+    override public function pause():Void {
         setPaused(true);
     }
 
-    public function resume():Void {
+    override public function resume():Void {
         setPaused(false);
     }
 
     public function reset():Void {
         blocks = [];
-        events = [];
-        currentTime = 0;
-        paused = false;
+        resetTransport();
         initBalls();
-        dirty = true;
     }
 
-    public function advanceTime(delta:Float):Void {
-        if (paused || !Math.isFinite(delta) || delta <= 0) {
-            return;
-        }
-        currentTime += delta;
+    override function advanceModel(delta:Float):Bool {
         // Move each ball, check collisions
         for (ball in balls) {
             moveBall(ball, delta);
         }
-    }
-
-    public function hasEventBefore(timeLimit:Float):Bool {
-        return events.length > 0 && events[0].timestamp <= timeLimit;
-    }
-
-    public function getNextEvent():Event {
-        return events.shift();
+        return true;
     }
 
     public function exportStateJson():String {
@@ -278,11 +257,6 @@ class Gbloink implements ISequencerControl {
         } catch (_:Dynamic) {}
     }
 
-    /** Logical time used for queued `Event` timestamps (e.g. align host schedulers after load). */
-    public function getLogicalTime():Float {
-        return currentTime;
-    }
-
     /** Current scale id for `NoteCalculator` (e.g. sync host UI after `importStateJson`). */
     public function getScaleName():String {
         return noteCalc.current;
@@ -327,10 +301,6 @@ class Gbloink implements ISequencerControl {
         }
     }
 
-    public function isPaused():Bool {
-        return paused;
-    }
-
     public function setPaused(p:Bool):Void {
         if (paused == p) {
             return;
@@ -372,13 +342,6 @@ class Gbloink implements ISequencerControl {
     ///////////////////////////////////////////////////////////////////////////
     // Public helper methods
     ///////////////////////////////////////////////////////////////////////////
-
-    // The view might want to check if we need redraw
-    public function consumeDirty():Bool {
-        var wasDirty = dirty;
-        dirty = false;
-        return wasDirty;
-    }
 
     public function getBalls():Array<Ball> {
         return balls;

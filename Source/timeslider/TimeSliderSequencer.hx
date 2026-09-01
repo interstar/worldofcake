@@ -3,6 +3,7 @@ package timeslider;
 import haxe.Json;
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
+import worldofcake.SequencerCore;
 import worldofcake.LocalPoint;
 import worldofcake.LocalRect;
 import generated.timeslider.TimeSliderCompositionGenerated;
@@ -102,7 +103,7 @@ class TimeSlider {
     }
 }
 
-class TimeSliderSequencer implements ISequencerControl {
+class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public static inline var PLAY_AREA_UID:Int = 1;
     public static inline var CC_EVENT_TYPE:Int = 1;
     public static inline var BASE_CC:Int = 20;
@@ -113,22 +114,14 @@ class TimeSliderSequencer implements ISequencerControl {
     public var areaHeight:Int;
 
     private var sliders:Array<TimeSlider>;
-    private var currentTime:Float;
-    private var events:Array<Event>;
-    private var dirty:Bool;
     /** Travel time (seconds) when clicking the **left** edge of a track (slow). */
     private var minSpeed:Float;
     /** Travel time (seconds) when clicking the **right** edge (fast). */
     private var maxSpeed:Float;
-    private var paused:Bool;
-
     public function new(width:Int, height:Int, minSpeed:Float, maxSpeed:Float) {
+        super(true);
         areaWidth = width;
         areaHeight = height;
-        currentTime = 0.0;
-        events = [];
-        dirty = true;
-        paused = false;
         this.minSpeed = minSpeed;
         this.maxSpeed = maxSpeed;
 
@@ -139,54 +132,19 @@ class TimeSliderSequencer implements ISequencerControl {
         return TimeSliderCompositionGenerated.buildTracks(minSpeed, maxSpeed);
     }
 
-    public function pause():Void {
-        paused = true;
-    }
-
-    public function resume():Void {
-        paused = false;
-    }
-
     public function reset():Void {
-        currentTime = 0;
-        events = [];
-        paused = false;
+        resetTransport();
         sliders = buildSliders(areaWidth, areaHeight, minSpeed, maxSpeed);
-        dirty = true;
     }
 
-    public function advanceTime(delta:Float):Void {
-        if (paused || !Math.isFinite(delta) || delta <= 0) {
-            return;
-        }
-        currentTime += delta;
-
+    override function advanceModel(delta:Float):Bool {
         var changed = false;
         for (slider in sliders) {
             if (slider.update(delta)) {
                 changed = true;
             }
         }
-
-        if (changed) {
-            dirty = true;
-        }
-    }
-
-    public function hasEventBefore(timeLimit:Float):Bool {
-        return events.length > 0 && events[0].timestamp <= timeLimit;
-    }
-
-    public function getNextEvent():Event {
-        return events.shift();
-    }
-
-    public function getLogicalTime():Float {
-        return currentTime;
-    }
-
-    public function isPaused():Bool {
-        return paused;
+        return changed;
     }
 
     public function exportStateJson():String {
@@ -318,12 +276,6 @@ class TimeSliderSequencer implements ISequencerControl {
                 ));
             }
         }
-    }
-
-    public function consumeDirty():Bool {
-        var wasDirty = dirty;
-        dirty = false;
-        return wasDirty;
     }
 
     public function getSliders():Array<TimeSlider> {

@@ -14,10 +14,17 @@
   "greenspeed" {:kind :slider :uid 11 :minimum 0.1 :maximum 8.0 :default 2.0 :vertical true :colour "0x00FF00"}
   "bluespeed" {:kind :slider :uid 12 :minimum 0.1 :maximum 8.0 :default 2.0 :vertical true :colour "0x0000FF"}
   "channel" {:kind :slider :uid 20 :minimum 1.0 :maximum 14.0 :default 7.0 :vertical false :colour "0x808080" :view-hook "setChannelSlider"}
-  "selectcursor" {:kind :semantic-select :uid 30 :default-index 0 :presentation "segmented"
+  "selectcursor" {:kind :semantic-select :uid 30 :default-index 0 :presentation "segmented" :view-hook "setCursorSelect"
                   :choices [{:value 0 :label "R" :colour "0xFF0000"}
                             {:value 1 :label "G" :colour "0x00FF00"}
                             {:value 2 :label "B" :colour "0x0000FF"}]}
+  "scaleselect" {:kind :semantic-select :uid 31 :default-index 0 :presentation "compact" :view-hook "setScaleSelect"
+                 :choices [{:value 0 :label "Chromatic" :colour "0x606874"}
+                           {:value 1 :label "Major" :colour "0x606874"}
+                           {:value 2 :label "Minor" :colour "0x606874"}
+                           {:value 3 :label "Harm minor" :colour "0x606874"}
+                           {:value 4 :label "Mel minor" :colour "0x606874"}
+                           {:value 5 :label "Min blues" :colour "0x606874"}]}
   "controltop" {:kind :spacer} "controlmiddle" {:kind :spacer}
-  "selectgap" {:kind :spacer} "controlbottom" {:kind :spacer}
+  "selectgap" {:kind :spacer} "scalegap" {:kind :spacer} "controlbottom" {:kind :spacer}
   "speedend" {:kind :spacer} "channelend" {:kind :spacer}}}

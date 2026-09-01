@@ -72,11 +72,38 @@ class TestKDiagramHeadless {
         check("kdiag semantic cursor selection", app.getSelectedCursorIndex() == 2);
     }
 
+    static function testScaleAndNotePitch():Void {
+        var app = make();
+        app.newValue(KDiagramSequencer.SCALE_SELECT_UID, 1);
+        check("kdiag semantic scale selection", app.getScaleIndex() == 1);
+        app.setCursorSpeed(0, 8.0);
+        app.setCursorSpeed(1, 0.0);
+        app.setCursorSpeed(2, 0.0);
+        var targetY = app.getCursorTargetY(0);
+        var expected = app.noteForLocalY(targetY);
+        app.advanceTime(1.0);
+        var found = false;
+        while (app.hasEventBefore(app.getLogicalTime())) {
+            var event = app.getNextEvent();
+            if (event.type == KDiagramSequencer.NOTE_EVENT_TYPE && event.data1 == app.getBaseMidiChannel()) {
+                found = true;
+                check("kdiag note pitch uses cursor y", event.data2 == expected);
+                break;
+            }
+        }
+        check("kdiag note pitch event generated", found);
+
+        var restored = make(999);
+        restored.importStateJson(app.exportStateJson());
+        check("kdiag scale state round trip", restored.getScaleIndex() == app.getScaleIndex());
+    }
+
     public static function main():Void {
         testSeedAndCadence();
         testControlsPauseState();
         testNodeClickRestartsSelectedCursor();
         testSemanticCursorSelection();
+        testScaleAndNotePitch();
         if (failures > 0) { Sys.println('$failures K-Diag headless test(s) failed'); Sys.exit(1); }
         Sys.println("All K-Diag headless tests passed");
     }

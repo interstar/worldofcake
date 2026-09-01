@@ -2,13 +2,14 @@ package zewp;
 
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
+import worldofcake.SequencerCore;
 import worldofcake.LocalPoint;
 import worldofcake.IRandomSource;
 import worldofcake.SystemRandomSource;
 import haxe.Json;
 import StringTools;
 
-class ZewpSequencer implements ISequencerControl {
+class ZewpSequencer extends SequencerCore implements ISequencerControl {
     public static inline var PLAY_AREA_UID:Int = 1;
     public static inline var POPULATION_UID:Int = 10;
     public static inline var SPEED_UID:Int = 11;
@@ -22,22 +23,15 @@ class ZewpSequencer implements ISequencerControl {
     private var selectedBlock:Block;
     private var dragOffsetX:Float;
     private var dragOffsetY:Float;
-    private var currentTime:Float;
-    private var events:Array<Event>;
-    private var dirty:Bool;
-    private var paused:Bool;
     private var random:IRandomSource;
     private var speedMultiplier:Float;
     private static var COLORS:Array<Int> = [0xFF4040, 0x40FF40, 0x4040FF, 0xFFFF40, 0xFF40FF, 0x40FFFF, 0xFF8040, 0x80FF40, 0x4080FF, 0xFFFFFF];
 
     public function new(width:Int, height:Int, ?random:IRandomSource) {
         this.random = random == null ? new SystemRandomSource() : random;
+        super(true);
         areaWidth = width;
         areaHeight = height;
-        currentTime = 0.0;
-        events = [];
-        dirty = true;
-        paused = false;
         speedMultiplier = 1.0;
         repopulateWorld();
     }
@@ -65,27 +59,13 @@ class ZewpSequencer implements ISequencerControl {
         return new Zewp(x, y, 10, velocity, COLORS[index % COLORS.length], 1, 10 + index, random);
     }
 
-    public function pause():Void {
-        paused = true;
-    }
-
-    public function resume():Void {
-        paused = false;
-    }
-
     public function reset():Void {
-        currentTime = 0;
-        events = [];
-        paused = false;
+        resetTransport();
         selectedBlock = null;
         repopulateWorld();
-        dirty = true;
     }
 
-    public function advanceTime(delta:Float):Void {
-        if (paused || !Math.isFinite(delta) || delta <= 0) {
-            return;
-        }
+    override function advanceModel(delta:Float):Bool {
         // Preserve the original 1 ms physics granularity even when a native
         // frontend presents snapshots at a lower GUI rate. Turning and
         // look-ahead are discrete decisions, so one coarse 33 ms step would
@@ -93,21 +73,12 @@ class ZewpSequencer implements ISequencerControl {
         var remaining = delta;
         while (remaining > 0) {
             var step = remaining > 0.001 ? 0.001 : remaining;
-            currentTime += step;
             for (zewp in zewps) {
                 zewp.update(zewps, blocks, areaWidth, areaHeight, step);
             }
             remaining -= step;
         }
-        dirty = true;
-    }
-
-    public function hasEventBefore(timeLimit:Float):Bool {
-        return events.length > 0 && events[0].timestamp <= timeLimit;
-    }
-
-    public function getNextEvent():Event {
-        return events.shift();
+        return true;
     }
 
     /** Rack consumes position/gate snapshots, so it must not retain CC events. */
@@ -173,9 +144,6 @@ class ZewpSequencer implements ISequencerControl {
         } catch (_:Dynamic) {}
     }
 
-    public function getLogicalTime():Float return currentTime;
-    public function isPaused():Bool return paused;
-
     public function mouseDown(uid:Int, point:LocalPoint):Void {
         if (uid != PLAY_AREA_UID) {
             return;
@@ -234,12 +202,6 @@ class ZewpSequencer implements ISequencerControl {
                 Std.int((zewp.position.y / areaHeight) * 127)
             ));
         }
-    }
-
-    public function consumeDirty():Bool {
-        var wasDirty = dirty;
-        dirty = false;
-        return wasDirty;
     }
 
     public function getZewps():Array<Zewp> {
