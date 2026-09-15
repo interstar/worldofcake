@@ -48,7 +48,7 @@ A World file can be accompanied by a Layout file which specifies in code, the im
 
 Older notes mention `ui.YAML` as the intended layout source of truth. Current work has moved to Layla plus companion EDN files: Layla owns spatial panel composition and the EDN files own component details such as UIDs, ranges, labels, colours, widget hints, and target bindings. Generated Haxe composition and layout constants live under `Source/generated/` and should not be hand-edited.
 
-Rack is expected to need target-specific Layla variants because Rack panels have different proportions, sockets, and control idioms. OpenFL remains the reference implementation for UI layout and behaviour, with Rack and VST adapting that intent where the host requires different physical controls.
+Rack uses target-specific Layla/EDN variants because Rack panels have different proportions, sockets, and control idioms. All five current Rack modules have authored variants under `layouts/rack/`; the offline generator emits their panel SVGs and native layout headers. OpenFL remains the reference implementation for UI semantics and behaviour, with Rack and VST adapting that intent where the host requires different physical controls. Rack-only output sockets belong in the Rack variant and are not added to the OpenFL panel.
 
 ### Coordinate Spaces
 

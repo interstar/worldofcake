@@ -8,6 +8,7 @@ Source/generated/
 /derivatives/vcvrack/*/build/
 /derivatives/vcvrack/*/native/
 /derivatives/vcvrack/*/dist/
+/derivatives/vcvrack/*/generated/
 /derivatives/vcvrack/*/plugin.so
 /derivatives/vcvrack/*/plugin.dll
 /derivatives/vcvrack/*/plugin.dylib

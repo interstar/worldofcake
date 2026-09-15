@@ -1,6 +1,6 @@
 # WorldOfCake Architecture
 
-Updated: 2026-09-03
+Updated: 2026-09-15
 
 ## 1. Purpose and Design Direction
 
@@ -27,6 +27,9 @@ Important source areas:
 - `Source/platform/`: simple instrumentation adapters such as `MonitorInstrument`.
 - `bridge/haxe/`: Haxe harness classes used by native runners.
 - `bridge/native/`: shared C++ native bridge code, including `ControlThread`, `ControlRunnerBase`, queue types, bridge POD types, and persistence transport.
+- `laylagen/`: WoC-owned Layla/EDN generator source, generator tests, and the Java/package entry point. This is maintained source, not a build cache.
+- `layouts/openfl/`: canonical OpenFL Layla/EDN sources.
+- `layouts/rack/`: authored Rack-specific Layla/EDN variants. These are source-of-truth inputs and must be versioned.
 - `derivatives/vcvrack/`: VCV Rack module shells, Rack-specific panels/widgets, shared Rack build helpers, and install scripts.
 - `build/`: generated/intermediate build output. Rack artifacts are under `build/vcvrack/<module>/`.
 - `hxml/tests/`: Haxe test build files.
@@ -186,7 +189,9 @@ Examples:
 - `Source/zewp/ZewpLayout.hx` wraps `Source/generated/zewp/ZewpLayoutGenerated.hx`.
 - `Source/timeslider/TimeSliderLayout.hx` wraps `Source/generated/timeslider/TimeSliderLayoutGenerated.hx` and generated TimeSlider track metadata. TimeSlider track objects store generated UIDs, while persisted state stores stable slot indexes.
 
-Rack uses target-specific Layla/EDN layout variants because Rack panels need different proportions, output sockets, and control idioms. The Rack pair is a second layout source of truth for the Rack panel: the Rack generator will emit the panel SVG and native `ModuleWidget` layout from the same geometry. Rack EDN may define output jacks and other Rack-only metadata that has no OpenFL counterpart.
+Rack uses target-specific Layla/EDN layout variants because Rack panels need different proportions, output sockets, and control idioms. The Rack pair is a second layout source of truth for the Rack panel: the Rack generator emits the panel SVG and native `ModuleWidget` layout from the same geometry. Rack EDN may define output jacks and other Rack-only metadata that has no OpenFL counterpart.
+
+All five current Rack modules now have Rack Layla/EDN pairs. `generate_rack_layout.sh` consumes each pair and writes the generated SVG under `derivatives/vcvrack/<app>/generated/` plus a native layout header under `bridge/native/worldofcake/generated/rack/`. The generated SVG includes Rack title/branding and panel-level visual regions; the native header supplies generated geometry consumed by Rack C++ where that module has completed the migration. Rack-only output sockets remain in Rack EDN. Native controls and custom playfield drawing are being migrated incrementally, so the Rack pair is the intended source of truth even where a C++ shell still has legacy handwritten placement.
 
 ---
 
@@ -338,7 +343,8 @@ Current constraints:
 - Windows Rack builds need verification on Windows/MSYS2 after Linux-side changes.
 - Resize currently replaces world mappers, but existing component instances may retain the mapper they were constructed with. This deserves a focused pass before relying heavily on dynamic resize behavior.
 - Output semantics differ by host: MIDI/MIDI-CC are the base assumption, while Rack exposes gates/CV whose musical meaning is user-patched.
-- OpenFL component UIDs are generated from Layla/EDN for the full canonical app UI. Rack output/socket metadata still needs a later metadata decision because sockets are Rack-specific physical connection points.
+- OpenFL component UIDs are generated from Layla/EDN for the full canonical app UI. Rack control IDs for Rack-visible components are generated from the Rack Layla/EDN variant; Rack output/socket IDs remain Rack-local because sockets are physical host connection points.
+- `laylagen` is an offline build-time generator. A complete rebuild regenerates OpenFL Haxe composition/ID files, native Haxe bridge ID headers, Rack metadata headers, Rack SVGs, and Rack layout headers before compiling targets. Generated files are not hand-edited or treated as source.
 
 Open design questions:
 
