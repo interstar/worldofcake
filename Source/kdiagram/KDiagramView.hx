@@ -1,21 +1,17 @@
 package kdiagram;
 
-import openfl.display.Sprite;
 import openfl.display.Graphics;
-import worldofcake.IControlPanelView;
-import worldofcake.WindowPoint;
-import worldofcake.PanelPoint;
-import worldofcake.ComposedCoordinateMapper;
 import worldofcake.CoordinateMapper;
 import worldofcake.ui.Slider;
+import worldofcake.ui.ControlValueViewBase;
 import worldofcake.ui.PlayArea;
 import worldofcake.ui.SemanticSelect;
 import worldofcake.LocalPoint;
+import generated.kdiagram.KDiagramControlIdsGenerated;
 
-class KDiagramView extends Sprite implements IControlPanelView {
+class KDiagramView extends ControlValueViewBase {
     private var sequencer:KDiagramSequencer;
     private var playArea:PlayArea;
-    private var speedSliders:Array<Slider>;
     private var channelSlider:Slider;
     private var cursorSelect:SemanticSelect;
     private var scaleSelect:SemanticSelect;
@@ -24,48 +20,42 @@ class KDiagramView extends Sprite implements IControlPanelView {
     private var cursorColor:Int = 0x32C850; // Green cursor
     private var networkColor:Int = 0xC8C864; // Yellow-ish network circle
     private var selectedCursorBorderColor:Int = 0xFFFFFF;  // White border for selected cursor
-    private var windowToPanelMapper:CoordinateMapper;
 
     public function new(sequencer:KDiagramSequencer, windowToPanelMapper:CoordinateMapper) {
         super();
         this.sequencer = sequencer;
-        this.windowToPanelMapper = windowToPanelMapper;
         
         // PlayArea will be set later by World
-        speedSliders = [];
     }
     
-    public function needsRedraw(uid:Int):Bool {
+    private function needsRedraw(uid:Int):Bool {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
             if (cursorSelect != null) cursorSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
             if (scaleSelect != null) scaleSelect.setSelectedIndex(sequencer.getScaleIndex());
             return sequencer.consumeDirty();
         }
-        // Add UIDs for sliders (10-12 for speed, 20 for channel)
-        return (uid >= 10 && uid <= 12) || uid == 20 || uid == KDiagramSequencer.CURSOR_SELECT_UID || uid == KDiagramSequencer.SCALE_SELECT_UID;
+        return KDiagramControlIdsGenerated.REDRAW_CONTROL_UIDS.indexOf(uid) >= 0;
     }
     
 
-    public function redrawDirty():Void {
+    override public function redrawDirty():Void {
         if (needsRedraw(KDiagramSequencer.PLAY_AREA_UID)) {
             redraw(KDiagramSequencer.PLAY_AREA_UID);
         }
 
-        for (uid in [10, 11, 12, 20, KDiagramSequencer.CURSOR_SELECT_UID, KDiagramSequencer.SCALE_SELECT_UID]) {
+        for (uid in KDiagramControlIdsGenerated.REDRAW_CONTROL_UIDS) {
             if (needsRedraw(uid)) {
                 redraw(uid);
             }
         }
     }
 
-    public function redraw(uid:Int):Void {
+    private function redraw(uid:Int):Void {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
             redrawPlayArea();
-        } else if (uid >= 10 && uid <= 12) {
-            // Speed sliders need redrawing
-            var sliderIndex = uid - 10;
-            speedSliders[sliderIndex].redraw();
-        } else if (uid == 20) {
+        } else if (KDiagramSequencer.isSpeedUid(uid)) {
+            redrawValueControl(uid);
+        } else if (uid == KDiagramSequencer.CHANNEL_SLIDER_UID) {
             // Channel slider needs redrawing
             channelSlider.redraw();
         } else if (uid == KDiagramSequencer.CURSOR_SELECT_UID) {
@@ -149,15 +139,6 @@ class KDiagramView extends Sprite implements IControlPanelView {
         }
     }
 
-    public function setSliders(speedSliders:Array<Slider>, channelSlider:Slider):Void {
-        this.speedSliders = speedSliders;
-        this.channelSlider = channelSlider;
-    }
-
-    public function addSlider(slider:Slider):Void {
-        speedSliders.push(slider);
-        addChild(slider);
-    }
 
     public function setChannelSlider(slider:Slider):Void {
         channelSlider = slider;

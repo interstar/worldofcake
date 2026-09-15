@@ -1,5 +1,6 @@
 package zewp;
 
+import generated.zewp.ZewpControlIdsGenerated;
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
 import worldofcake.SequencerCore;
@@ -10,9 +11,11 @@ import haxe.Json;
 import StringTools;
 
 class ZewpSequencer extends SequencerCore implements ISequencerControl {
-    public static inline var PLAY_AREA_UID:Int = 1;
-    public static inline var POPULATION_UID:Int = 10;
-    public static inline var SPEED_UID:Int = 11;
+    public static inline var PLAY_AREA_UID:Int = ZewpControlIdsGenerated.PLAYAREA;
+    public static inline var POPULATION_UID:Int = ZewpControlIdsGenerated.POPULATION;
+    public static inline var SPEED_UID:Int = ZewpControlIdsGenerated.SPEED;
+    public static inline var RESET_UID:Int = ZewpControlIdsGenerated.RESET;
+    public static inline var PAUSE_UID:Int = ZewpControlIdsGenerated.PAUSE;
     public static inline var CC_EVENT_TYPE:Int = 1;
 
     public var areaWidth:Int;
@@ -183,10 +186,14 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
             setPopulation(Std.int(Math.round(value)));
         } else if (uid == SPEED_UID) {
             setSpeedMultiplier(value);
+        } else if (uid == PAUSE_UID) {
+            if (value > 0.5) pause(); else resume();
         }
         dirty = true;
     }
-    public function buttonPressed(uid:Int):Void {}
+    public function buttonPressed(uid:Int):Void {
+        if (uid == RESET_UID) reset();
+    }
     public function keyPressed(uid:Int, key:String):Void {}
 
     public function generateEvents():Void {

@@ -1,5 +1,6 @@
 package tileland;
 
+import generated.tileland.TileLandControlIdsGenerated;
 import haxe.Json;
 import StringTools;
 import worldofcake.Event;
@@ -15,7 +16,23 @@ import worldofcake.SystemRandomSource;
 
 class TileLandSequencer extends SequencerCore implements ISequencerControl {
     // Constants
-    public static inline var PLAY_AREA_UID:Int = 1;
+    public static inline var PLAY_AREA_UID:Int = TileLandControlIdsGenerated.PLAYAREA;
+    public static inline var SPEED_UID_BASE:Int = TileLandControlIdsGenerated.REDSPEED;
+    public static inline var SPEED_UID_COUNT:Int = 3;
+    public static inline var RESET_UID:Int = TileLandControlIdsGenerated.RESET;
+    public static inline var PAUSE_UID:Int = TileLandControlIdsGenerated.PAUSE;
+
+    public static inline function speedUid(index:Int):Int {
+        return SPEED_UID_BASE + index;
+    }
+
+    public static inline function speedIndexForUid(uid:Int):Int {
+        return uid - SPEED_UID_BASE;
+    }
+
+    public static inline function isSpeedUid(uid:Int):Bool {
+        return uid >= SPEED_UID_BASE && uid < SPEED_UID_BASE + SPEED_UID_COUNT;
+    }
     
     // Dimensions
     public var areaWidth:Float;
@@ -269,13 +286,18 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
     public function textSubmitted(uid:Int, text:String):Void {}
     public function newValue(uid:Int, value:Float):Void {
-        if (uid >= 10 && uid <= 12) {  // Speed sliders
-            var cursorIndex = uid - 10;
+        if (isSpeedUid(uid)) {  // Speed sliders
+            var cursorIndex = speedIndexForUid(uid);
             cursors[cursorIndex].speed = value;  // Update cursor's speed directly
+            dirty = true;
+        } else if (uid == PAUSE_UID) {
+            if (value > 0.5) pause(); else resume();
             dirty = true;
         }
     }
-    public function buttonPressed(uid:Int):Void {}
+    public function buttonPressed(uid:Int):Void {
+        if (uid == RESET_UID) reset();
+    }
     public function keyPressed(uid:Int, key:String):Void {}
     
     // Add getter for cursors

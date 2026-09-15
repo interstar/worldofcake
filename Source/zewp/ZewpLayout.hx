@@ -2,6 +2,7 @@ package zewp;
 
 import generated.zewp.ZewpLayoutGenerated;
 
+// Maintained compatibility facade. Geometry is generated from layouts/openfl/zewp.layla.
 class ZewpLayout {
     public static inline var PANEL_WIDTH:Int = Std.int(ZewpLayoutGenerated.PANEL_WIDTH);
     public static inline var PANEL_HEIGHT:Int = Std.int(ZewpLayoutGenerated.PANEL_HEIGHT);

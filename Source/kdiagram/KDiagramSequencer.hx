@@ -1,5 +1,7 @@
 package kdiagram;
 
+import generated.kdiagram.KDiagramControlIdsGenerated;
+
 import haxe.Json;
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
@@ -33,15 +35,33 @@ private class Cursor {
 
 class KDiagramSequencer extends SequencerCore implements ISequencerControl {
     // Constants
-    public static inline var PLAY_AREA_UID:Int = 1;
-    public static inline var CURSOR_SELECT_UID:Int = 30;
-    public static inline var SCALE_SELECT_UID:Int = 31;
+    public static inline var PLAY_AREA_UID:Int = KDiagramControlIdsGenerated.PLAYAREA;
+    public static inline var CURSOR_SELECT_UID:Int = KDiagramControlIdsGenerated.SELECTCURSOR;
+    public static inline var SCALE_SELECT_UID:Int = KDiagramControlIdsGenerated.SCALESELECT;
     public static inline var CC_EVENT_TYPE:Int = 1;
     public static inline var NOTE_EVENT_TYPE:Int = 0;
-    public static inline var SPEED_SLIDER_1_UID:Int = 10;
-    public static inline var SPEED_SLIDER_2_UID:Int = 11;
-    public static inline var SPEED_SLIDER_3_UID:Int = 12;
-    public static inline var CHANNEL_SLIDER_UID:Int = 20;
+    public static inline var SPEED_UID_BASE:Int = KDiagramControlIdsGenerated.REDSPEED;
+    public static inline var SPEED_UID_COUNT:Int = 3;
+    public static inline var SPEED_SLIDER_1_UID:Int = SPEED_UID_BASE;
+    public static inline var SPEED_SLIDER_2_UID:Int = SPEED_UID_BASE + 1;
+    public static inline var SPEED_SLIDER_3_UID:Int = SPEED_UID_BASE + 2;
+    public static inline var CHANNEL_SLIDER_UID:Int = KDiagramControlIdsGenerated.CHANNEL;
+    public static inline var RESET_UID:Int = KDiagramControlIdsGenerated.RESET;
+    public static inline var PAUSE_UID:Int = KDiagramControlIdsGenerated.PAUSE;
+    public static inline var ROTATE_LEFT_UID:Int = KDiagramControlIdsGenerated.ROTATE_LEFT;
+    public static inline var ROTATE_RIGHT_UID:Int = KDiagramControlIdsGenerated.ROTATE_RIGHT;
+
+    public static inline function speedUid(index:Int):Int {
+        return SPEED_UID_BASE + index;
+    }
+
+    public static inline function speedIndexForUid(uid:Int):Int {
+        return uid - SPEED_UID_BASE;
+    }
+
+    public static inline function isSpeedUid(uid:Int):Bool {
+        return uid >= SPEED_UID_BASE && uid < SPEED_UID_BASE + SPEED_UID_COUNT;
+    }
     /** Random graph size for `resetNetwork`. */
     public static inline var NETWORK_NODE_COUNT:Int = 12;
     /** ~one leaf with no outgoing arcs; all other nodes get ≥1 exit. */
@@ -456,9 +476,9 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
     public function textSubmitted(uid:Int, text:String):Void {}
 
     public function newValue(uid:Int, value:Float):Void {
-        if (uid >= 10 && uid <= 12) {  // Speed sliders
-            cursors[uid - 10].cursorSpeed = value;
-        } else if (uid == 20) {  // Channel slider
+        if (isSpeedUid(uid)) {  // Speed sliders
+            cursors[speedIndexForUid(uid)].cursorSpeed = value;
+        } else if (uid == CHANNEL_SLIDER_UID) {  // Channel slider
             var baseChannel = Math.floor(value);  // Convert to integer
             for (i in 0...cursors.length) {
                 cursors[i].channel = baseChannel + i;  // Channels will be baseChannel, baseChannel+1, baseChannel+2
@@ -468,10 +488,20 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
         } else if (uid == SCALE_SELECT_UID) {
             var index = Std.int(Math.max(0, Math.min(SCALE_NAMES.length - 1, Math.round(value))));
             setScale(SCALE_NAMES[index]);
+        } else if (uid == PAUSE_UID) {
+            if (value > 0.5) pause(); else resume();
         }
         dirty = true;
     }
-    public function buttonPressed(uid:Int):Void {}
+    public function buttonPressed(uid:Int):Void {
+        if (uid == RESET_UID) {
+            reset();
+        } else if (uid == ROTATE_LEFT_UID) {
+            rotateNetwork(-0.1);
+        } else if (uid == ROTATE_RIGHT_UID) {
+            rotateNetwork(0.1);
+        }
+    }
     
     // Helper methods
     public function generateEvents():Void {

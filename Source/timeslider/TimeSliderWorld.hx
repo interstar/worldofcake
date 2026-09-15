@@ -1,6 +1,5 @@
 package timeslider;
 
-import generated.timeslider.TimeSliderCompositionGenerated;
 import worldofcake.PanelPoint;
 import worldofcake.ui.ComponentWorldBase;
 import worldofcake.ui.IComponent;
@@ -15,24 +14,27 @@ class TimeSliderWorld extends ComponentWorldBase {
             TimeSliderLayout.PANEL_WIDTH,
             TimeSliderLayout.PANEL_HEIGHT
         );
-        sequencer = TimeSliderCompositionGenerated.createSequencer();
+        sequencer = TimeSliderLayout.createSequencer();
         var view = new TimeSliderView(sequencer);
         setView(view);
-        setComponents(buildTrackComponents());
+        setComponents(buildComponents(view));
     }
 
-    private function buildTrackComponents():Array<IComponent> {
+    private function buildComponents(view:TimeSliderView):Array<IComponent> {
         var components:Array<IComponent> = [];
         var sliders = sequencer.getSliders();
         for (i in 0...sliders.length) {
             var bounds = sliders[i].bounds;
             components.push(new TimeSliderTrackComponent(
-                TimeSliderSequencer.trackUid(i),
+                sliders[i].uid,
                 new PanelPoint(bounds.left, bounds.top),
                 new PanelPoint(bounds.width(), bounds.height()),
                 getWindowToPanelMapper(),
                 sequencer
             ));
+        }
+        for (component in TimeSliderLayout.buildControls(sequencer, getWindowToPanelMapper(), view)) {
+            components.push(component);
         }
         return components;
     }

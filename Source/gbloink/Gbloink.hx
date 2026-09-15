@@ -8,6 +8,7 @@ import worldofcake.Utils;
 import worldofcake.NoteCalculator;
 import worldofcake.LocalPoint;
 import worldofcake.LocalRect;
+import generated.gbloink.GbloinkControlIdsGenerated;
 import haxe.Json;
 import StringTools;
 import Reflect;
@@ -84,13 +85,27 @@ class Block {
 }
 
 class Gbloink extends SequencerCore implements ISequencerControl {
-    public static inline var PLAY_AREA_UID:Int = 1;
-    /** Optional toolbar (OpenFL, Rack, …): clear blocks / toggle pause. */
-    public static inline var BTN_CLEAR_BLOCKS:Int = 20;
-    public static inline var BTN_PAUSE_TOGGLE:Int = 21;
+    public static inline var PLAY_AREA_UID:Int = GbloinkControlIdsGenerated.PLAYAREA;
+    public static inline var SPEED_UID_BASE:Int = GbloinkControlIdsGenerated.REDSPEED;
+    public static inline var SPEED_UID_COUNT:Int = 3;
+    /** Optional toolbar (OpenFL, Rack, ...): clear blocks / toggle pause. */
+    public static inline var BTN_CLEAR_BLOCKS:Int = GbloinkControlIdsGenerated.RESET;
+    public static inline var BTN_PAUSE_TOGGLE:Int = GbloinkControlIdsGenerated.PAUSE;
     /** Latch 0 = off, 1 = play note on play-area edge bounce (hosts map from param). */
-    public static inline var EDGE_NOTES_UID:Int = 22;
-    public static inline var SCALE_SELECT_UID:Int = 23;
+    public static inline var EDGE_NOTES_UID:Int = GbloinkControlIdsGenerated.EDGE_NOTES;
+    public static inline var SCALE_SELECT_UID:Int = GbloinkControlIdsGenerated.SCALESELECT;
+
+    public static inline function speedUid(index:Int):Int {
+        return SPEED_UID_BASE + index;
+    }
+
+    public static inline function speedIndexForUid(uid:Int):Int {
+        return uid - SPEED_UID_BASE;
+    }
+
+    public static inline function isSpeedUid(uid:Int):Bool {
+        return uid >= SPEED_UID_BASE && uid < SPEED_UID_BASE + SPEED_UID_COUNT;
+    }
     private static var SCALE_NAMES:Array<String> = ["chromatic", "major", "minor", "harmonic_minor", "melodic_minor", "minor_blues"];
     /** The legacy OpenFL model advanced nominally once per millisecond. */
     private static inline var LEGACY_TICKS_PER_SECOND:Float = 1000.0;
@@ -271,12 +286,14 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     public function mouseDragged(uid:Int, point:LocalPoint):Void {}
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
     public function newValue(uid:Int, value:Float):Void {
-        if (uid >= 10 && uid <= 12) {
-            setBallSpeed(uid - 10, value);
+        if (isSpeedUid(uid)) {
+            setBallSpeed(speedIndexForUid(uid), value);
             dirty = true;
         } else if (uid == EDGE_NOTES_UID) {
             edgeNotesEnabled = value > 0.5;
             dirty = true;
+        } else if (uid == BTN_PAUSE_TOGGLE) {
+            setPaused(value > 0.5);
         } else if (uid == SCALE_SELECT_UID) {
             var index = Std.int(Math.max(0, Math.min(SCALE_NAMES.length - 1, Math.round(value))));
             setScale(SCALE_NAMES[index]);
@@ -552,10 +569,4 @@ class Gbloink extends SequencerCore implements ISequencerControl {
         dirty = true;
     }
 
-    public function needsRedraw(componentId:Int):Bool {
-        if (componentId == PLAY_AREA_UID) {
-            return dirty;
-        }
-        return false;
-    }
 }

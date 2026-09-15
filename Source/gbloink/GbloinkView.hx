@@ -1,20 +1,15 @@
 package gbloink;
 
-import openfl.display.Sprite;
-import worldofcake.IControlPanelView;
-import worldofcake.ISequencerControl;
 import worldofcake.CoordinateMapper;
 import worldofcake.ui.PlayArea;
-import worldofcake.PanelPoint;
 import worldofcake.LocalPoint;
-import worldofcake.ui.Slider;
+import worldofcake.ui.ControlValueViewBase;
 import worldofcake.ui.SemanticSelect;
+import generated.gbloink.GbloinkControlIdsGenerated;
 
-class GbloinkView extends Sprite implements IControlPanelView {
+class GbloinkView extends ControlValueViewBase {
     private var sequencer:Gbloink;
-    private var windowToPanelMapper:CoordinateMapper;
     private var playArea:PlayArea;
-    private var speedSliders:Array<Slider>;
     private var semanticSelect:SemanticSelect;
     private var backgroundWidth:Float;
     private var backgroundHeight:Float;
@@ -22,8 +17,6 @@ class GbloinkView extends Sprite implements IControlPanelView {
     public function new(sequencer:Gbloink, windowToPanelMapper:CoordinateMapper) {
         super();
         this.sequencer = sequencer;
-        this.windowToPanelMapper = windowToPanelMapper;
-        this.speedSliders = [];
     }
     
     public function setPlayArea(playArea:PlayArea):Void {
@@ -35,39 +28,38 @@ class GbloinkView extends Sprite implements IControlPanelView {
         this.backgroundHeight = playArea.panelLengthToWindowLength(size.y);
     }
     
-    public function addSlider(slider:Slider):Void {
-        speedSliders.push(slider);
-        addChild(slider);
-    }
-
     public function setSemanticSelect(select:SemanticSelect):Void {
         semanticSelect = select;
         addChild(select);
     }
     
-    // IControlPanelView implementation
-    public function needsRedraw(componentId:Int):Bool {
-        return sequencer.needsRedraw(componentId);
+    private function needsRedraw(componentId:Int):Bool {
+        if (componentId == Gbloink.PLAY_AREA_UID) {
+            return sequencer.consumeDirty();
+        }
+        return GbloinkControlIdsGenerated.REDRAW_CONTROL_UIDS.indexOf(componentId) >= 0;
     }
-    
 
-    public function redrawDirty():Void {
+    override public function redrawDirty():Void {
         if (needsRedraw(Gbloink.PLAY_AREA_UID)) {
             redraw(Gbloink.PLAY_AREA_UID);
         }
+
+        for (uid in GbloinkControlIdsGenerated.REDRAW_CONTROL_UIDS) {
+            if (needsRedraw(uid)) {
+                redraw(uid);
+            }
+        }
     }
 
-    public function redraw(componentId:Int):Void {
+    private function redraw(componentId:Int):Void {
         if (componentId == Gbloink.PLAY_AREA_UID) {
             if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getScaleIndex());
             redrawPlayArea();
-        } else if (componentId >= 10 && componentId <= 12) {  // Speed sliders
-            for (slider in speedSliders) {
-                if (slider.getUID() == componentId) {
-                    slider.redraw();
-                    break;
-                }
-            }
+        } else if (Gbloink.isSpeedUid(componentId)) {
+            redrawValueControl(componentId);
+        } else if (componentId == Gbloink.SCALE_SELECT_UID) {
+            if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getScaleIndex());
         }
     }
     

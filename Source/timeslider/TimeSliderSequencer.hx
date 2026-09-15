@@ -1,14 +1,16 @@
 package timeslider;
 
+import generated.timeslider.TimeSliderControlIdsGenerated;
+import generated.timeslider.TimeSliderLayoutGenerated;
 import haxe.Json;
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
 import worldofcake.SequencerCore;
 import worldofcake.LocalPoint;
 import worldofcake.LocalRect;
-import generated.timeslider.TimeSliderCompositionGenerated;
 
 class TimeSlider {
+    public var uid:Int;
     /** Track rectangle in TimeSlider local play-area coordinates. */
     public var bounds:LocalRect;
     public var channel:Int;
@@ -23,8 +25,9 @@ class TimeSlider {
     /** Seconds when clicking the **right** edge (fast). */
     public var maxSpeed:Float;
 
-    public function new(bounds:LocalRect, channel:Int, ccNumber:Int, minSpeed:Float, maxSpeed:Float) {
-        this.bounds = bounds;
+    public function new(uid:Int, x:Float, y:Float, width:Float, height:Float, channel:Int, ccNumber:Int, minSpeed:Float, maxSpeed:Float) {
+        this.uid = uid;
+        this.bounds = LocalRect.fromTopLeft(new LocalPoint(x, y), width, height);
         this.channel = channel;
         this.ccNumber = ccNumber;
         this.minSpeed = minSpeed;
@@ -111,12 +114,12 @@ class TimeSlider {
 }
 
 class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
-    public static inline var PLAY_AREA_UID:Int = 1;
-    public static inline var TRACK_UID_BASE:Int = 10;
+    public static inline var RESET_UID:Int = TimeSliderControlIdsGenerated.RESET;
+    public static inline var PAUSE_UID:Int = TimeSliderControlIdsGenerated.PAUSE;
     public static inline var CC_EVENT_TYPE:Int = 1;
     public static inline var BASE_CC:Int = 20;
     /** Four parallel tracks (OpenFL + Rack). */
-    public static inline var SLIDER_COUNT:Int = TimeSliderCompositionGenerated.TRACK_COUNT;
+    public static inline var SLIDER_COUNT:Int = 4;
 
     public var areaWidth:Int;
     public var areaHeight:Int;
@@ -137,7 +140,12 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     }
 
     static function buildSliders(width:Int, height:Int, minSpeed:Float, maxSpeed:Float):Array<TimeSlider> {
-        return TimeSliderCompositionGenerated.buildTracks(minSpeed, maxSpeed);
+        return [
+            new TimeSlider(TimeSliderControlIdsGenerated.CC1TRACK, TimeSliderLayoutGenerated.CC1TRACK_X, TimeSliderLayoutGenerated.CC1TRACK_Y, TimeSliderLayoutGenerated.CC1TRACK_WIDTH, TimeSliderLayoutGenerated.CC1TRACK_HEIGHT, 1, 1, minSpeed, maxSpeed),
+            new TimeSlider(TimeSliderControlIdsGenerated.CC2TRACK, TimeSliderLayoutGenerated.CC2TRACK_X, TimeSliderLayoutGenerated.CC2TRACK_Y, TimeSliderLayoutGenerated.CC2TRACK_WIDTH, TimeSliderLayoutGenerated.CC2TRACK_HEIGHT, 1, 2, minSpeed, maxSpeed),
+            new TimeSlider(TimeSliderControlIdsGenerated.CC3TRACK, TimeSliderLayoutGenerated.CC3TRACK_X, TimeSliderLayoutGenerated.CC3TRACK_Y, TimeSliderLayoutGenerated.CC3TRACK_WIDTH, TimeSliderLayoutGenerated.CC3TRACK_HEIGHT, 1, 3, minSpeed, maxSpeed),
+            new TimeSlider(TimeSliderControlIdsGenerated.CC4TRACK, TimeSliderLayoutGenerated.CC4TRACK_X, TimeSliderLayoutGenerated.CC4TRACK_Y, TimeSliderLayoutGenerated.CC4TRACK_WIDTH, TimeSliderLayoutGenerated.CC4TRACK_HEIGHT, 1, 4, minSpeed, maxSpeed)
+        ];
     }
 
     public function reset():Void {
@@ -159,6 +167,7 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
         var sliderParts:Array<Dynamic> = [];
         for (s in sliders) {
             sliderParts.push({
+                slot: sliderParts.length,
                 x: s.bounds.left,
                 y: s.bounds.top,
                 width: s.bounds.width(),
@@ -173,8 +182,8 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                 speed: s.speed
             });
         }
-        var out = new StringBuf(); out.add('{"v":3,"kind":"timeslider","currentTime":'); out.add(currentTime); out.add(',"paused":'); out.add(paused ? 'true' : 'false'); out.add(',"minSpeed":'); out.add(minSpeed); out.add(',"maxSpeed":'); out.add(maxSpeed); out.add(',"areaWidth":'); out.add(areaWidth); out.add(',"areaHeight":'); out.add(areaHeight); out.add(',"sliders":[');
-        for (i in 0...sliderParts.length) { if (i > 0) out.add(','); var s:Dynamic=sliderParts[i]; out.add('{"x":'); out.add(s.x); out.add(',"y":'); out.add(s.y); out.add(',"width":'); out.add(s.width); out.add(',"height":'); out.add(s.height); out.add(',"channel":'); out.add(s.channel); out.add(',"ccNumber":'); out.add(s.ccNumber); out.add(',"minSpeed":'); out.add(s.minSpeed); out.add(',"maxSpeed":'); out.add(s.maxSpeed); out.add(',"current":'); out.add(s.current); out.add(',"destination":'); out.add(s.destination); out.add(',"moving":'); out.add(s.moving ? 'true' : 'false'); out.add(',"speed":'); out.add(s.speed); out.add('}'); }
+        var out = new StringBuf(); out.add('{"v":4,"kind":"timeslider","currentTime":'); out.add(currentTime); out.add(',"paused":'); out.add(paused ? 'true' : 'false'); out.add(',"minSpeed":'); out.add(minSpeed); out.add(',"maxSpeed":'); out.add(maxSpeed); out.add(',"areaWidth":'); out.add(areaWidth); out.add(',"areaHeight":'); out.add(areaHeight); out.add(',"sliders":[');
+        for (i in 0...sliderParts.length) { if (i > 0) out.add(','); var s:Dynamic=sliderParts[i]; out.add('{"slot":'); out.add(s.slot); out.add(',"x":'); out.add(s.x); out.add(',"y":'); out.add(s.y); out.add(',"width":'); out.add(s.width); out.add(',"height":'); out.add(s.height); out.add(',"channel":'); out.add(s.channel); out.add(',"ccNumber":'); out.add(s.ccNumber); out.add(',"minSpeed":'); out.add(s.minSpeed); out.add(',"maxSpeed":'); out.add(s.maxSpeed); out.add(',"current":'); out.add(s.current); out.add(',"destination":'); out.add(s.destination); out.add(',"moving":'); out.add(s.moving ? 'true' : 'false'); out.add(',"speed":'); out.add(s.speed); out.add('}'); }
         out.add(']}'); return out.toString();
     }
 
@@ -220,25 +229,20 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                     layoutOk = false;
                 }
             }
-            if (!layoutOk) {
-                sliders = buildSliders(areaWidth, areaHeight, minSpeed, maxSpeed);
-            } else {
-                var next:Array<TimeSlider> = [];
-                for (e in arr) {
-                    var sx = Std.parseFloat(Std.string(Reflect.field(e, "x")));
-                    var sy = Std.parseFloat(Std.string(Reflect.field(e, "y")));
-                    var sw = Std.parseFloat(Std.string(Reflect.field(e, "width")));
-                    var sh = Std.parseFloat(Std.string(Reflect.field(e, "height")));
-                    var ch = Std.int(Reflect.field(e, "channel"));
-                    var ccn = Std.int(Reflect.field(e, "ccNumber"));
-                    var ts = new TimeSlider(LocalRect.fromTopLeft(new LocalPoint(sx, sy), sw, sh), ch, ccn, minSpeed, maxSpeed);
-                    ts.current = Reflect.hasField(e, "current") ? Std.parseFloat(Std.string(Reflect.field(e, "current"))) : sh / 2;
+            sliders = buildSliders(areaWidth, areaHeight, minSpeed, maxSpeed);
+            if (layoutOk) {
+                for (i in 0...arr.length) {
+                    var e = arr[i];
+                    var slot = Reflect.hasField(e, "slot") ? Std.int(Reflect.field(e, "slot")) : i;
+                    if (slot < 0 || slot >= sliders.length) {
+                        continue;
+                    }
+                    var ts = sliders[slot];
+                    ts.current = Reflect.hasField(e, "current") ? Std.parseFloat(Std.string(Reflect.field(e, "current"))) : ts.bounds.height() / 2;
                     ts.destination = Reflect.hasField(e, "destination") ? Std.parseFloat(Std.string(Reflect.field(e, "destination"))) : ts.current;
                     ts.moving = Reflect.hasField(e, "moving") && Reflect.field(e, "moving") == true;
                     ts.speed = Reflect.hasField(e, "speed") ? Std.parseFloat(Std.string(Reflect.field(e, "speed"))) : 0;
-                    next.push(ts);
                 }
-                sliders = next;
             }
             for (s in sliders) {
                 s.minSpeed = minSpeed;
@@ -248,35 +252,12 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
         } catch (_:Dynamic) {}
     }
 
-    public static function trackUid(index:Int):Int {
-        return TRACK_UID_BASE + index;
-    }
-
-    public static function trackIndexForUid(uid:Int):Int {
-        return uid - TRACK_UID_BASE;
-    }
-
     public function mouseDown(uid:Int, point:LocalPoint):Void {
-        if (uid == PLAY_AREA_UID) {
-            mouseDownInLegacyPlayArea(point);
-            return;
-        }
-
-        var index = trackIndexForUid(uid);
-        if (index < 0 || index >= sliders.length) {
-            return;
-        }
-
-        sliders[index].setDestinationLocal(point.x, point.y);
-        dirty = true;
-    }
-
-    private function mouseDownInLegacyPlayArea(point:LocalPoint):Void {
         for (slider in sliders) {
-            if (slider.hit(point.x, point.y)) {
-                slider.setDestination(point.x, point.y);
+            if (slider.uid == uid) {
+                slider.setDestinationLocal(point.x, point.y);
                 dirty = true;
-                break;
+                return;
             }
         }
     }
@@ -284,8 +265,14 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public function mouseDragged(uid:Int, point:LocalPoint):Void {}
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
     public function textSubmitted(uid:Int, text:String):Void {}
-    public function newValue(uid:Int, value:Float):Void {}
-    public function buttonPressed(uid:Int):Void {}
+    public function newValue(uid:Int, value:Float):Void {
+        if (uid == PAUSE_UID) {
+            if (value > 0.5) pause(); else resume();
+        }
+    }
+    public function buttonPressed(uid:Int):Void {
+        if (uid == RESET_UID) reset();
+    }
     public function keyPressed(uid:Int, key:String):Void {}
 
     public function generateEvents():Void {

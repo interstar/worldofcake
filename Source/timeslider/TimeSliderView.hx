@@ -35,51 +35,41 @@ class TimeSliderView extends Sprite implements IControlPanelView {
         }
     }
 
-    public function needsRedraw(uid:Int):Bool {
-        if (uid == TimeSliderSequencer.PLAY_AREA_UID) {
-            return engine.consumeDirty();
-        }
-        return false;
-    }
-
-
     public function redrawDirty():Void {
-        if (needsRedraw(TimeSliderSequencer.PLAY_AREA_UID)) {
-            redraw(TimeSliderSequencer.PLAY_AREA_UID);
+        if (engine.consumeDirty()) {
+            redraw();
         }
     }
 
-    public function redraw(uid:Int):Void {
-        if (uid == TimeSliderSequencer.PLAY_AREA_UID) {
-            var g:Graphics = this.graphics;
-            g.clear();
+    private function redraw():Void {
+        var g:Graphics = this.graphics;
+        g.clear();
 
-            // Draw background
-            g.beginFill(0x000000);
-            g.drawRect(0, 0, engine.areaWidth, engine.areaHeight);
+        // Draw background
+        g.beginFill(0x000000);
+        g.drawRect(0, 0, engine.areaWidth, engine.areaHeight);
+        g.endFill();
+
+        // Draw sliders
+        for (slider in engine.getSliders()) {
+            // Draw slider background
+            g.lineStyle(1, sliderColor);
+            g.beginFill(sliderColor);
+            g.drawRect(slider.bounds.left, slider.bounds.top, slider.bounds.width(), slider.bounds.height());
             g.endFill();
 
-            // Draw sliders
-            for (slider in engine.getSliders()) {
-                // Draw slider background
-                g.lineStyle(1, sliderColor);
-                g.beginFill(sliderColor);
-            g.drawRect(slider.bounds.left, slider.bounds.top, slider.bounds.width(), slider.bounds.height());
-                g.endFill();
-
-                // Draw current value line (green)
-                g.lineStyle(2, currentColor);
+            // Draw current value line (green)
+            g.lineStyle(2, currentColor);
             g.moveTo(slider.bounds.left, slider.bounds.top + slider.current);
             g.lineTo(slider.bounds.right, slider.bounds.top + slider.current);
 
-                // Draw target value line (yellow)
-                g.lineStyle(2, targetColor);
+            // Draw target value line (yellow)
+            g.lineStyle(2, targetColor);
             g.moveTo(slider.bounds.left, slider.bounds.top + slider.destination);
             g.lineTo(slider.bounds.right, slider.bounds.top + slider.destination);
-            }
-
-            // Generate events after drawing
-            engine.generateEvents();
         }
+
+        // Generate events after drawing
+        engine.generateEvents();
     }
 } 

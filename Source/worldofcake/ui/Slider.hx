@@ -10,9 +10,9 @@ import worldofcake.BasePoint;
 import worldofcake.LocalPoint;
 import worldofcake.PanelPoint;
 import openfl.display.Sprite;
-import worldofcake.ui.IComponent;
+import worldofcake.ui.IValueControl;
 
-class Slider extends Sprite implements IComponent {
+class Slider extends Sprite implements IValueControl {
     public var value:Float; 
     public var min:Float;
     public var max:Float;
@@ -108,6 +108,11 @@ class Slider extends Sprite implements IComponent {
     }
     
     public function handleMouseUp(p:WindowPoint):Bool { return true; }
+
+    public function setValue(v:Float):Void {
+        value = Math.max(min, Math.min(max, v));
+        redraw();
+    }
     
     // Add helper to map value back to local coordinate
     public function valueToLocal(value:Float):LocalPoint {

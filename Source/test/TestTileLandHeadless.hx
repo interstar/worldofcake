@@ -45,7 +45,7 @@ class TestTileLandHeadless {
         var beforeType = app.getTile(0, 0).type;
         app.mouseDown(TileLandSequencer.PLAY_AREA_UID, new LocalPoint(10, 10));
         check("tileland click flips tile", app.getTile(0, 0).type != beforeType);
-        app.newValue(10, 8.0);
+        app.newValue(TileLandSequencer.speedUid(0), 8.0);
         check("tileland speed command", near(app.getCursorSpeed(0), 8.0));
 
         var before = app.getCursors()[0].position.x;
@@ -61,7 +61,7 @@ class TestTileLandHeadless {
     static function testStateRoundTrip():Void {
         var source = make();
         source.mouseDown(TileLandSequencer.PLAY_AREA_UID, new LocalPoint(10, 10));
-        source.newValue(11, 7.0);
+        source.newValue(TileLandSequencer.speedUid(1), 7.0);
         source.advanceTime(0.125);
         var restored = make(999);
         restored.importStateJson(source.exportStateJson());

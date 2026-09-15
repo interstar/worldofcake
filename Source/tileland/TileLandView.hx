@@ -1,53 +1,45 @@
 package tileland;
 
 import openfl.display.Graphics;
-import openfl.display.Sprite;
 import worldofcake.CoordinateMapper;
-import worldofcake.IControlPanelView;
 import worldofcake.ui.PlayArea;
-import worldofcake.ui.Slider;
+import worldofcake.ui.ControlValueViewBase;
+import generated.tileland.TileLandControlIdsGenerated;
 
-class TileLandView extends Sprite implements IControlPanelView {
+class TileLandView extends ControlValueViewBase {
     private var sequencer:TileLandSequencer;
     private var playArea:PlayArea;
-    private var speedSliders:Array<Slider>;
-    private var channelSlider:Slider;
-    private var windowToPanelMapper:CoordinateMapper;
 
     public function new(sequencer:TileLandSequencer, windowToPanelMapper:CoordinateMapper) {
         super();
         this.sequencer = sequencer;
-        this.windowToPanelMapper = windowToPanelMapper;
-        speedSliders = [];
     }
 
-    public function needsRedraw(uid:Int):Bool {
+    private function needsRedraw(uid:Int):Bool {
         if (uid == TileLandSequencer.PLAY_AREA_UID) {
             return sequencer.consumeDirty();
         }
-        return (uid >= 10 && uid <= 12) || uid == 20;
+        return TileLandControlIdsGenerated.REDRAW_CONTROL_UIDS.indexOf(uid) >= 0;
     }
 
 
-    public function redrawDirty():Void {
+    override public function redrawDirty():Void {
         if (needsRedraw(TileLandSequencer.PLAY_AREA_UID)) {
             redraw(TileLandSequencer.PLAY_AREA_UID);
         }
 
-        for (uid in [10, 11, 12, 20]) {
+        for (uid in TileLandControlIdsGenerated.REDRAW_CONTROL_UIDS) {
             if (needsRedraw(uid)) {
                 redraw(uid);
             }
         }
     }
 
-    public function redraw(uid:Int):Void {
+    private function redraw(uid:Int):Void {
         if (uid == TileLandSequencer.PLAY_AREA_UID) {
             redrawPlayArea();
-        } else if (uid >= 10 && uid <= 12) {
-            speedSliders[uid - 10].redraw();
-        } else if (uid == 20 && channelSlider != null) {
-            channelSlider.redraw();
+        } else if (TileLandSequencer.isSpeedUid(uid)) {
+            redrawValueControl(uid);
         }
     }
 
@@ -102,13 +94,4 @@ class TileLandView extends Sprite implements IControlPanelView {
         addChild(playArea);
     }
 
-    public function addSlider(slider:Slider):Void {
-        speedSliders.push(slider);
-        addChild(slider);
-    }
-
-    public function setChannelSlider(slider:Slider):Void {
-        channelSlider = slider;
-        addChild(slider);
-    }
 }

@@ -1,23 +1,19 @@
 package zewp;
 
 import openfl.display.Graphics;
-import openfl.display.Sprite;
 import worldofcake.CoordinateMapper;
-import worldofcake.IControlPanelView;
 import worldofcake.LocalPoint;
 import worldofcake.ui.PlayArea;
-import worldofcake.ui.Slider;
+import worldofcake.ui.ControlValueViewBase;
+import generated.zewp.ZewpControlIdsGenerated;
 
-class ZewpView extends Sprite implements IControlPanelView {
+class ZewpView extends ControlValueViewBase {
     private var engine:ZewpSequencer;
-    private var windowToPanelMapper:CoordinateMapper;
     private var playArea:PlayArea;
-    private var sliders:Array<Slider> = [];
 
     public function new(engine:ZewpSequencer, windowToPanelMapper:CoordinateMapper) {
         super();
         this.engine = engine;
-        this.windowToPanelMapper = windowToPanelMapper;
     }
 
     public function setPlayArea(playArea:PlayArea):Void {
@@ -25,31 +21,31 @@ class ZewpView extends Sprite implements IControlPanelView {
         addChild(playArea);
     }
 
-    public function needsRedraw(uid:Int):Bool {
+    private function needsRedraw(uid:Int):Bool {
         if (uid == ZewpSequencer.PLAY_AREA_UID) {
             return engine.consumeDirty();
         }
-        return uid == ZewpSequencer.POPULATION_UID || uid == ZewpSequencer.SPEED_UID;
+        return ZewpControlIdsGenerated.REDRAW_CONTROL_UIDS.indexOf(uid) >= 0;
     }
 
 
-    public function redrawDirty():Void {
+    override public function redrawDirty():Void {
         if (needsRedraw(ZewpSequencer.PLAY_AREA_UID)) {
             redraw(ZewpSequencer.PLAY_AREA_UID);
         }
 
-        for (uid in [ZewpSequencer.POPULATION_UID, ZewpSequencer.SPEED_UID]) {
+        for (uid in ZewpControlIdsGenerated.REDRAW_CONTROL_UIDS) {
             if (needsRedraw(uid)) {
                 redraw(uid);
             }
         }
     }
 
-    public function redraw(uid:Int):Void {
+    private function redraw(uid:Int):Void {
         if (uid == ZewpSequencer.PLAY_AREA_UID) {
             redrawPlayArea();
         } else if (uid == ZewpSequencer.POPULATION_UID || uid == ZewpSequencer.SPEED_UID) {
-            sliders[uid - ZewpSequencer.POPULATION_UID].redraw();
+            redrawValueControl(uid);
         }
     }
 
@@ -97,8 +93,4 @@ class ZewpView extends Sprite implements IControlPanelView {
         return new LocalPoint(windowPoint.x - playArea.x, windowPoint.y - playArea.y);
     }
 
-    public function addSlider(slider:Slider):Void {
-        sliders.push(slider);
-        addChild(slider);
-    }
 }
