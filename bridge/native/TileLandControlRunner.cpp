@@ -1,8 +1,10 @@
 #include "TileLandControlRunner.h"
+#include "WorldOfCakeControlIds.h"
 #include <algorithm>
 #include <cmath>
 namespace worldofcake::bridge
 {
+    namespace ControlIds = worldofcake::control::tileland;
     TileLandControlRunner::TileLandControlRunner(int seed) : modelSeed(seed)
     {
     }
@@ -43,11 +45,12 @@ namespace worldofcake::bridge
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId >= 10 && c.controlId <= 12)
-            harness->setSpeed(c.controlId - 10, c.value);
-        else if (c.kind == CommandKind::setValue && c.controlId == 20)
+        else if (c.kind == CommandKind::setValue && c.controlId >= ControlIds::kSpeedBase &&
+                 c.controlId < ControlIds::kSpeedBase + ControlIds::kSpeedCount)
+            harness->setSpeed(c.controlId - ControlIds::kSpeedBase, c.value);
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kReset)
             harness->reset();
-        else if (c.kind == CommandKind::setValue && c.controlId == 21)
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kPause)
             harness->setPaused(c.value > .5);
     }
     TileLandControlSnapshot TileLandControlRunner::captureControlSnapshot(std::uint64_t g)

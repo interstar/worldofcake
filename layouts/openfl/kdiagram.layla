@@ -1,14 +1,16 @@
 <
   playarea/kdiagramplayarea(600)
   [
-    controltop/spacer(30)
-    <redspeed/speedslider(3) greenspeed/speedslider(3) bluespeed/speedslider(3) speedend/spacer(2)>(150)
-    controlmiddle/spacer(30)
+    controltop/spacer(20)
+    <redspeed/knob(3) greenspeed/knob(3) bluespeed/knob(3) speedend/spacer(2)>(90)
+    controlmiddle/spacer(70)
     <channel/channelslider(12) channelend/spacer(1)>(30)
-    selectgap/spacer(30)
+    selectgap/spacer(20)
     selectcursor/semanticselect(50)
-    scalegap/spacer(30)
-    scaleselect/semanticselect(70)
-    controlbottom/spacer(180)
+    scalegap/spacer(20)
+    scaleselect/semanticselect(60)
+    <reset/button pause/toggle>(40)
+    <rotate-left/button rotate-right/button>(40)
+    controlbottom/spacer(120)
   ](140)
 >

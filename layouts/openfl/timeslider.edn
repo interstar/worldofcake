@@ -12,7 +12,8 @@
             :padding-top 28.0
             :padding-bottom 48.0
             :root-gap 12.0
-            :nested-gap 0.0}
+            :nested-gap 0.0
+            :gaps-by-depth {1 12.0 2 0.0}}
  :sequencer {:minimum-travel-time 120.0
              :maximum-travel-time 0.5}
  :components
@@ -23,4 +24,6 @@
   "cc3label" {:kind :drawn-label :text "CC3"}
   "cc3track" {:kind :timeslider-track :channel 1 :cc-number 3}
   "cc4label" {:kind :drawn-label :text "CC4"}
-  "cc4track" {:kind :timeslider-track :channel 1 :cc-number 4}}}
+  "cc4track" {:kind :timeslider-track :channel 1 :cc-number 4}
+  "reset" {:kind :button :label "Reset" :colour "0x606874"}
+  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}}

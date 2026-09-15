@@ -1,7 +1,9 @@
 #include "GbloinkControlRunner.h"
+#include "WorldOfCakeControlIds.h"
 #include <cmath>
 namespace worldofcake::bridge
 {
+    namespace ControlIds = worldofcake::control::gbloink;
     GbloinkControlRunner::GbloinkControlRunner(double w, double h, int seed)
         : modelWidth(w), modelHeight(h), modelSeed(seed)
     {
@@ -60,9 +62,9 @@ namespace worldofcake::bridge
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
         else if (c.kind == CommandKind::setValue) {
-            if (c.controlId == 20)
+            if (c.controlId == ControlIds::kReset)
                 harness->reset();
-            else if (c.controlId == 21)
+            else if (c.controlId == ControlIds::kPause)
                 harness->setPaused(c.value > .5);
             else
                 harness->setValue(c.controlId, c.value);

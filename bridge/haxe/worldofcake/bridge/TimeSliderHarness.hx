@@ -7,7 +7,7 @@ class TimeSliderHarness {
  public function new(w:Int,h:Int,slow:Float,fast:Float) instance=new TimeSliderSequencer(w,h,slow,fast);
  public function destroy():Void instance=null;
  public function advanceTime(d:Float):Void if(instance!=null)instance.advanceTime(d);
- public function click(x:Float,y:Float):Void if(instance!=null)instance.mouseDown(TimeSliderSequencer.PLAY_AREA_UID,new LocalPoint(x,y));
+ public function click(uid:Int,x:Float,y:Float):Void if(instance!=null)instance.mouseDown(uid,new LocalPoint(x,y));
  public function reset():Void if(instance!=null)instance.reset();
  public function setPaused(v:Bool):Void if(instance!=null){if(v)instance.pause();else instance.resume();}
  public function logicalTime():Float return instance==null?0:instance.getLogicalTime();

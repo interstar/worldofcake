@@ -1,9 +1,11 @@
 #include "KDiagramControlRunner.h"
+#include "WorldOfCakeControlIds.h"
 #include <algorithm>
 #include <cmath>
 
 namespace worldofcake::bridge
 {
+    namespace ControlIds = worldofcake::control::kdiagram;
     KDiagramControlRunner::KDiagramControlRunner(int seed) : modelSeed(seed)
     {
     }
@@ -48,13 +50,13 @@ namespace worldofcake::bridge
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId == 40)
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kReset)
             harness->reset();
-        else if (c.kind == CommandKind::setValue && c.controlId == 41)
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kPause)
             harness->setPaused(c.value > .5);
-        else if (c.kind == CommandKind::setValue && c.controlId == 42)
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kRotateLeft)
             harness->rotate(-.12);
-        else if (c.kind == CommandKind::setValue && c.controlId == 43)
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kRotateRight)
             harness->rotate(.12);
         else if (c.kind == CommandKind::setValue)
             harness->setValue(c.controlId, c.value);

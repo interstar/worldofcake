@@ -1,8 +1,10 @@
 #include "ZewpControlRunner.h"
+#include "WorldOfCakeControlIds.h"
 #include <algorithm>
 #include <cmath>
 namespace worldofcake::bridge
 {
+    namespace ControlIds = worldofcake::control::zewp;
     ZewpControlRunner::ZewpControlRunner(int w, int h, int s) : width(w), height(h), seed(s)
     {
     }
@@ -55,13 +57,13 @@ namespace worldofcake::bridge
         else if (c.kind == CommandKind::playAreaRelease)
             harness->release(c.x, c.y);
         else if (c.kind == CommandKind::setValue) {
-            if (c.controlId == 10)
+            if (c.controlId == ControlIds::kPopulation)
                 harness->setPopulation(c.value);
-            else if (c.controlId == 11)
+            else if (c.controlId == ControlIds::kSpeed)
                 harness->setSpeed(c.value);
-            else if (c.controlId == 20)
+            else if (c.controlId == ControlIds::kReset)
                 harness->reset();
-            else if (c.controlId == 21)
+            else if (c.controlId == ControlIds::kPause)
                 harness->setPaused(c.value > .5);
         }
     }

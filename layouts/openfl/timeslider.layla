@@ -1,6 +1,9 @@
-<
-  [cc1label/label(20) cc1track/timeslidertrack(504)]
-  [cc2label/label(20) cc2track/timeslidertrack(504)]
-  [cc3label/label(20) cc3track/timeslidertrack(504)]
-  [cc4label/label(20) cc4track/timeslidertrack(504)]
->
+[
+  <
+    [cc1label/label(20) cc1track/timeslidertrack(440)]
+    [cc2label/label(20) cc2track/timeslidertrack(440)]
+    [cc3label/label(20) cc3track/timeslidertrack(440)]
+    [cc4label/label(20) cc4track/timeslidertrack(440)]
+  >(470)
+  <reset/button pause/toggle>(42)
+]

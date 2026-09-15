@@ -1,7 +1,16 @@
-<
-  playarea/gbloinkplayarea(70)
-  [
-    <redspeed/speedslider greenspeed/speedslider bluespeed/speedslider>(420)
-    scaleselect/semanticselect(70)
-  ](11)
->
+[
+  title/title(30)
+  <
+    playarea/gbloinkplayarea(70)
+    [
+      controltop/spacer(25)
+      redspeed/knob(90)
+      greenspeed/knob(90)
+      bluespeed/knob(90)
+      controlmiddle/spacer(20)
+      scaleselect/semanticselect(70)
+      <reset/button pause/toggle edge-notes/toggle>(90)
+      controlbottom/spacer(25)
+    ](11)
+  >(570)
+]

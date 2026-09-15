@@ -1,7 +1,10 @@
 #include "TimeSliderControlRunner.h"
+#include "WorldOfCakeControlIds.h"
+#include "worldofcake/generated/timeslider/TimeSliderControlIdsGenerated.h"
 #include <cmath>
 namespace worldofcake::bridge
 {
+    namespace ControlIds = worldofcake::control::timeslider;
     TimeSliderControlRunner::TimeSliderControlRunner(int w, int h, double slow, double fast)
         : modelWidth(w), modelHeight(h), modelSlow(slow), modelFast(fast)
     {
@@ -40,10 +43,10 @@ namespace worldofcake::bridge
     void TimeSliderControlRunner::applyCommand(const ControlCommand& c)
     {
         if (c.kind == CommandKind::playAreaClick)
-            harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId == 20)
+            harness->click(c.controlId, c.x, c.y);
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kReset)
             harness->reset();
-        else if (c.kind == CommandKind::setValue && c.controlId == 21)
+        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kPause)
             harness->setPaused(c.value > .5);
     }
     TimeSliderControlSnapshot TimeSliderControlRunner::captureSnapshot()

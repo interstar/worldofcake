@@ -10,7 +10,7 @@ class TileLandHarness {
  public function advanceTime(d:Float):Void if(inst!=null)inst.advanceTime(d);
  public function discardPendingEvents():Void if(inst!=null)inst.events=[];
  public function click(x:Float,y:Float):Void if(inst!=null)inst.mouseDown(TileLandSequencer.PLAY_AREA_UID,new LocalPoint(x,y));
- public function setSpeed(i:Int,v:Float):Void if(inst!=null&&i>=0&&i<3)inst.newValue(10+i,v);
+ public function setSpeed(i:Int,v:Float):Void if(inst!=null&&i>=0&&i<3)inst.newValue(TileLandSequencer.speedUid(i),v);
  public function reset():Void if(inst!=null)inst.reset();
  public function setPaused(v:Bool):Void if(inst!=null){if(v)inst.pause();else inst.resume();}
  public function rows():Int return inst==null?0:inst.getRows(); public function cols():Int return inst==null?0:inst.getCols();

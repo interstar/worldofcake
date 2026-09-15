@@ -13,20 +13,27 @@
             :root-gap 20.0
             :nested-gap 10.0}
  :components
- {"playarea" {:kind :play-area
-              :uid-expression "Gbloink.PLAY_AREA_UID"
+ {"title" {:kind :title :text "GLR : Gbloink!"}
+  "playarea" {:kind :play-area
               :local-width 700.0
               :local-height 500.0}
-  "redspeed" {:kind :slider :uid 10 :minimum 0.5 :maximum 4.0 :default 2.0
-              :vertical true :colour "0xFF0000"}
-  "greenspeed" {:kind :slider :uid 11 :minimum 0.5 :maximum 4.0 :default 2.0
-                :vertical true :colour "0x00FF00"}
-  "bluespeed" {:kind :slider :uid 12 :minimum 0.5 :maximum 4.0 :default 2.0
-               :vertical true :colour "0x0000FF"}
-  "scaleselect" {:kind :semantic-select :uid 23 :default-index 0 :presentation "compact"
+  "redspeed" {:kind :knob :minimum 0.5 :maximum 4.0 :default 2.0
+              :label "R" :colour "0xFF0000" :view-hook "addValueControl"}
+  "greenspeed" {:kind :knob :minimum 0.5 :maximum 4.0 :default 2.0
+                :label "G" :colour "0x00FF00" :view-hook "addValueControl"}
+  "bluespeed" {:kind :knob :minimum 0.5 :maximum 4.0 :default 2.0
+               :label "B" :colour "0x0000FF" :view-hook "addValueControl"}
+  "reset" {:kind :button :label "Reset" :colour "0x606874"}
+  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}
+  "edge-notes" {:kind :toggle :label "Edge" :default false :colour "0x606874"}
+  "controltop" {:kind :spacer}
+  "controlmiddle" {:kind :spacer}
+  "controlbottom" {:kind :spacer}
+  "scaleselect" {:kind :semantic-select :default-index 0 :presentation "compact"
                  :choices [{:value 0 :label "Chromatic" :colour "0x606874"}
                            {:value 1 :label "Major" :colour "0x606874"}
                            {:value 2 :label "Minor" :colour "0x606874"}
                            {:value 3 :label "Harm minor" :colour "0x606874"}
                            {:value 4 :label "Mel minor" :colour "0x606874"}
-                           {:value 5 :label "Min blues" :colour "0x606874"}]}}}
+                           {:value 5 :label "Min blues" :colour "0x606874"}]}}
+}
