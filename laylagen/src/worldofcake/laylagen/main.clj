@@ -48,10 +48,16 @@
           config-path (get options "--config")
           output (get options "--output")]
       (when-not (and input config-path output)
-        (throw (ex-info "Usage: generate --input FILE --config FILE --output DIRECTORY [--check]" {})))
-      (let [result (generator/parse-and-generate (slurp input) (edn/read-string (slurp config-path)))
-            count (write-or-check! (:files result) output (boolean (get options "--check")))]
-        (println (if (get options "--check") "Checked" "Generated") count "files in" output)))
+        (throw (ex-info "Usage: generate --input FILE --config FILE --output DIRECTORY [--native-output DIRECTORY] [--check]" {})))
+      (let [native-output (get options "--native-output")
+            result (generator/parse-and-generate (slurp input) (edn/read-string (slurp config-path)))
+            haxe-count (write-or-check! (:files result) output (boolean (get options "--check")))
+            native-count (if native-output
+                           (write-or-check! (:native-files result) native-output (boolean (get options "--check")))
+                           0)
+            total (+ haxe-count native-count)]
+        (println (if (get options "--check") "Checked" "Generated") total "files in" output
+                 (if native-output (str "and " native-output) ""))))
     (catch Exception e
       (binding [*out* *err*]
         (println "WorldOfCake Layla generation failed:" (.getMessage e)))
