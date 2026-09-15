@@ -1,0 +1,99 @@
+{:generator-version 1
+:application {:id "gbloink"
+               :slug "Gbloink"
+               :panel-svg "Gbloink.svg"
+               :title "GLR : Gbloink!"}
+:geometry {:panel-width 243.84
+           :panel-height 128.5
+           :outer-padding 0.0
+           :root-gap 0.0
+           :nested-gap 0.0}
+ :rack-components
+ {"title" {:kind :title :text "GLR : Gbloink!"} "left-gap" {:kind :spacer}
+  "play-top" {:kind :spacer}
+  "play-bottom" {:kind :spacer}
+  "control-gap" {:kind :spacer}
+  "control-top" {:kind :spacer}
+  "control-middle" {:kind :spacer}
+  "control-bottom" {:kind :spacer}
+  "patch-gap" {:kind :spacer}
+  "right-gap" {:kind :spacer}
+  "playarea" {:kind :play-area}
+  "patchbay" {:kind :patch-bay}
+  "redspeed" {:kind :knob :label "R" :svg-label "SPD"}
+  "greenspeed" {:kind :knob :label "G" :svg-label "SPD"}
+  "bluespeed" {:kind :knob :label "B" :svg-label "SPD"}
+  "scaleselect" {:kind :knob :label "SCALE" :svg-label "SCALE"}
+  "edge-notes" {:kind :toggle :label "Edge" :svg-label "WALL"}
+  "reset" {:kind :button :label "Reset" :svg-label "RST"}
+  "pause" {:kind :toggle :label "Pause" :svg-label "PAUSE"}}
+:app :gbloink
+ :target :vcvrack
+ :module {:slug "Gbloink"
+          :plugin "WorldOfCake-Gbloink"
+          :panel {:width-mm 243.84
+                  :height-mm 128.5}}
+ :patch-bay {:title "OUT"
+             :bounds-mm {:x 190.5 :y 21.5 :width 37.0 :height 64.0}
+             :columns [{:key :gate :label "GATE" :x-mm 198.0}
+                       {:key :note :label "NOTE" :x-mm 218.0}]
+             :groups [{:key :red-ball
+                       :label "Red ball"
+                       :color "#c03535"
+                       :fill "#d43c3c"
+                       :bounds-mm {:x 190.5 :y 21.5 :width 37.0 :height 20.0}
+                       :y-mm 30.0
+                       :outputs [{:key :gate
+                                  :cpp-id "GATE_BALL1_OUTPUT"
+                                  :svg-label "GATE_BALL1"
+                                  :socket-mm {:x 198.0 :y 30.0}
+                                  :config-label "Gate (red)"
+                                  :config-label-fragments ["Gate (" "red" ")"]
+                                  :voltage-law :gate-10v-pulse}
+                                 {:key :note
+                                  :cpp-id "PITCH_BALL1_OUTPUT"
+                                  :svg-label "PITCH_BALL1"
+                                  :socket-mm {:x 218.0 :y 30.0}
+                                  :config-label "CV (red, 1V/oct)"
+                                  :config-label-fragments ["CV (" "red" ", 1V/oct)"]
+                                  :voltage-law :pitch-1v-oct}]}
+                      {:key :green-ball
+                       :label "Green ball"
+                       :color "#2fa84a"
+                       :fill "#3cc85a"
+                       :bounds-mm {:x 190.5 :y 43.5 :width 37.0 :height 20.0}
+                       :y-mm 52.0
+                       :outputs [{:key :gate
+                                  :cpp-id "GATE_BALL2_OUTPUT"
+                                  :svg-label "GATE_BALL2"
+                                  :socket-mm {:x 198.0 :y 52.0}
+                                  :config-label "Gate (green)"
+                                  :config-label-fragments ["Gate (" "green" ")"]
+                                  :voltage-law :gate-10v-pulse}
+                                 {:key :note
+                                  :cpp-id "PITCH_BALL2_OUTPUT"
+                                  :svg-label "PITCH_BALL2"
+                                  :socket-mm {:x 218.0 :y 52.0}
+                                  :config-label "CV (green, 1V/oct)"
+                                  :config-label-fragments ["CV (" "green" ", 1V/oct)"]
+                                  :voltage-law :pitch-1v-oct}]}
+                      {:key :blue-ball
+                       :label "Blue ball"
+                       :color "#2f62d4"
+                       :fill "#3c78ff"
+                       :bounds-mm {:x 190.5 :y 65.5 :width 37.0 :height 20.0}
+                       :y-mm 74.0
+                       :outputs [{:key :gate
+                                  :cpp-id "GATE_BALL3_OUTPUT"
+                                  :svg-label "GATE_BALL3"
+                                  :socket-mm {:x 198.0 :y 74.0}
+                                  :config-label "Gate (blue)"
+                                  :config-label-fragments ["Gate (" "blue" ")"]
+                                  :voltage-law :gate-10v-pulse}
+                                 {:key :note
+                                  :cpp-id "PITCH_BALL3_OUTPUT"
+                                  :svg-label "PITCH_BALL3"
+                                  :socket-mm {:x 218.0 :y 74.0}
+                                  :config-label "CV (blue, 1V/oct)"
+                                  :config-label-fragments ["CV (" "blue" ", 1V/oct)"]
+                                  :voltage-law :pitch-1v-oct}]}]}}

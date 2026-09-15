@@ -1,0 +1,60 @@
+{:app :timeslider
+ :target :vcvrack
+ :application {:panel-svg "TimeSlider.svg"
+               :title "GLR : Time Sliders"}
+ :module {:slug "TimeSlider"
+          :plugin "WorldOfCake-TimeSlider"
+          :panel {:width-mm 132.08
+                  :height-mm 128.5}}
+ :geometry {:panel-width 132.08 :panel-height 128.5
+            :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+ :rack-components {"title" {:kind :title :text "GLR : Time Sliders"}
+                   "playarea" {:kind :play-area}
+                   "patchbay" {:kind :patch-bay}}
+ :patch-bay {:title "CV"
+             :bounds-mm {:x 112.0 :y 18.0 :width 17.0 :height 78.0}
+             :columns [{:key :cv :label "CV" :x-mm 123.0}]
+             :groups [{:key :track-1
+                       :label "Track 1"
+                       :bounds-mm {:x 112.0 :y 18.0 :width 17.0 :height 16.0}
+                       :y-mm 26.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER1_OUTPUT"
+                                  :svg-label "CV_SLIDER1"
+                                  :socket-mm {:x 123.0 :y 26.0}
+                                  :config-label "Slider 1 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}
+                      {:key :track-2
+                       :label "Track 2"
+                       :bounds-mm {:x 112.0 :y 38.0 :width 17.0 :height 16.0}
+                       :y-mm 46.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER2_OUTPUT"
+                                  :svg-label "CV_SLIDER2"
+                                  :socket-mm {:x 123.0 :y 46.0}
+                                  :config-label "Slider 2 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}
+                      {:key :track-3
+                       :label "Track 3"
+                       :bounds-mm {:x 112.0 :y 58.0 :width 17.0 :height 16.0}
+                       :y-mm 66.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER3_OUTPUT"
+                                  :svg-label "CV_SLIDER3"
+                                  :socket-mm {:x 123.0 :y 66.0}
+                                  :config-label "Slider 3 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}
+                      {:key :track-4
+                       :label "Track 4"
+                       :bounds-mm {:x 112.0 :y 78.0 :width 17.0 :height 16.0}
+                       :y-mm 86.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER4_OUTPUT"
+                                  :svg-label "CV_SLIDER4"
+                                  :socket-mm {:x 123.0 :y 86.0}
+                                  :config-label "Slider 4 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}]}}

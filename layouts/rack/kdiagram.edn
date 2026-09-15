@@ -1,0 +1,49 @@
+{:app :kdiagram
+ :target :vcvrack
+ :application {:panel-svg "KDiagram.svg"
+               :title "GLR : K-Diagram"}
+ :module {:slug "KDiagram"
+          :plugin "WorldOfCake-KDiagram"
+          :panel {:width-mm 223.52
+                  :height-mm 128.5}}
+ :geometry {:panel-width 223.52 :panel-height 128.5
+            :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+ :rack-components {"title" {:kind :title :text "GLR : K-Diagram"}
+                   "playarea" {:kind :play-area}
+                   "patchbay" {:kind :patch-bay}}
+ :patch-bay {:title "OUT"
+             :bounds-mm {:x 150.5 :y 21.5 :width 58.0 :height 64.0}
+             :columns [{:key :gate :label "G" :x-mm 159.0}
+                       {:key :y :label "Y" :x-mm 174.0}
+                       {:key :x :label "X" :x-mm 189.0}
+                       {:key :note :label "N" :x-mm 204.0}]
+             :groups [{:key :cursor-1
+                       :label "Cursor 1"
+                       :color "#c03535"
+                       :fill "#d43c3c"
+                       :bounds-mm {:x 150.5 :y 21.5 :width 58.0 :height 20.0}
+                       :y-mm 30.0
+                       :outputs [{:key :gate :cpp-id "GATE1_OUTPUT" :svg-label "GATE1" :socket-mm {:x 159.0 :y 30.0} :config-label "Cursor 1 gate" :config-label-fragments ["Cursor " " gate"] :voltage-law :gate-10v-pulse}
+                                 {:key :y :cpp-id "CVY1_OUTPUT" :svg-label "CVY1" :socket-mm {:x 174.0 :y 30.0} :config-label "Cursor 1 Y CV" :config-label-fragments ["Cursor " " Y CV"] :voltage-law :midi7-unipolar-10v}
+                                 {:key :x :cpp-id "CVX1_OUTPUT" :svg-label "CVX1" :socket-mm {:x 189.0 :y 30.0} :config-label "Cursor 1 X CV" :config-label-fragments ["Cursor " " X CV"] :voltage-law :midi7-unipolar-10v}
+                                 {:key :note :cpp-id "CVHY1_OUTPUT" :svg-label "CVHY1" :socket-mm {:x 204.0 :y 30.0} :config-label "Cursor 1 note CV" :config-label-fragments ["Cursor " " note CV"] :voltage-law :pitch-1v-oct}]}
+                      {:key :cursor-2
+                       :label "Cursor 2"
+                       :color "#2fa84a"
+                       :fill "#3cc85a"
+                       :bounds-mm {:x 150.5 :y 43.5 :width 58.0 :height 20.0}
+                       :y-mm 52.0
+                       :outputs [{:key :gate :cpp-id "GATE2_OUTPUT" :svg-label "GATE2" :socket-mm {:x 159.0 :y 52.0} :config-label "Cursor 2 gate" :config-label-fragments ["Cursor " " gate"] :voltage-law :gate-10v-pulse}
+                                 {:key :y :cpp-id "CVY2_OUTPUT" :svg-label "CVY2" :socket-mm {:x 174.0 :y 52.0} :config-label "Cursor 2 Y CV" :config-label-fragments ["Cursor " " Y CV"] :voltage-law :midi7-unipolar-10v}
+                                 {:key :x :cpp-id "CVX2_OUTPUT" :svg-label "CVX2" :socket-mm {:x 189.0 :y 52.0} :config-label "Cursor 2 X CV" :config-label-fragments ["Cursor " " X CV"] :voltage-law :midi7-unipolar-10v}
+                                 {:key :note :cpp-id "CVHY2_OUTPUT" :svg-label "CVHY2" :socket-mm {:x 204.0 :y 52.0} :config-label "Cursor 2 note CV" :config-label-fragments ["Cursor " " note CV"] :voltage-law :pitch-1v-oct}]}
+                      {:key :cursor-3
+                       :label "Cursor 3"
+                       :color "#2f62d4"
+                       :fill "#3c78ff"
+                       :bounds-mm {:x 150.5 :y 65.5 :width 58.0 :height 20.0}
+                       :y-mm 74.0
+                       :outputs [{:key :gate :cpp-id "GATE3_OUTPUT" :svg-label "GATE3" :socket-mm {:x 159.0 :y 74.0} :config-label "Cursor 3 gate" :config-label-fragments ["Cursor " " gate"] :voltage-law :gate-10v-pulse}
+                                 {:key :y :cpp-id "CVY3_OUTPUT" :svg-label "CVY3" :socket-mm {:x 174.0 :y 74.0} :config-label "Cursor 3 Y CV" :config-label-fragments ["Cursor " " Y CV"] :voltage-law :midi7-unipolar-10v}
+                                 {:key :x :cpp-id "CVX3_OUTPUT" :svg-label "CVX3" :socket-mm {:x 189.0 :y 74.0} :config-label "Cursor 3 X CV" :config-label-fragments ["Cursor " " X CV"] :voltage-law :midi7-unipolar-10v}
+                                 {:key :note :cpp-id "CVHY3_OUTPUT" :svg-label "CVHY3" :socket-mm {:x 204.0 :y 74.0} :config-label "Cursor 3 note CV" :config-label-fragments ["Cursor " " note CV"] :voltage-law :pitch-1v-oct}]}]}}

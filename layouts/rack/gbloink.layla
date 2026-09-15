@@ -1,0 +1,21 @@
+[
+  title/title(10)
+  <
+  left-gap/spacer(5)
+  [play-top/spacer(12) playarea/playarea(104) play-bottom/spacer(12)](145)
+  control-gap/spacer(8)
+  [
+    control-top/spacer(25)
+    redspeed/knob(90)
+    greenspeed/knob(90)
+    bluespeed/knob(90)
+    control-middle/spacer(20)
+    scaleselect/knob(70)
+    <reset/button pause/toggle edge-notes/toggle>(90)
+    control-bottom/spacer(25)
+  ](24)
+  patch-gap/spacer(17/2)
+  patchbay/patchbay(37)
+  right-gap/spacer(817/50)
+  >(237/2)
+]

@@ -1,0 +1,10 @@
+[
+  title/title(10)
+  <
+    left-gap/spacer(22)
+    [top/spacer(8) playarea/playarea(95) bottom/spacer(31/2)](88)
+    patch-gap/spacer(2)
+    patchbay/patchbay(17)
+    right-gap/spacer(77/25)
+  >(237/2)
+]
