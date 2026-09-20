@@ -20,25 +20,17 @@ namespace worldofcake::bridge
         if (!modelCreated)
             createModel();
         currentStage = 2;
-        persistence.service([this] { return harness->exportStateJson().utf8_str(); },
-                            [this](const std::string& s) {
-                                harness->importStateJson(::String(s.c_str()));
-                                logicalTime = harness->logicalTime();
-                                drainEvents();
-                                publishVisualSnapshot();
-                            });
-        currentStage = 3;
         applyPendingCommands();
-        currentStage = 4;
+        currentStage = 3;
         if (std::isfinite(delta) && delta > 0) {
             harness->advanceTime(delta);
             logicalTime += delta;
-            currentStage = 5;
+            currentStage = 4;
             drainEvents();
         }
-        currentStage = 6;
+        currentStage = 5;
         publishVisualSnapshot();
-        currentStage = 7;
+        currentStage = 6;
         persistence.service([this] { return harness->exportStateJson().utf8_str(); },
                             [this](const std::string& s) {
                                 harness->importStateJson(::String(s.c_str()));
@@ -46,7 +38,7 @@ namespace worldofcake::bridge
                                 drainEvents();
                                 publishVisualSnapshot();
                             });
-        currentStage = 8;
+        currentStage = 7;
     }
     bool GbloinkControlRunner::popPreparedEvent(PreparedEvent& e) noexcept
     {

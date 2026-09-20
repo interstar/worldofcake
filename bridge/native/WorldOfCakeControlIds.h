@@ -5,6 +5,7 @@
 #include "worldofcake/generated/tileland/TileLandControlIdsGenerated.h"
 #include "worldofcake/generated/timeslider/TimeSliderControlIdsGenerated.h"
 #include "worldofcake/generated/zewp/ZewpControlIdsGenerated.h"
+#include "worldofcake/generated/goldenpond/GoldenpondControlIdsGenerated.h"
 
 namespace worldofcake::control
 {

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace worldofcake
@@ -121,7 +122,8 @@ namespace worldofcake
             playAreaClick,
             setValue,
             playAreaDrag,
-            playAreaRelease
+            playAreaRelease,
+            textSubmitted
         };
 
         struct ControlCommand
@@ -132,6 +134,8 @@ namespace worldofcake
             double x = 0.0;
             double y = 0.0;
             double value = 0.0;
+            // Fixed-size so ControlCommand remains safe to pass through the SPSC queues.
+            char text[256] = {};
         };
 
         struct PreparedEvent
@@ -141,6 +145,27 @@ namespace worldofcake
             int channel = 0;
             int data2 = 0;
             int data3 = 0;
+        };
+
+        struct GoldenpondNoteSnapshot
+        {
+            int partId = 0;
+            int pitch = 0;
+            int velocity = 100;
+            double startTick = 0.0;
+            double durationTicks = 0.0;
+        };
+
+        struct GoldenpondVisualSnapshot
+        {
+            std::uint64_t generation = 0;
+            double logicalTime = 0.0;
+            double positionTicks = 0.0;
+            double loopLengthTicks = 1.0;
+        bool paused = false;
+        std::string chordInput;
+        std::array<std::string, 4> rhythmInputs;
+        std::vector<GoldenpondNoteSnapshot> notes;
         };
 
         struct BallSnapshot
