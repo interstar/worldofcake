@@ -43,6 +43,10 @@ class SequencerCore {
         return events.shift();
     }
 
+    public function correctInputNote(note:Int, time:Float, previousNote:Int = -1):Int {
+        return note;
+    }
+
     public function getLogicalTime():Float {
         return currentTime;
     }

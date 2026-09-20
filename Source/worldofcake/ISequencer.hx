@@ -5,6 +5,12 @@ interface ISequencer {
     function hasEventBefore(timeLimit:Float):Bool;
     function getNextEvent():Event;
 
+    /**
+        Correct an incoming MIDI note at logical sequencer time. Sequencers
+        without a harmonic correction model return the input unchanged.
+    **/
+    function correctInputNote(note:Int, time:Float, previousNote:Int = -1):Int;
+
     /** Stop simulation and logical time until `resume()`. No-ops where inapplicable. */
     function pause():Void;
 
