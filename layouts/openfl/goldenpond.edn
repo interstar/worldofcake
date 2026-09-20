@@ -1,0 +1,50 @@
+{:generator-version 1
+ :application {:id "goldenpond"
+               :package "goldenpond"
+               :generated-package "generated.goldenpond"
+               :composition-kind :worldofcake-components
+               :sequencer-class "GoldenpondSequencer"
+               :view-class "GoldenpondView"
+               :composition-class "GoldenpondCompositionGenerated"
+               :layout-class "GoldenpondLayoutGenerated"}
+ :geometry {:panel-width 1400.0
+            :panel-height 700.0
+            :padding-left 24.0 :padding-right 24.0
+            :padding-top 18.0 :padding-bottom 18.0
+            :root-gap 16.0 :nested-gap 10.0}
+ :components
+ {"title" {:kind :title :text "GLR : Goldenpond"}
+  "status" {:kind :status :view-hook "setStatus"}
+  "playarea" {:kind :play-area
+               :local-min-x 0.0 :local-min-y 0.0
+               :local-max-x 760.0 :local-max-y 600.0
+               :view-hook "setPlayArea"}
+  "chordinput" {:kind :text-input :default "62 72 5ii 71"}
+  "rhythm0" {:kind :text-input :default "3%8 > 2"}
+  "rhythm1" {:kind :text-input :default "1.1.Cr 2"}
+  "rhythm2" {:kind :text-input :default "3%8 > 2"}
+  "rhythm3" {:kind :text-input :default "3%8 > 2"}
+  "octave0" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+             :label "Oct" :colour "0x8CB6D9" :view-hook "addValueControl"}
+  "octave1" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+             :label "Oct" :colour "0xE59A9D" :view-hook "addValueControl"}
+  "octave2" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+             :label "Oct" :colour "0x9ACB7C" :view-hook "addValueControl"}
+  "octave3" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+             :label "Oct" :colour "0xBDA0DD" :view-hook "addValueControl"}
+  "velocity0" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+               :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
+  "velocity1" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+               :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
+  "velocity2" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+               :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
+  "velocity3" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+               :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
+  "bpm" {:kind :knob :minimum 30.0 :maximum 240.0 :default 120.0
+         :label "BPM" :colour "0x40C0FF" :view-hook "addValueControl"}
+  "chordduration" {:kind :knob :minimum 1.0 :maximum 16.0 :default 4.0
+                   :label "Chord" :colour "0xB0B0B0" :view-hook "addValueControl"}
+  "zoom" {:kind :knob :minimum 1.0 :maximum 8.0 :default 1.0
+          :label "Zoom" :colour "0xD49A55" :view-hook "addValueControl"}
+  "reset" {:kind :button :label "Reset" :colour "0x606874"}
+  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}}

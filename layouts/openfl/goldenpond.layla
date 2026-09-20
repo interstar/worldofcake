@@ -1,0 +1,16 @@
+[
+  title/title(40)
+  status/status(24)
+  <
+    playarea/pianoroll(60)
+    [
+      chordinput/textinput(44)
+      <rhythm0/textinput octave0/knob velocity0/knob>(38)
+      <rhythm1/textinput octave1/knob velocity1/knob>(38)
+      <rhythm2/textinput octave2/knob velocity2/knob>(38)
+      <rhythm3/textinput octave3/knob velocity3/knob>(38)
+      <bpm/knob chordduration/knob zoom/knob>(90)
+      <reset/button pause/toggle>(48)
+    ](28)
+  >(636)
+]

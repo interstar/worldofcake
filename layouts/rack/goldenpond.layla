@@ -1,0 +1,17 @@
+[
+  title/title(10)
+  <
+    playarea/playarea(105)
+    gap/spacer(4)
+    [
+      chordinput/textinput(18)
+      <rhythm0/textinput octave0/knob velocity0/knob>(18)
+      <rhythm1/textinput octave1/knob velocity1/knob>(18)
+      <rhythm2/textinput octave2/knob velocity2/knob>(18)
+      <rhythm3/textinput octave3/knob velocity3/knob>(18)
+      <bpm/knob chordduration/knob zoom/knob>(18)
+      <reset/button pause/toggle>(18)
+    ](2446/25)
+    patchbay/patchbay(37)
+  >(6096/25)
+]

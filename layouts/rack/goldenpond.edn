@@ -1,0 +1,81 @@
+{:generator-version 1
+ :application {:id "goldenpond"
+               :slug "Goldenpond"
+               :panel-svg "Goldenpond.svg"
+               :title "GLR : Goldenpond"}
+ :geometry {:panel-width 243.84
+            :panel-height 128.5
+            :outer-padding 0.0
+            :root-gap 0.0
+            :nested-gap 0.0}
+ :rack-components
+ {"title" {:kind :title :text "GLR : Goldenpond"}
+  "gap" {:kind :spacer}
+  "playarea" {:kind :play-area}
+  "patchbay" {:kind :patch-bay}
+  "chordinput" {:kind :text-input :svg-label "CHORD"}
+  "rhythm0" {:kind :text-input :svg-label "PART 1 RHYTHM"}
+  "rhythm1" {:kind :text-input :svg-label "PART 2 RHYTHM"}
+  "rhythm2" {:kind :text-input :svg-label "PART 3 RHYTHM"}
+  "rhythm3" {:kind :text-input :svg-label "PART 4 RHYTHM"}
+  "octave0" {:kind :knob :svg-label "OCT"}
+  "velocity0" {:kind :knob :svg-label "VEL"}
+  "octave1" {:kind :knob :svg-label "OCT"}
+  "velocity1" {:kind :knob :svg-label "VEL"}
+  "octave2" {:kind :knob :svg-label "OCT"}
+  "velocity2" {:kind :knob :svg-label "VEL"}
+  "octave3" {:kind :knob :svg-label "OCT"}
+  "velocity3" {:kind :knob :svg-label "VEL"}
+  "bpm" {:kind :knob :svg-label "BPM"}
+  "chordduration" {:kind :knob :svg-label "CHORD"}
+  "zoom" {:kind :knob :svg-label "ZOOM"}
+  "reset" {:kind :button :svg-label "RESET"}
+  "pause" {:kind :toggle :svg-label "PAUSE"}}
+ :app :goldenpond
+ :module {:slug "Goldenpond"
+          :plugin "WorldOfCake-Goldenpond"
+          :panel {:width-mm 243.84
+                  :height-mm 128.5}}
+ :patch-bay {:title "OUT / CORRECT"
+             :bounds-mm {:x 206.84 :y 18.0 :width 37.0 :height 108.0}
+             :columns [{:key :gate :label "GATE" :x-mm 214.84}
+                       {:key :pitch :label "PITCH" :x-mm 232.84}]
+             :groups [{:key :part-1
+                       :label "Part 1"
+                       :color "#d43c3c"
+                       :fill "#d43c3c"
+                       :bounds-mm {:x 206.84 :y 22.0 :width 37.0 :height 18.0}
+                       :outputs [{:key :gate :cpp-id "GATE1_OUTPUT" :svg-label "PART1_GATE" :socket-mm {:x 214.84 :y 31.0} :config-label "Part 1 gate" :voltage-law :gate-10v-pulse}
+                                 {:key :pitch :cpp-id "PITCH1_OUTPUT" :svg-label "PART1_PITCH" :socket-mm {:x 232.84 :y 31.0} :config-label "Part 1 pitch" :voltage-law :pitch-1v-oct}]}
+                      {:key :part-2
+                       :label "Part 2"
+                       :color "#2fa84a"
+                       :fill "#2fa84a"
+                       :bounds-mm {:x 206.84 :y 44.0 :width 37.0 :height 18.0}
+                       :outputs [{:key :gate :cpp-id "GATE2_OUTPUT" :svg-label "PART2_GATE" :socket-mm {:x 214.84 :y 53.0} :config-label "Part 2 gate" :voltage-law :gate-10v-pulse}
+                                 {:key :pitch :cpp-id "PITCH2_OUTPUT" :svg-label "PART2_PITCH" :socket-mm {:x 232.84 :y 53.0} :config-label "Part 2 pitch" :voltage-law :pitch-1v-oct}]}
+                      {:key :part-3
+                       :label "Part 3"
+                       :color "#2f62d4"
+                       :fill "#2f62d4"
+                       :bounds-mm {:x 206.84 :y 66.0 :width 37.0 :height 18.0}
+                       :outputs [{:key :gate :cpp-id "GATE3_OUTPUT" :svg-label "PART3_GATE" :socket-mm {:x 214.84 :y 75.0} :config-label "Part 3 gate" :voltage-law :gate-10v-pulse}
+                                 {:key :pitch :cpp-id "PITCH3_OUTPUT" :svg-label "PART3_PITCH" :socket-mm {:x 232.84 :y 75.0} :config-label "Part 3 pitch" :voltage-law :pitch-1v-oct}]}
+                      {:key :part-4
+                       :label "Part 4"
+                       :color "#a85bc9"
+                       :fill "#a85bc9"
+                       :bounds-mm {:x 206.84 :y 88.0 :width 37.0 :height 18.0}
+                       :outputs [{:key :gate :cpp-id "GATE4_OUTPUT" :svg-label "PART4_GATE" :socket-mm {:x 214.84 :y 97.0} :config-label "Part 4 gate" :voltage-law :gate-10v-pulse}
+                                 {:key :pitch :cpp-id "PITCH4_OUTPUT" :svg-label "PART4_PITCH" :socket-mm {:x 232.84 :y 97.0} :config-label "Part 4 pitch" :voltage-law :pitch-1v-oct}]}
+                      {:key :correction
+                       :label "CORRECT"
+                       :color "#d08b32"
+                       :fill "#d08b32"
+                       :bounds-mm {:x 206.84 :y 106.0 :width 37.0 :height 20.0}
+                       :inputs [{:key :correct-1 :cpp-id "CORRECT1_INPUT" :svg-label "CORRECT1_IN" :socket-mm {:x 214.84 :y 111.0} :config-label "Correction input 1" :voltage-law :pitch-1v-oct}
+                                {:key :correct-2 :cpp-id "CORRECT2_INPUT" :svg-label "CORRECT2_IN" :socket-mm {:x 223.84 :y 111.0} :config-label "Correction input 2" :voltage-law :pitch-1v-oct}
+                                {:key :correct-3 :cpp-id "CORRECT3_INPUT" :svg-label "CORRECT3_IN" :socket-mm {:x 232.84 :y 111.0} :config-label "Correction input 3" :voltage-law :pitch-1v-oct}]
+                       :outputs [{:key :correct-1 :cpp-id "CORRECT1_OUTPUT" :svg-label "CORRECT1_OUT" :socket-mm {:x 214.84 :y 121.0} :config-label "Corrected pitch 1" :voltage-law :pitch-1v-oct}
+                                 {:key :correct-2 :cpp-id "CORRECT2_OUTPUT" :svg-label "CORRECT2_OUT" :socket-mm {:x 223.84 :y 121.0} :config-label "Corrected pitch 2" :voltage-law :pitch-1v-oct}
+                                 {:key :correct-3 :cpp-id "CORRECT3_OUTPUT" :svg-label "CORRECT3_OUT" :socket-mm {:x 232.84 :y 121.0} :config-label "Corrected pitch 3" :voltage-law :pitch-1v-oct}]}]}}
