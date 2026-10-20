@@ -78,8 +78,12 @@ int main(int argc, char** argv) {
     std::atomic<std::uint64_t> audioChecksum{0};
     std::thread audioThread([&] {
         const auto blockPeriod = duration<double>(static_cast<double>(kAudioBlockSize) / kSampleRate);
+        double hostTransportTime = 0.0;
         auto deadline = steady_clock::now();
         while (!stopAudio.load(std::memory_order_acquire)) {
+            hostTransportTime += blockPeriod.count();
+            for (const auto& runner : runners)
+                runner->setHostTransportTime(hostTransportTime, 0);
             std::uint64_t checksum = 0;
             for (int sample = 0; sample < kAudioBlockSize; ++sample) {
                 for (const auto& runner : runners) {
@@ -106,6 +110,9 @@ int main(int argc, char** argv) {
     const auto started = steady_clock::now();
     auto nextReport = started + seconds(10);
     auto nextParameterChange = started + seconds(5);
+    auto nextPersistenceRequest = started + seconds(15);
+    std::uint64_t persistenceBytes = 0;
+    std::uint64_t persistenceRequests = 0;
     while (steady_clock::now() - started < seconds(durationSeconds)) {
         const auto now = steady_clock::now();
         for (int i = 0; i < runnerCount; ++i) {
@@ -139,13 +146,23 @@ int main(int argc, char** argv) {
             nextParameterChange += seconds(5);
         }
 
+        if (now >= nextPersistenceRequest) {
+            for (auto& runner : runners) {
+                const auto state = runner->exportStateJson();
+                persistenceBytes += state.size();
+                ++persistenceRequests;
+            }
+            nextPersistenceRequest += seconds(15);
+        }
+
         if (now >= nextReport) {
             const auto elapsed = duration_cast<seconds>(now - started).count();
             std::uint64_t generations = 0;
             for (const auto generation : lastGeneration) generations += generation;
             std::cout << "alive: " << elapsed << "s, runners=" << runnerCount
                       << ", snapshots=" << generations
-                      << ", audioBlocks=" << audioBlocks.load(std::memory_order_relaxed) << '\n';
+                      << ", audioBlocks=" << audioBlocks.load(std::memory_order_relaxed)
+                      << ", stateExports=" << persistenceRequests << '\n';
             nextReport += seconds(10);
         }
         std::this_thread::sleep_for(milliseconds(100));
@@ -170,6 +187,8 @@ int main(int argc, char** argv) {
     std::cout << "PASS: " << durationSeconds << "s, " << runnerCount << " concurrent Rack runners"
               << ", snapshots=" << totalGeneration
               << ", audioBlocks=" << audioBlocks.load(std::memory_order_relaxed)
+              << ", stateExports=" << persistenceRequests
+              << ", stateBytes=" << persistenceBytes
               << ", correctionTableRefreshes=" << totalTableRefreshes
               << ", audioChecksum=" << audioChecksum.load(std::memory_order_relaxed) << '\n';
     return 0;

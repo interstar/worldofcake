@@ -201,7 +201,7 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
             return;
         }
         for (zewp in zewps) {
-            events.push(new Event(
+            emitEvent(new Event(
                 currentTime,
                 CC_EVENT_TYPE,
                 zewp.channel,

@@ -91,6 +91,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     /** Optional toolbar (OpenFL, Rack, ...): clear blocks / toggle pause. */
     public static inline var BTN_CLEAR_BLOCKS:Int = GbloinkControlIdsGenerated.RESET;
     public static inline var BTN_PAUSE_TOGGLE:Int = GbloinkControlIdsGenerated.PAUSE;
+    public static inline var MUTE_OUTPUT_UID:Int = GbloinkControlIdsGenerated.MUTE;
     /** Latch 0 = off, 1 = play note on play-area edge bounce (hosts map from param). */
     public static inline var EDGE_NOTES_UID:Int = GbloinkControlIdsGenerated.EDGE_NOTES;
     public static inline var SCALE_SELECT_UID:Int = GbloinkControlIdsGenerated.SCALESELECT;
@@ -150,11 +151,11 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     ///////////////////////////////////////////////////////////////////////////
 
     override public function pause():Void {
-        setPaused(true);
+        super.pause();
     }
 
     override public function resume():Void {
-        setPaused(false);
+        super.resume();
     }
 
     public function reset():Void {
@@ -176,6 +177,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
         out.add('{"v":1,"kind":"gbloink"');
         out.add(',"currentTime":'); out.add(Std.string(currentTime));
         out.add(',"paused":'); out.add(paused ? 'true' : 'false');
+        out.add(',"muted":'); out.add(muted ? 'true' : 'false');
         out.add(',"scale":"'); out.add(noteCalc.current); out.add('"');
         out.add(',"balls":[');
         for (i in 0...balls.length) {
@@ -216,6 +218,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             if (Reflect.hasField(o, "paused")) {
                 paused = cast Reflect.field(o, "paused");
             }
+            if (Reflect.hasField(o, "muted")) muted = Reflect.field(o, "muted") == true;
             if (Reflect.hasField(o, "edgeNotes")) {
                 edgeNotesEnabled = Reflect.field(o, "edgeNotes") == true;
             }
@@ -294,6 +297,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             dirty = true;
         } else if (uid == BTN_PAUSE_TOGGLE) {
             setPaused(value > 0.5);
+        } else if (uid == MUTE_OUTPUT_UID) {
+            setMuted(value > 0.5);
         } else if (uid == SCALE_SELECT_UID) {
             var index = Std.int(Math.max(0, Math.min(SCALE_NAMES.length - 1, Math.round(value))));
             setScale(SCALE_NAMES[index]);
@@ -319,11 +324,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     }
 
     public function setPaused(p:Bool):Void {
-        if (paused == p) {
-            return;
-        }
-        paused = p;
-        dirty = true;
+        if (p) pause(); else resume();
     }
 
     public function clearBlocks():Void {
@@ -364,12 +365,25 @@ class Gbloink extends SequencerCore implements ISequencerControl {
         return balls;
     }
 
+    /** Semantic speed value used by speed controls, independent of render target. */
+    public function getBallSpeed(ballIndex:Int):Float {
+        if (ballIndex < 0 || ballIndex >= balls.length) return 0.0;
+        var velocity = balls[ballIndex].velocity;
+        return Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y)
+            / (BALL_SPEED_SCALE * LEGACY_TICKS_PER_SECOND);
+    }
+
     public function getBlocks():Array<Block> {
         return blocks;
     }
 
     public function setScale(scaleName:String):Void {
+        if (!noteCalc.scales.exists(scaleName) || noteCalc.current == scaleName) return;
         noteCalc.setCurrent(scaleName);
+        // Notes already queued under the previous scale must not leak through
+        // after a scale change.  The next collision will publish using the new
+        // calculator immediately.
+        events = [];
         dirty = true;
     }
 
@@ -423,7 +437,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     ///////////////////////////////////////////////////////////////////////////
 
     private function pushEvent(evtType:Int, channel:Int, data2:Int, data3:Int):Void {
-        events.push(new Event(currentTime, evtType, channel, data2, data3));
+        emitEvent(new Event(currentTime, evtType, channel, data2, data3));
     }
 
     private function removeBlock(block:Block):Void {
@@ -513,6 +527,10 @@ class Gbloink extends SequencerCore implements ISequencerControl {
 
         for (other in balls) {
             if (other == ball) continue;
+            // Resolve each pair exactly once.  The old loop handled A-B when
+            // moving A and then again when moving B, flipping both velocities
+            // twice and allowing overlapped balls to orbit/stick together.
+            if (other.id <= ball.id) continue;
 
             var distX = other.pos.x - nextX;
             var distY = other.pos.y - nextY;
@@ -534,12 +552,21 @@ class Gbloink extends SequencerCore implements ISequencerControl {
                 other.pos.x += normalX * overlap / 2;
                 other.pos.y += normalY * overlap / 2;
 
-                if (Math.abs(normalX) > Math.abs(normalY)) {
-                    ball.velocity.x = -ball.velocity.x;
-                    other.velocity.x = -other.velocity.x;
-                } else {
-                    ball.velocity.y = -ball.velocity.y;
-                    other.velocity.y = -other.velocity.y;
+                // Only reflect while the pair is closing.  Once positional
+                // correction has separated them, repeatedly flipping their
+                // components is what caused the characteristic sticking and
+                // rotation around one another.
+                var relativeAlongNormal =
+                    (ball.velocity.x - other.velocity.x) * normalX +
+                    (ball.velocity.y - other.velocity.y) * normalY;
+                if (relativeAlongNormal > 0) {
+                    if (Math.abs(normalX) > Math.abs(normalY)) {
+                        ball.velocity.x = -ball.velocity.x;
+                        other.velocity.x = -other.velocity.x;
+                    } else {
+                        ball.velocity.y = -ball.velocity.y;
+                        other.velocity.y = -other.velocity.y;
+                    }
                 }
             }
         }
@@ -547,16 +574,50 @@ class Gbloink extends SequencerCore implements ISequencerControl {
         for (block in blocks) {
             if (block.hit(nextX, ball.pos.y, ball.rad)) {
                 pushEvent(0, ball.channel, noteCalc.transform(ball.pos.y), 100);
-                if (ball.velocity.x > 0) nextX = block.bounds.left - ball.rad;
-                else nextX = block.bounds.right + ball.rad;
-                ball.velocity.x = -ball.velocity.x;
+                // If the ball is already embedded (for example because a
+                // block was clicked over it), velocity alone is not a useful
+                // side selector: it can eject the ball through the whole
+                // block.  Choose the nearest face instead.  For a normal
+                // approach we retain the traditional velocity-directed
+                // reflection.
+                if (ball.pos.x > block.bounds.left && ball.pos.x < block.bounds.right) {
+                    var leftGap = ball.pos.x - block.bounds.left;
+                    var rightGap = block.bounds.right - ball.pos.x;
+                    if (leftGap <= rightGap) {
+                        nextX = block.bounds.left - ball.rad;
+                        ball.velocity.x = -Math.abs(ball.velocity.x);
+                    } else {
+                        nextX = block.bounds.right + ball.rad;
+                        ball.velocity.x = Math.abs(ball.velocity.x);
+                    }
+                } else if (ball.velocity.x > 0) {
+                    nextX = block.bounds.left - ball.rad;
+                    ball.velocity.x = -ball.velocity.x;
+                } else {
+                    nextX = block.bounds.right + ball.rad;
+                    ball.velocity.x = -ball.velocity.x;
+                }
             }
 
             if (block.hit(ball.pos.x, nextY, ball.rad)) {
                 pushEvent(0, ball.channel, noteCalc.transform(ball.pos.y), 100);
-                if (ball.velocity.y > 0) nextY = block.bounds.top - ball.rad;
-                else nextY = block.bounds.bottom + ball.rad;
-                ball.velocity.y = -ball.velocity.y;
+                if (ball.pos.y > block.bounds.top && ball.pos.y < block.bounds.bottom) {
+                    var topGap = ball.pos.y - block.bounds.top;
+                    var bottomGap = block.bounds.bottom - ball.pos.y;
+                    if (topGap <= bottomGap) {
+                        nextY = block.bounds.top - ball.rad;
+                        ball.velocity.y = -Math.abs(ball.velocity.y);
+                    } else {
+                        nextY = block.bounds.bottom + ball.rad;
+                        ball.velocity.y = Math.abs(ball.velocity.y);
+                    }
+                } else if (ball.velocity.y > 0) {
+                    nextY = block.bounds.top - ball.rad;
+                    ball.velocity.y = -ball.velocity.y;
+                } else {
+                    nextY = block.bounds.bottom + ball.rad;
+                    ball.velocity.y = -ball.velocity.y;
+                }
             }
         }
 

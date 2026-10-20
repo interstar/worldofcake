@@ -26,7 +26,8 @@
   "scaleselect" {:kind :knob :label "SCALE" :svg-label "SCALE"}
   "edge-notes" {:kind :toggle :label "Edge" :svg-label "WALL"}
   "reset" {:kind :button :label "Reset" :svg-label "RST"}
-  "pause" {:kind :toggle :label "Pause" :svg-label "PAUSE"}}
+  "pause" {:kind :toggle :label "Pause" :svg-label "PAUSE"}
+  "mute" {:kind :toggle :label "Mute output" :svg-label "MUTE"}}
 :app :gbloink
  :target :vcvrack
  :module {:slug "Gbloink"

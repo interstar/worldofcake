@@ -10,9 +10,9 @@
  :components
  {"playarea" {:kind :play-area
               :local-min-x -1.0 :local-min-y 1.0 :local-max-x 1.0 :local-max-y -1.0}
-  "redspeed" {:kind :knob :minimum 0.1 :maximum 8.0 :default 2.0 :label "R" :colour "0xFF0000" :view-hook "addValueControl"}
-  "greenspeed" {:kind :knob :minimum 0.1 :maximum 8.0 :default 2.0 :label "G" :colour "0x00FF00" :view-hook "addValueControl"}
-  "bluespeed" {:kind :knob :minimum 0.1 :maximum 8.0 :default 2.0 :label "B" :colour "0x0000FF" :view-hook "addValueControl"}
+  "redspeed" {:kind :knob :minimum 0.1 :maximum 8.0 :default 2.0 :unit :speed :output :midi-note :label "R" :colour "0xFF0000" :view-hook "addValueControl"}
+  "greenspeed" {:kind :knob :minimum 0.1 :maximum 8.0 :default 2.0 :unit :speed :output :midi-note :label "G" :colour "0x00FF00" :view-hook "addValueControl"}
+  "bluespeed" {:kind :knob :minimum 0.1 :maximum 8.0 :default 2.0 :unit :speed :output :midi-note :label "B" :colour "0x0000FF" :view-hook "addValueControl"}
   "channel" {:kind :slider :minimum 1.0 :maximum 14.0 :default 7.0 :vertical false :colour "0x808080" :view-hook "setChannelSlider"}
   "selectcursor" {:kind :semantic-select :default-index 0 :presentation "segmented" :view-hook "setCursorSelect"
                   :choices [{:value 0 :label "R" :colour "0xFF0000"}

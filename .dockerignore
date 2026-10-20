@@ -1,0 +1,14 @@
+.git
+.git/**
+build
+Export
+derivatives/*/build
+derivatives/*/dist
+derivatives/*/native
+derivatives/Rack-SDK-*
+*.vcvrack
+*.dll
+*.so
+*.o
+*.obj
+*.exe

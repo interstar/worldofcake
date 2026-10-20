@@ -5,6 +5,7 @@ ARG HAXE_VERSION=4.3.6
 ARG HXCPP_VERSION=4.3.2
 ARG LIME_VERSION=8.1.3
 ARG OPENFL_VERSION=9.3.4
+ARG RACK_SDK_VERSION=2.6.6
 ARG RACK_SDK_SHA256=420da2452def7b195f98e3a0650c35f1e0f058a98a71840b4347d3d203618532
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -43,8 +44,10 @@ RUN haxelib install hxcpp "${HXCPP_VERSION}" --always \
 
 WORKDIR /opt/worldofcake
 
-COPY derivatives/Rack-SDK-2.6.6-lin-x64.zip /tmp/rack-sdk.zip
-RUN echo "${RACK_SDK_SHA256}  /tmp/rack-sdk.zip" | sha256sum -c - \
+# Downloaded rather than copied so a fresh clone does not need the gitignored
+# Rack-SDK-*.zip (or an extracted SDK directory) present locally.
+RUN curl -fsSL "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-lin-x64.zip" -o /tmp/rack-sdk.zip \
+    && echo "${RACK_SDK_SHA256}  /tmp/rack-sdk.zip" | sha256sum -c - \
     && mkdir -p /opt/rack-sdk \
     && unzip -q /tmp/rack-sdk.zip -d /opt/rack-sdk \
     && rm /tmp/rack-sdk.zip

@@ -113,7 +113,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                     cursor.pos = cursor.target;
                     elapsed += travelTime;
                     remaining -= travelTime;
-                    events.push(new Event(
+                    emitEvent(new Event(
                         startTime + elapsed,
                         NOTE_EVENT_TYPE,
                         cursor.channel,
@@ -142,14 +142,14 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                 }
             }
             if (cursor.isMoving || elapsed > 0) {
-                events.push(new Event(
+                    emitEvent(new Event(
                     currentTime,
                     CC_EVENT_TYPE,
                     cursor.channel,
                     1,  // CC number for X position
                     Std.int((cursor.pos.x * 127))
                 ));
-                events.push(new Event(
+                emitEvent(new Event(
                     currentTime,
                     CC_EVENT_TYPE,
                     cursor.channel,

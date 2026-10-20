@@ -11,7 +11,6 @@ namespace worldofcake::bridge
     ZewpControlRunner::~ZewpControlRunner()
     {
         stop();
-        destroyModel();
     }
     void ZewpControlRunner::createModel()
     {
@@ -72,6 +71,8 @@ namespace worldofcake::bridge
         const auto g = generation++;
         ZewpControlSnapshot c{};
         c.generation = g;
+        c.modelReady = harness->modelReady();
+        c.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         c.logicalTime = logicalTime;
         for (int i = 0; i < 6; ++i) {
             if (i < harness->count()) {
@@ -84,6 +85,8 @@ namespace worldofcake::bridge
             snapshotDrops++;
         ZewpVisualSnapshot v;
         v.generation = g;
+        v.modelReady = harness->modelReady();
+        v.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         v.logicalTime = logicalTime;
         v.paused = harness->paused();
         v.population = harness->population();

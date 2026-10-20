@@ -141,6 +141,7 @@ namespace worldofcake
         struct PreparedEvent
         {
             double timestamp = 0.0;
+            std::uint64_t transportEpoch = 0;
             int type = -1;
             int channel = 0;
             int data2 = 0;
@@ -159,10 +160,16 @@ namespace worldofcake
         struct GoldenpondVisualSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             double positionTicks = 0.0;
             double loopLengthTicks = 1.0;
+            double bpm = 120.0;
+            std::array<int, 4> octaves{};
+            std::array<int, 4> velocities{{100, 100, 100, 100}};
         bool paused = false;
+        bool muted = false;
         std::string chordInput;
         std::array<std::string, 4> rhythmInputs;
         std::vector<GoldenpondNoteSnapshot> notes;
@@ -188,10 +195,14 @@ namespace worldofcake
         struct GbloinkVisualSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             std::array<BallSnapshot, 3> balls{};
+            std::array<double, 3> ballSpeeds{};
             std::vector<GbloinkBlockSnapshot> blocks;
             bool paused = false;
+            bool muted = false;
             bool edgeNotes = false;
             int scaleIndex = 0;
         };
@@ -210,6 +221,8 @@ namespace worldofcake
         struct TimeSliderControlSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             bool paused = false;
             std::array<TimeSliderValueSnapshot, 4> sliders{};
@@ -226,6 +239,8 @@ namespace worldofcake
         struct TileLandControlSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             /** X/Y pairs for cursors 1..3, normalized to MIDI-style 0..127. */
             std::array<int, 6> values{};
@@ -247,6 +262,8 @@ namespace worldofcake
         struct TileLandVisualSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             bool paused = false;
             int rows = 0;
@@ -258,6 +275,8 @@ namespace worldofcake
         struct KDiagramControlSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             /** X/Y pairs for three cursors, normalized from -1..1 to 0..127. */
             std::array<int, 6> values{};
@@ -283,6 +302,8 @@ namespace worldofcake
         struct KDiagramVisualSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             bool paused = false;
             double radius = 0.9;
@@ -306,6 +327,8 @@ namespace worldofcake
         struct ZewpControlSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             // Six fixed Zewp slots × (X CV, Y CV, gate). Unpopulated slots publish zero.
             std::array<int, 18> values{};
@@ -313,6 +336,8 @@ namespace worldofcake
         struct ZewpVisualSnapshot
         {
             std::uint64_t generation = 0;
+            bool modelReady = false;
+            std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             bool paused = false;
             int population = 0;

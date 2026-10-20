@@ -11,7 +11,7 @@ class GoldenpondScoreCompiler {
     public static function chordLengthTicks(data:GoldenData):Float {
         if (data == null) throw "Goldenpond data cannot be null";
         var chords = data.makeChordProgression().toChordThings();
-        if (chords == null || chords.length == 0) throw "Goldenpond progression contains no chords";
+        if (chords == null || chords.length == 0) return 0.0;
         return data.makeTimeManipulator().chordTicks;
     }
 
@@ -20,7 +20,11 @@ class GoldenpondScoreCompiler {
 
         var time = data.makeTimeManipulator();
         var chords = data.makeChordProgression().toChordThings();
-        if (chords == null || chords.length == 0) throw "Goldenpond progression contains no chords";
+        // An empty progression is a valid editing state.  It lets the UI accept
+        // rhythm patterns before the user chooses a chord progression and
+        // publishes an empty score until chords are supplied.
+        if (chords == null || chords.length == 0)
+            return new SequenceSnapshot(1.0, []);
 
         var notes:Array<SequenceNote> = [];
         for (partId in 0...data.lines.length) {

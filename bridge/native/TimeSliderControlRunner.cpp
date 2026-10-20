@@ -12,7 +12,6 @@ namespace worldofcake::bridge
     TimeSliderControlRunner::~TimeSliderControlRunner()
     {
         stop();
-        destroyModel();
     }
     void TimeSliderControlRunner::pump(double d)
     {
@@ -25,15 +24,21 @@ namespace worldofcake::bridge
                                 publishSnapshot();
                             });
         applyPendingCommands();
-        if (std::isfinite(d) && d > 0) {
-            harness->advanceTime(d);
-            logicalTime += d;
+        const double step = std::isfinite(d) && d > 0 ? d : 0.001;
+        if (step > 0) {
+            harness->advanceTime(step);
+            logicalTime += step;
+            drainEvents();
         }
         publishSnapshot();
     }
     bool TimeSliderControlRunner::popControlSnapshot(TimeSliderControlSnapshot& v) noexcept
     {
         return controlSnapshots.pop(v);
+    }
+    bool TimeSliderControlRunner::popPreparedEvent(PreparedEvent& v) noexcept
+    {
+        return events.pop(v);
     }
     TimeSliderControlSnapshot TimeSliderControlRunner::latestVisualSnapshot() const
     {
@@ -53,6 +58,8 @@ namespace worldofcake::bridge
     {
         TimeSliderControlSnapshot n;
         n.generation = nextGeneration++;
+        n.modelReady = harness->modelReady();
+        n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
         n.paused = harness->paused();
         for (int i = 0; i < 4; i++) {
@@ -74,6 +81,21 @@ namespace worldofcake::bridge
             snapshotDrops++;
         std::lock_guard<std::mutex> l(visualMutex);
         visualSnapshot = n;
+    }
+    void TimeSliderControlRunner::drainEvents()
+    {
+        while (harness->hasEventBefore(logicalTime)) {
+            PreparedEvent e;
+            e.timestamp = harness->nextEventTimestamp();
+            e.transportEpoch = 0;
+            e.type = harness->nextEventType();
+            e.channel = harness->nextEventChannel();
+            e.data2 = harness->nextEventData2();
+            e.data3 = harness->nextEventData3();
+            if (!events.push(e))
+                eventDrops++;
+            harness->popEvent();
+        }
     }
     void TimeSliderControlRunner::createModel()
     {

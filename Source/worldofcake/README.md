@@ -22,7 +22,7 @@ Use of this library of UI components is optional.
 
 There are two layers of interfaces. The inner layer is the crucial cross-platform definition of a sequencer. It consists of the following interfaces :
 
-- ISequencer in ISequencer.hx. The "model" of the sequencer: time stepping (`advanceTime`), the event queue, **transport** (`pause`, `resume`, `reset`), and **patch persistence** (`exportStateJson`, `importStateJson`). Transport and `reset` may no-op where they do not apply; each sequencer owns its JSON shape (use a version field such as `"v"` when it evolves). See `architecture.md` for why these live on `ISequencer` and how hosts use them.
+- ISequencer in ISequencer.hx. The "model" of the sequencer: time stepping (`advanceTime`), host-clock synchronization (`resyncTime`), the event queue, **transport** (`pause`, `resume`, `reset`), and **patch persistence** (`exportStateJson`, `importStateJson`). Hosts with an authoritative clock can resync forward in elapsed transport seconds; paused hosts keep that time fixed. Transport and `reset` may no-op where they do not apply; each sequencer owns its JSON shape (use a version field such as `"v"` when it evolves). See `architecture.md` for why these live on `ISequencer` and how hosts use them.
 
 - IControlPanel in IControlPanel.hx. This defines the inputs or commands that can be sent to sequencers from the outer platform. It's how the sequencer is controlled by the user.
 

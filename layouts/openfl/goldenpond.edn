@@ -8,7 +8,7 @@
                :composition-class "GoldenpondCompositionGenerated"
                :layout-class "GoldenpondLayoutGenerated"}
  :geometry {:panel-width 1400.0
-            :panel-height 700.0
+            :panel-height 580.0
             :padding-left 24.0 :padding-right 24.0
             :padding-top 18.0 :padding-bottom 18.0
             :root-gap 16.0 :nested-gap 10.0}
@@ -19,32 +19,56 @@
                :local-min-x 0.0 :local-min-y 0.0
                :local-max-x 760.0 :local-max-y 600.0
                :view-hook "setPlayArea"}
-  "chordinput" {:kind :text-input :default "62 72 5ii 71"}
-  "rhythm0" {:kind :text-input :default "3%8 > 2"}
-  "rhythm1" {:kind :text-input :default "1.1.Cr 2"}
-  "rhythm2" {:kind :text-input :default "3%8 > 2"}
-  "rhythm3" {:kind :text-input :default "3%8 > 2"}
-  "octave0" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+  "chordinput" {:kind :text-input :default ""}
+  "correctiontarget" {:kind :semantic-select :label "Correction target" :tooltip "How incoming keyboard notes are corrected." :default-index 0 :presentation "compact"
+                       :view-hook "setCorrectionTargetSelect"
+                       :choices [{:value 0 :label "Scale" :colour "0x40C0FF"}
+                                 {:value 1 :label "Key pentatonic" :colour "0xD49A55"}
+                                 {:value 2 :label "Chord tones" :colour "0xD43C3C"}
+                                 {:value 3 :label "Chord pentatonic" :colour "0x9ACB7C"}]}
+  "keyselect" {:kind :semantic-select :label "Key" :tooltip "Root note for the generated score." :default-index 0 :unit :pitch-class :output :midi-note :presentation "compact"
+               :view-hook "setKeySelect"
+               :choices [{:value 0 :label "C"} {:value 1 :label "C#"}
+                         {:value 2 :label "D"} {:value 3 :label "Eb"}
+                         {:value 4 :label "E"} {:value 5 :label "F"}
+                         {:value 6 :label "F#"} {:value 7 :label "G"}
+                         {:value 8 :label "Ab"} {:value 9 :label "A"}
+                         {:value 10 :label "Bb"} {:value 11 :label "B"}]}
+  "modeselect" {:kind :semantic-select :label "Scale" :tooltip "Scale or mode used to generate and correct notes." :default-index 0 :unit :scale :output :midi-note :presentation "compact"
+                :view-hook "setModeSelect"
+                :choices [{:value 0 :label "Major"}
+                          {:value 1 :label "Minor"}
+                          {:value 2 :label "Harmonic minor"}
+                          {:value 3 :label "Melodic minor"}
+                          {:value 4 :label "Harmonic major"}
+                          {:value 5 :label "Hungarian minor"}
+                          {:value 6 :label "Double harmonic"}]}
+  "rhythm0" {:kind :text-input :default ""}
+  "rhythm1" {:kind :text-input :default ""}
+  "rhythm2" {:kind :text-input :default ""}
+  "rhythm3" {:kind :text-input :default ""}
+  "octave0" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0 :unit :octave :output :midi-note
              :label "Oct" :colour "0x8CB6D9" :view-hook "addValueControl"}
-  "octave1" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+  "octave1" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0 :unit :octave :output :midi-note
              :label "Oct" :colour "0xE59A9D" :view-hook "addValueControl"}
-  "octave2" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+  "octave2" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0 :unit :octave :output :midi-note
              :label "Oct" :colour "0x9ACB7C" :view-hook "addValueControl"}
-  "octave3" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0
+  "octave3" {:kind :knob :minimum -3.0 :maximum 3.0 :default 0.0 :unit :octave :output :midi-note
              :label "Oct" :colour "0xBDA0DD" :view-hook "addValueControl"}
-  "velocity0" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+  "velocity0" {:kind :knob :minimum 0.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
                :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
-  "velocity1" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+  "velocity1" {:kind :knob :minimum 0.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
                :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
-  "velocity2" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+  "velocity2" {:kind :knob :minimum 0.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
                :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
-  "velocity3" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0
+  "velocity3" {:kind :knob :minimum 0.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
                :label "Vel" :colour "0xD49A55" :view-hook "addValueControl"}
-  "bpm" {:kind :knob :minimum 30.0 :maximum 240.0 :default 120.0
+  "bpm" {:kind :knob :minimum 30.0 :maximum 240.0 :default 120.0 :unit :bpm :output :transport
          :label "BPM" :colour "0x40C0FF" :view-hook "addValueControl"}
-  "chordduration" {:kind :knob :minimum 1.0 :maximum 16.0 :default 4.0
+  "chordduration" {:kind :knob :minimum 1.0 :maximum 16.0 :default 4.0 :unit :duration :output :midi-note
                    :label "Chord" :colour "0xB0B0B0" :view-hook "addValueControl"}
   "zoom" {:kind :knob :minimum 1.0 :maximum 8.0 :default 1.0
           :label "Zoom" :colour "0xD49A55" :view-hook "addValueControl"}
   "reset" {:kind :button :label "Reset" :colour "0x606874"}
-  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}}
+  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}
+  "mute" {:kind :toggle :label "Mute output" :tooltip "Keep the score and transport running but suppress MIDI output." :default false :colour "0x606874"}}}

@@ -9,7 +9,7 @@
       bluespeed/knob(90)
       controlmiddle/spacer(20)
       scaleselect/semanticselect(70)
-      <reset/button pause/toggle edge-notes/toggle>(90)
+      <reset/button pause/toggle mute/toggle edge-notes/toggle>(90)
       controlbottom/spacer(25)
     ](11)
   >(570)

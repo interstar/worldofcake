@@ -281,7 +281,7 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
         }
         for (slider in sliders) {
             if (slider.moving) {
-                events.push(new Event(
+                emitEvent(new Event(
                     currentTime,
                     CC_EVENT_TYPE,
                     slider.channel,

@@ -7,6 +7,8 @@ class TileLandHarness {
  var inst:TileLandSequencer;
  public function new(seed:Int) inst=new TileLandSequencer(new worldofcake.SeededRandomSource(seed));
  public function destroy():Void inst=null;
+ public function modelReady():Bool return inst != null && inst.getModelStatus().ready;
+ public function stateRevision():Int return inst == null ? 0 : inst.getModelStatus().stateRevision;
  public function advanceTime(d:Float):Void if(inst!=null)inst.advanceTime(d);
  public function discardPendingEvents():Void if(inst!=null)inst.events=[];
  public function click(x:Float,y:Float):Void if(inst!=null)inst.mouseDown(TileLandSequencer.PLAY_AREA_UID,new LocalPoint(x,y));

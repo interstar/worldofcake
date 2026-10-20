@@ -1,6 +1,7 @@
 #include "ControlThread.h"
 
 #include <hxcpp.h>
+#include <hx/Native.h>
 
 #include <chrono>
 #include <cmath>
@@ -25,8 +26,9 @@ namespace worldofcake::bridge
         stopRequested.store(false, std::memory_order_release);
         worker = std::thread([this, periodSeconds, callbackDelta, callback = std::move(tick),
                               onSetup = std::move(setup), onTeardown = std::move(teardown)] {
-            int stackAnchor = 0;
-            hx::SetTopOfStack(&stackAnchor, true);
+            // The control worker is the sole Haxe owner. NativeAttach balances
+            // its hxcpp GC registration when the thread exits.
+            hx::NativeAttach haxeThread;
             if (onSetup)
                 onSetup();
             {

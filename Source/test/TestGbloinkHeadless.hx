@@ -70,18 +70,38 @@ class TestGbloinkHeadless {
     static function testStateRoundTrip():Void {
         var source = make(77);
         source.mouseDown(Gbloink.PLAY_AREA_UID, new LocalPoint(250, 210));
+        source.newValue(Gbloink.SPEED_UID_BASE, 0.05);
+        source.newValue(Gbloink.SCALE_SELECT_UID, 4);
         source.advanceTime(0.025);
         var restored = make(99);
         restored.importStateJson(source.exportStateJson());
         check("state block round trip", restored.exportBlocksJson() == source.exportBlocksJson());
         check("state logical time", near(restored.getLogicalTime(), source.getLogicalTime()));
         check("state ball position", near(restored.balls[0].pos.x, source.balls[0].pos.x));
+        check("state ball speed", near(restored.getBallSpeed(0), 0.05));
+        check("state scale", restored.getScaleIndex() == 4);
     }
 
     static function testSemanticScaleSelection():Void {
         var app = make(13);
         app.newValue(Gbloink.SCALE_SELECT_UID, 3);
         check("gbloink semantic scale selection", app.getScaleName() == "harmonic_minor" && app.getScaleIndex() == 3);
+    }
+
+    static function testTransportEpochResetPreservesLayout():Void {
+        var app = make(21);
+        app.mouseDown(Gbloink.PLAY_AREA_UID, new LocalPoint(250, 210));
+        app.advanceTime(0.25);
+        var blocks = app.exportBlocksJson();
+        app.resetTransport(false);
+        check("transport reset returns to zero", near(app.getLogicalTime(), 0));
+        check("transport reset preserves layout", app.exportBlocksJson() == blocks);
+        var x = app.balls[0].pos.x;
+        app.resyncTime(1.0);
+        check("paused transport reset remains paused", near(app.balls[0].pos.x, x));
+        app.resume();
+        app.resyncTime(1.0);
+        check("transport resumes from new epoch", near(app.getLogicalTime(), 1.0));
     }
 
     public static function main():Void {
@@ -91,6 +111,7 @@ class TestGbloinkHeadless {
         testPauseAndInvalidDelta();
         testStateRoundTrip();
         testSemanticScaleSelection();
+        testTransportEpochResetPreservesLayout();
         if (failures > 0) {
             Sys.println('$failures Gbloink headless test(s) failed');
             Sys.exit(1);

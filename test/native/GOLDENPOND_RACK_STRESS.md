@@ -9,12 +9,14 @@ bash test/native/run-goldenpond-rack-stress.sh [seconds] [runner-count]
 Defaults are 600 seconds and four concurrent `GoldenpondControlRunner`
 instances. The script regenerates the same hxcpp code used by the Rack module,
 then links the production runner and `ControlThread` into a standalone test
-executable under `build/vcvrack/goldenpond/`.
+executable under `build/vcvrack/goldenpond/linux/`.
 
-Each runner advances at Rack's 60 Hz control cadence. BPM is changed periodically
-to exercise project recompilation and correction-cache invalidation. A separate
-audio-consumer thread simulates 48 kHz processing in 64-sample blocks: it reads
-all three correction maps and drains prepared note events without calling Haxe.
+The simulated audio thread publishes a monotonic transport time to each runner
+at 48 kHz in 64-sample blocks. Each runner resynchronizes its sequencer to that
+host time on its 60 Hz control thread. BPM is changed periodically to exercise
+project recompilation and correction-cache invalidation. The audio consumer
+also reads all three correction maps and drains prepared note events without
+calling Haxe.
 The harness checks that visual snapshots keep advancing and counts successful
 correction-table publications. It exits with failure if a runner stops
 publishing snapshots for 15 seconds or publishes fewer than two tables.

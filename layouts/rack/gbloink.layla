@@ -11,7 +11,7 @@
     bluespeed/knob(90)
     control-middle/spacer(20)
     scaleselect/knob(70)
-    <reset/button pause/toggle edge-notes/toggle>(90)
+    <reset/button pause/toggle mute/toggle edge-notes/toggle>(90)
     control-bottom/spacer(25)
   ](24)
   patch-gap/spacer(17/2)

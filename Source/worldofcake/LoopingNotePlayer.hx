@@ -94,8 +94,13 @@ class LoopingNotePlayer {
     }
 
     private function applySnapshot(next:SequenceSnapshot):Void {
+        var oldLoopLength = snapshot.loopLengthTicks;
+        var loopPhase = getLoopPositionTicks();
+        var nextPhase = oldLoopLength > 0
+            ? loopPhase / oldLoopLength * next.loopLengthTicks
+            : 0.0;
         snapshot = next;
-        snapshotOriginTick = absoluteTick;
+        snapshotOriginTick = absoluteTick - nextPhase;
         if (active) emitStartsAt(absoluteTick);
     }
 

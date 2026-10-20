@@ -6,6 +6,8 @@ class KDiagramHarness {
  var inst:KDiagramSequencer;
  public function new(seed:Int) inst = new KDiagramSequencer(new SeededRandomSource(seed));
  public function destroy():Void inst=null;
+ public function modelReady():Bool return inst != null && inst.getModelStatus().ready;
+ public function stateRevision():Int return inst == null ? 0 : inst.getModelStatus().stateRevision;
  public function advanceTime(d:Float):Void if(inst!=null)inst.advanceTime(d);
  public function click(x:Float,y:Float):Void if(inst!=null)inst.playAreaMouseDown(x,y);
  public function setValue(i:Int,v:Float):Void if(inst!=null)inst.newValue(i,v);

@@ -25,7 +25,7 @@ Install Docker. The normal build uses the vendored artifact `vendor/layla/worldo
 From the repository root:
 
 ```bash
-./docker-build-linux.sh
+./docker/docker-build-linux.sh
 ```
 
 The build verifies the SHA-256 checksums of both the Linux Rack SDK archive and the vendored generator JAR. The image is tagged `worldofcake:linux`.
@@ -36,7 +36,7 @@ The build verifies the SHA-256 checksums of both the Linux Rack SDK archive and 
 Use the repository helper to mount this checkout at `/opt/worldofcake`:
 
 ```bash
-./docker-run-linux-build.sh bash
+./docker/docker-run-linux-build.sh bash
 ```
 
 The helper mounts the repository read/write, so generated files and build products appear in the normal repository locations. The image's installed tools and dependencies are not hidden by this mount.
@@ -44,7 +44,7 @@ The helper mounts the repository read/write, so generated files and build produc
 For a one-shot command:
 
 ```bash
-./docker-run-linux-build.sh bash -lc 'haxe --version'
+./docker/docker-run-linux-build.sh bash -lc 'haxe --version'
 ```
 
 The helper passes `RACK_DIR=/opt/rack-sdk/Rack-SDK`.
@@ -54,7 +54,7 @@ The helper passes `RACK_DIR=/opt/rack-sdk/Rack-SDK`.
 Run all five model test suites:
 
 ```bash
-./docker-run-linux-build.sh bash -lc '
+./docker/docker-run-linux-build.sh bash -lc '
   set -e
   for app in gbloink timeslider kdiagram tileland zewp; do
     haxe hxml/tests/test-$app-headless.hxml
@@ -65,13 +65,13 @@ Run all five model test suites:
 Run one suite:
 
 ```bash
-./docker-run-linux-build.sh haxe hxml/tests/test-gbloink-headless.hxml
+./docker/docker-run-linux-build.sh haxe hxml/tests/test-gbloink-headless.hxml
 ```
 
 Native Haxe test targets can be run in the same way:
 
 ```bash
-./docker-run-linux-build.sh haxe hxml/tests/test-gbloink-native.hxml
+./docker/docker-run-linux-build.sh haxe hxml/tests/test-gbloink-native.hxml
 ```
 
 The native target writes its generated executable beneath the repository's `build/` tree.
@@ -81,7 +81,7 @@ The native target writes its generated executable beneath the repository's `buil
 The bundled JAR includes Layla, the WorldOfCake generator, Clojure, and Instaparse. It requires only Java:
 
 ```bash
-./docker-run-linux-build.sh java -jar vendor/layla/worldofcake-laylagen.jar \
+./docker/docker-run-linux-build.sh java -jar vendor/layla/worldofcake-laylagen.jar \
   --input layouts/openfl/gbloink.layla \
   --config layouts/openfl/gbloink.edn \
   --output Source \
@@ -91,7 +91,7 @@ The bundled JAR includes Layla, the WorldOfCake generator, Clojure, and Instapar
 Use `--check` instead of generating files. To check all OpenFL layouts:
 
 ```bash
-./docker-run-linux-build.sh bash -lc '
+./docker/docker-run-linux-build.sh bash -lc '
   set -e
   for app in gbloink timeslider kdiagram tileland zewp; do
     java -jar vendor/layla/worldofcake-laylagen.jar \
@@ -111,7 +111,7 @@ Generated files under `Source/generated/` and `bridge/native/worldofcake/generat
 Build an OpenFL Neko target without opening a window:
 
 ```bash
-./docker-run-linux-build.sh haxelib run lime build project-gbloink.xml neko
+./docker/docker-run-linux-build.sh haxelib run lime build project-gbloink.xml neko
 ```
 
 Build the other applications by replacing `gbloink` with `kdiagram`, `tileland`, `timeslider`, or `zewp`.
@@ -123,7 +123,7 @@ The container can compile OpenFL targets, but it is not configured for interacti
 Build the available Gbloink Rack module:
 
 ```bash
-./docker-run-linux-build.sh bash -lc '
+./docker/docker-run-linux-build.sh bash -lc '
   set -e
   make -C derivatives/vcvrack/gbloink \
     RACK_DIR=/opt/rack-sdk/Rack-SDK clean

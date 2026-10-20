@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 MODULE="$ROOT/derivatives/vcvrack/goldenpond"
-ARTIFACTS="$ROOT/build/vcvrack/goldenpond"
+ARTIFACTS="$ROOT/build/vcvrack/goldenpond/linux"
 NATIVE="$ARTIFACTS/native"
 HXCPP_ROOT="$(haxelib path hxcpp | sed -n '1p' | tr -d '\r')"
 

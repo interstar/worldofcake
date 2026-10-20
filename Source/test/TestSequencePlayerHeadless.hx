@@ -38,7 +38,7 @@ class TestSequencePlayerHeadless {
         check(sawLoopStart, "note repeats at loop boundary");
         check(sawLongNoteOff, "short note-off is scheduled");
 
-        var replacement = new SequenceSnapshot(80, [new SequenceNote(2, 67, 0, 5, 90)]);
+        var replacement = new SequenceSnapshot(80, [new SequenceNote(2, 67, 40, 5, 90)]);
         player.publish(replacement, 150);
         player.advanceTicks(100);
         var sawOldLongOff = false;
@@ -50,6 +50,7 @@ class TestSequencePlayerHeadless {
         }
         check(sawOldLongOff, "old snapshot note-off survives replacement");
         check(sawReplacement, "replacement starts at requested boundary");
+        check(player.getLoopPositionTicks() == 10, "replacement preserves normalized loop phase as the loop length changes");
 
         player.stop();
         check(!player.isRunning(), "stop");

@@ -11,7 +11,6 @@ namespace worldofcake::bridge
     TileLandControlRunner::~TileLandControlRunner()
     {
         stop();
-        destroyModel();
     }
     void TileLandControlRunner::pump(double d)
     {
@@ -57,6 +56,8 @@ namespace worldofcake::bridge
     {
         TileLandControlSnapshot n;
         n.generation = g;
+        n.modelReady = harness->modelReady();
+        n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
         for (int i = 0; i < 3; i++) {
             n.values[i * 2] = std::max(0, std::min(127, (int)(harness->cursorX(i) / 600. * 127)));
@@ -68,6 +69,8 @@ namespace worldofcake::bridge
     {
         TileLandVisualSnapshot n;
         n.generation = g;
+        n.modelReady = harness->modelReady();
+        n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
         n.paused = harness->paused();
         n.rows = harness->rows();

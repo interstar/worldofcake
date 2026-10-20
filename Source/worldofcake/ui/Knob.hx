@@ -16,17 +16,20 @@ class Knob extends Sprite implements IValueControl {
     private var min:Float;
     private var max:Float;
     private var value:Float;
+    private var mapping:String;
     private var dragStartY:Float;
     private var dragStartValue:Float;
 
     public function new(uid:Int, panelPos:PanelPoint, panelSize:PanelPoint, windowToPanelMapper:CoordinateMapper,
-                        sequencer:ISequencerControl, min:Float, max:Float, defaultValue:Float, label:String, color:Int) {
+                        sequencer:ISequencerControl, min:Float, max:Float, defaultValue:Float, label:String, color:Int,
+                        mapping:String = "linear") {
         super();
         common = new ComponentCommon(uid, panelPos, panelSize, windowToPanelMapper,
             new LocalPoint(0, 0), new LocalPoint(panelSize.x, panelSize.y), sequencer);
         this.min = min;
         this.max = max;
         this.value = clamp(defaultValue);
+        this.mapping = mapping;
         this.label = label;
         this.color = color;
         var windowPos = panelToWindow(panelPos);
@@ -50,7 +53,8 @@ class Knob extends Sprite implements IValueControl {
 
     public function handleMouseDragged(point:WindowPoint):Bool {
         var span = Math.max(1.0, common.getWindowSize().y);
-        value = clamp(dragStartValue + ((dragStartY - point.y) / span) * (max - min));
+        var normalized = valueToNormalized(dragStartValue) + ((dragStartY - point.y) / span);
+        value = normalizedToValue(Math.max(0.0, Math.min(1.0, normalized)));
         common.sequencer.newValue(getUID(), value);
         redraw();
         return true;
@@ -61,12 +65,29 @@ class Knob extends Sprite implements IValueControl {
     private function updateFromPoint(point:WindowPoint, notify:Bool):Void {
         var local = windowToLocal(point);
         var h = Math.max(1.0, common.getSize().y);
-        value = clamp(max - (local.y / h) * (max - min));
+        value = normalizedToValue(Math.max(0.0, Math.min(1.0, 1.0 - local.y / h)));
         if (notify) common.sequencer.newValue(getUID(), value);
         redraw();
     }
 
     private function clamp(v:Float):Float return Math.max(min, Math.min(max, v));
+
+    private function usesLogarithmicMapping():Bool {
+        return mapping == "logarithmic" && min > 0.0 && max > min;
+    }
+
+    private function valueToNormalized(v:Float):Float {
+        var clamped = clamp(v);
+        return usesLogarithmicMapping()
+            ? Math.log(clamped / min) / Math.log(max / min)
+            : (clamped - min) / (max - min);
+    }
+
+    private function normalizedToValue(normalized:Float):Float {
+        return usesLogarithmicMapping()
+            ? min * Math.pow(max / min, normalized)
+            : min + normalized * (max - min);
+    }
 
     public function redraw():Void {
         graphics.clear();
@@ -80,7 +101,7 @@ class Knob extends Sprite implements IValueControl {
         graphics.beginFill(0xE6E6E6);
         graphics.drawCircle(cx, cy, radius);
         graphics.endFill();
-        var normalized = (value - min) / (max - min);
+        var normalized = valueToNormalized(value);
         var angle = (135 + normalized * 270) * Math.PI / 180;
         graphics.lineStyle(3, color);
         graphics.moveTo(cx, cy);

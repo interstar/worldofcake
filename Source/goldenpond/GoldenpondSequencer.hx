@@ -24,6 +24,7 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     private var correctionChordCount:Int;
     private var cachedBpm:Float;
     private var cachedPpq:Float;
+    private var cachedProjectJson:Null<String>;
 
     public function new(?initialProject:GoldenData) {
         super(true);
@@ -41,6 +42,10 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     }
 
     public function compileNow():Bool {
+        invalidateProjectJsonCache();
+        // A rebuilt score supersedes all events from the previous key/scale/
+        // pattern. Never let stale notes leak into the new sequence.
+        clearEvents();
         try {
             var compiled = GoldenpondScoreCompiler.compile(project);
             var time = project.makeTimeManipulator();
@@ -77,20 +82,45 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         }
     }
 
+    /** Host tempo override used by DAW adapters; project BPM remains editable state. */
+    public function setHostBpm(value:Float):Void {
+        if (!Math.isFinite(value) || value <= 0) return;
+        var normalized = Std.int(Math.round(value));
+        if (normalized < 30) normalized = 30;
+        if (normalized > 240) normalized = 240;
+        project.bpm = normalized;
+        cachedBpm = normalized;
+        invalidateProjectJsonCache();
+        dirty = true;
+    }
+
     public function reset():Void {
         resetTransport();
+    }
+
+    override public function resetTransport(unpause:Bool = true):Void {
+        super.resetTransport(unpause);
+        player.reset();
+        if (!unpause) player.stop();
+        drainPlayerEvents(project.bpm, project.ppq);
+    }
+
+    override public function resetTransportPreservingState():Void {
+        super.resetTransportPreservingState();
         player.reset();
         drainPlayerEvents(project.bpm, project.ppq);
     }
 
     public function exportStateJson():String {
-        return Json.stringify({
+        if (cachedProjectJson == null) cachedProjectJson = Json.stringify(project.toJSON());
+        var envelope = Json.stringify({
             v: 1,
             kind: "goldenpond",
             currentTime: currentTime,
             paused: paused,
-            project: project.toJSON()
+            muted: muted
         });
+        return envelope.substr(0, envelope.length - 1) + ',"project":' + cachedProjectJson + '}';
     }
 
     public function importStateJson(json:String):Void {
@@ -100,8 +130,10 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
             if (saved == null || saved.kind != "goldenpond" || saved.project == null) return;
             var restored = GoldenData.makeFromJSON(saved.project, new TimedSequence.DeserializationHelper());
             project = restored;
+            markStateReplaced();
             currentTime = saved.currentTime == null ? 0 : Std.parseFloat(Std.string(saved.currentTime));
             paused = saved.paused == true;
+            muted = saved.muted == true;
             player = new LoopingNotePlayer();
             compileNow();
             drainPlayerEvents(project.bpm, project.ppq);
@@ -139,8 +171,20 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         } else if (uid == GoldenpondControlIdsGenerated.CHORDDURATION) {
             project.chordDuration = Std.int(Math.max(1, Math.min(16, value)));
             requestCompile();
+        } else if (uid == GoldenpondControlIdsGenerated.CORRECTIONTARGET) {
+            project.setCorrectionTarget(Std.int(Math.max(0, Math.min(3, Math.round(value)))));
+            invalidateProjectJsonCache();
+            dirty = true;
+        } else if (uid == GoldenpondControlIdsGenerated.KEYSELECT) {
+            project.root = 60 + Std.int(Math.max(0, Math.min(11, Math.round(value))));
+            requestCompile();
+        } else if (uid == GoldenpondControlIdsGenerated.MODESELECT) {
+            project.setMode(Std.int(Math.max(0, Math.min(6, Math.round(value)))));
+            requestCompile();
         } else if (uid == GoldenpondControlIdsGenerated.PAUSE) {
             if (value > 0.5) pause(); else resume();
+        } else if (uid == GoldenpondControlIdsGenerated.MUTE) {
+            setMuted(value > 0.5);
         } else if (uid == GoldenpondControlIdsGenerated.ZOOM) {
             pianoRollZoom = Math.max(1.0, Math.min(8.0, value));
             dirty = true;
@@ -162,9 +206,21 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
 
     public function getSnapshot():worldofcake.SequenceSnapshot return player.getSnapshot();
     public function getPositionTicks():Float return player.getPositionTicks();
+    public function getLoopPositionTicks():Float return player.getLoopPositionTicks();
     public function getPianoRollZoom():Float return pianoRollZoom;
 
     public function getCorrectionRevision():Int return correctionRevision;
+    public function getCorrectionTarget():Int return project.correctionTarget;
+    public function getKeyIndex():Int return ((project.root % 12) + 12) % 12;
+    public function getModeIndex():Int return project.mode;
+
+    public function getCorrectionKey(time:Float):Int {
+        try {
+            return project.getCorrectionKey(toGoldenpondTicks(time));
+        } catch (_:Dynamic) {
+            return -1;
+        }
+    }
 
     public function getCorrectionChordIndex(time:Float):Int {
         var chordTicks = project.ppq * project.chordDuration;
@@ -179,6 +235,14 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
             return project.makeCorrectionTable(toGoldenpondTicks(time), previousNote < 0 ? null : previousNote);
         } catch (_:Dynamic) {
             return [for (note in 0...128) note];
+        }
+    }
+
+    public function makeBidirectionalCorrectionTable(time:Float):Array<Int> {
+        try {
+            return project.makeBidirectionalCorrectionTable(toGoldenpondTicks(time));
+        } catch (_:Dynamic) {
+            return [for (note in 0...128) note].concat([for (note in 0...128) note]);
         }
     }
 
@@ -212,9 +276,14 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     }
 
     private function requestCompile():Void {
+        invalidateProjectJsonCache();
         compilePending = true;
         compileDelay = 0.01;
         dirty = true;
+    }
+
+    private function invalidateProjectJsonCache():Void {
+        cachedProjectJson = null;
     }
 
     private function drainPlayerEvents(bpm:Float, ppq:Float):Void {
@@ -223,17 +292,16 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
             var note = player.getNextEvent();
             var type = note.type == worldofcake.SequenceNoteEvent.NOTE_ON ? NOTE_ON_EVENT_TYPE : NOTE_OFF_EVENT_TYPE;
             // WoC's native note contract is channel/part, pitch, velocity.
-            events.push(new Event(note.timestampTicks * secondsPerTick, type, note.partId, note.pitch, note.velocity));
+            emitEvent(new Event(note.timestampTicks * secondsPerTick, type, note.partId, note.pitch, note.velocity));
         }
     }
 
     private static function defaultProject():GoldenData {
         var data = new GoldenData();
+        data.chordSequence = "";
         data.lines = [];
-        data.addLine("3%8 > 2", new MidiInstrumentContext(0, 100, 0.8, 0));
-        data.addLine("1.1.Cr 2", new MidiInstrumentContext(1, 100, 0.8, 0));
-        data.addLine("3%8 > 2", new MidiInstrumentContext(2, 100, 0.8, 0));
-        data.addLine("3%8 > 2", new MidiInstrumentContext(3, 100, 0.8, 0));
+        // Start empty. Users can enter a chord progression and patterns explicitly;
+        // an empty project must not silently restore the historical demo score.
         return data;
     }
 }

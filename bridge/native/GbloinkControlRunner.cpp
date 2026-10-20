@@ -11,7 +11,6 @@ namespace worldofcake::bridge
     GbloinkControlRunner::~GbloinkControlRunner()
     {
         stop();
-        destroyModel();
     }
     void GbloinkControlRunner::pump(double delta)
     {
@@ -22,7 +21,50 @@ namespace worldofcake::bridge
         currentStage = 2;
         applyPendingCommands();
         currentStage = 3;
-        if (std::isfinite(delta) && delta > 0) {
+        // A stopped DAW transport is a hard generation boundary for Gbloink.
+        // Discard any events already prepared for the stopped epoch and do not
+        // advance the Haxe simulation until the host explicitly resumes.
+        if (!hostTransportRunning.load(std::memory_order_acquire)) {
+            PreparedEvent discarded;
+            while (events.pop(discarded)) {
+                eventDrops++;
+            }
+            publishVisualSnapshot();
+            currentStage = 7;
+            return;
+        }
+        if (hostClockEnabled.load(std::memory_order_acquire)) {
+            const auto epoch = hostTransportEpoch.load(std::memory_order_acquire);
+            const double hostTime = hostTransportTime.load(std::memory_order_acquire);
+            if (epoch != observedHostTransportEpoch) {
+                observedHostTransportEpoch = epoch;
+                hostClockBaseTime = 0.0;
+                logicalTime = 0.0;
+                // A host transport epoch is not an explicit user resume. Preserve
+                // the model's pause latch across stop/start and seek boundaries.
+                harness->resetTransportPreservingState();
+            }
+            const double targetTime = std::max(0.0, hostTime - hostClockBaseTime);
+            if (std::isfinite(targetTime) && targetTime > logicalTime) {
+                // The host publishes a point ahead of its current audio block. Keep
+                // the physics resolution independent of the host buffer size so a
+                // large block cannot tunnel a ball through a narrow obstacle.
+                constexpr double maxSimulationStep = 0.001;
+                while (logicalTime + maxSimulationStep < targetTime) {
+                    harness->advanceTime(maxSimulationStep);
+                    logicalTime += maxSimulationStep;
+                    currentStage = 4;
+                    drainEvents();
+                }
+                const double remainder = targetTime - logicalTime;
+                if (remainder > 0.0) {
+                    harness->advanceTime(remainder);
+                    logicalTime = targetTime;
+                    currentStage = 4;
+                    drainEvents();
+                }
+            }
+        } else if (std::isfinite(delta) && delta > 0) {
             harness->advanceTime(delta);
             logicalTime += delta;
             currentStage = 4;
@@ -67,12 +109,15 @@ namespace worldofcake::bridge
         while (harness->hasEventBefore(logicalTime)) {
             PreparedEvent e;
             e.timestamp = harness->nextEventTimestamp();
+            e.transportEpoch = observedHostTransportEpoch;
             e.type = harness->nextEventType();
             e.channel = harness->nextEventChannel();
             e.data2 = harness->nextEventData2();
             e.data3 = harness->nextEventData3();
             if (!events.push(e))
                 eventDrops++;
+            else
+                preparedEvents++;
             harness->popEvent();
         }
     }
@@ -80,12 +125,15 @@ namespace worldofcake::bridge
     {
         GbloinkVisualSnapshot n;
         n.generation = nextGeneration++;
+        n.modelReady = harness->modelReady();
+        n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
         for (int i = 0; i < 3; i++) {
             n.balls[i].x = harness->ballX(i);
             n.balls[i].y = harness->ballY(i);
             n.balls[i].radius = harness->ballRadius(i);
             n.balls[i].colour = harness->ballColour(i);
+            n.ballSpeeds[i] = harness->ballSpeed(i);
         }
         auto count = harness->blockCount();
         n.blocks.reserve((size_t)count);
@@ -99,6 +147,7 @@ namespace worldofcake::bridge
             n.blocks.push_back(b);
         }
         n.paused = harness->paused();
+        n.muted = harness->muted();
         n.edgeNotes = harness->edgeNotes();
         n.scaleIndex = harness->scaleIndex();
         std::lock_guard<std::mutex> l(snapshotMutex);

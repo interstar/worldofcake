@@ -41,7 +41,9 @@
              "generated/test/ControlIdsGenerated.hx"
              "generated/test/geometry.edn"}
            (set (keys (:files a)))))
-    (is (= #{"worldofcake/generated/test/ControlIdsGenerated.h"}
+    (is (= #{"worldofcake/generated/test/ControlIdsGenerated.h"
+             "worldofcake/generated/juce/test/LayoutGenerated.h"
+             "worldofcake/generated/test/TestControlMetadataGenerated.h"}
            (set (keys (:native-files a)))))
     (is (re-find #"Do not edit directly" (get-in a [:files "generated/test/LayoutGenerated.hx"])))
     (is (re-find #"new Slider" (get-in a [:files "generated/test/CompositionGenerated.hx"])))
@@ -53,6 +55,14 @@
     (is (re-find #"constexpr int kRedspeed = 2" (get-in a [:native-files "worldofcake/generated/test/ControlIdsGenerated.h"])))
     (is (re-find #"constexpr int kReset = 5" (get-in a [:native-files "worldofcake/generated/test/ControlIdsGenerated.h"])))
     (is (re-find #"constexpr int kPause = 6" (get-in a [:native-files "worldofcake/generated/test/ControlIdsGenerated.h"])))))
+
+(deftest knob-value-mapping-is-generated
+  (let [config (assoc base-config :components
+                      {"rate" {:kind :knob :minimum 0.05 :maximum 4.0 :default 2.0
+                               :mapping :logarithmic :label "Rate" :colour "0x40C0FF"}})
+        result (generator/parse-and-generate "[rate/knob]" config)]
+    (is (re-find #"0.050000, 4.000000, 2.000000" (get-in result [:files "generated/test/CompositionGenerated.hx"])))
+    (is (re-find #"\"logarithmic\"" (get-in result [:files "generated/test/CompositionGenerated.hx"])))))
 
 (deftest quoted-ids-and-safe-symbols
   (is (= "multi_word_label" (generator/safe-symbol "Multi Word Label")))
@@ -160,12 +170,13 @@
                 :geometry {:panel-width 120.0 :panel-height 40.0 :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
                 :components {"choice" {:kind :semantic-select :default-index 1 :presentation "segmented"
                                        :choices [{:value 0 :label "One" :colour "0xFF0000"}
-                                                 {:value 1 :label "Two" :colour "0x00FF00"}]}}}
+                                                 {:value 1 :label "Two"}]}}}
         result (generator/parse-and-generate "<choice/semanticselect>" config)
         composition (get-in result [:files "generated/selecttest/CompositionGenerated.hx"])]
     (is (re-find #"new SemanticSelect" composition))
     (is (re-find #"ControlIds\.CHOICE" composition))
     (is (re-find #"\[\"One\", \"Two\"\]" composition))
+    (is (re-find #"\[0xFF0000, 0x606874\]" composition))
     (is (re-find #"\"segmented\"" composition))))
 
 

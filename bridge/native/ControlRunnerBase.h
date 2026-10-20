@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <cmath>
 
 namespace worldofcake
 {
@@ -59,6 +60,27 @@ namespace worldofcake
             bool isRunning() const noexcept
             {
                 return controlThread.isRunning();
+            }
+
+            /** Real-time-safe latest-value host clock publication. */
+            void setHostTransportTime(double elapsedSeconds, std::uint64_t epoch) noexcept
+            {
+                if (!std::isfinite(elapsedSeconds) || elapsedSeconds < 0.0)
+                    return;
+                hostTransportTime.store(elapsedSeconds, std::memory_order_release);
+                hostTransportEpoch.store(epoch, std::memory_order_release);
+                hostClockEnabled.store(true, std::memory_order_release);
+            }
+
+            void setHostTransportRunning(bool running) noexcept
+            {
+                hostTransportRunning.store(running, std::memory_order_release);
+            }
+
+            void setHostTransportBpm(double bpm) noexcept
+            {
+                if (std::isfinite(bpm) && bpm > 0.0)
+                    hostTransportBpm.store(bpm, std::memory_order_release);
             }
 
             std::string exportStateJson()
@@ -112,6 +134,11 @@ namespace worldofcake
 
             double logicalTime = 0.0;
             StatePersistence persistence;
+            std::atomic<double> hostTransportTime{0.0};
+            std::atomic<std::uint64_t> hostTransportEpoch{0};
+            std::atomic<bool> hostClockEnabled{false};
+            std::atomic<bool> hostTransportRunning{true};
+            std::atomic<double> hostTransportBpm{0.0};
 
           private:
             static void updateHighWater(std::atomic<std::size_t>& highWater, std::size_t depth) noexcept

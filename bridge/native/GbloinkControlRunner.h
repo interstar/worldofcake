@@ -37,6 +37,10 @@ namespace worldofcake::bridge
         {
             return eventDrops.load();
         }
+        std::uint64_t preparedEventCount() const noexcept
+        {
+            return preparedEvents.load(std::memory_order_relaxed);
+        }
         std::uint64_t controlTicks() const noexcept
         {
             return controlTickCount.load(std::memory_order_relaxed);
@@ -67,6 +71,7 @@ namespace worldofcake::bridge
 
         SpscRingBuffer<PreparedEvent, 256> events;
         std::atomic<std::uint64_t> eventDrops{0};
+        std::atomic<std::uint64_t> preparedEvents{0};
         std::atomic<std::uint64_t> controlTickCount{0};
         std::atomic<int> currentStage{0};
         mutable std::mutex snapshotMutex;
@@ -76,6 +81,8 @@ namespace worldofcake::bridge
         double modelHeight = 0.0;
         int modelSeed = 0;
         bool modelCreated = false;
+        std::uint64_t observedHostTransportEpoch = 0;
+        double hostClockBaseTime = 0.0;
         ::hx::ObjectPtr<worldofcake::bridge::GbloinkHarness_obj> harness;
     };
 } // namespace worldofcake::bridge

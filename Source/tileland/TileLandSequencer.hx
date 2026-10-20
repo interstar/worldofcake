@@ -96,14 +96,14 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
             advanceCursor(cursor, delta);
             
             // Generate CC events for position
-            events.push(new Event(
+            emitEvent(new Event(
                 currentTime,
                 1,  // CC event type
                 cursor.channel,
                 1,  // CC number for X position
                 Std.int((cursor.position.x / areaWidth) * 127)
             ));
-            events.push(new Event(
+            emitEvent(new Event(
                 currentTime,
                 1,  // CC event type
                 cursor.channel,

@@ -29,8 +29,12 @@
   "bpm" {:kind :knob :svg-label "BPM"}
   "chordduration" {:kind :knob :svg-label "CHORD"}
   "zoom" {:kind :knob :svg-label "ZOOM"}
+  "correctiontarget" {:kind :knob :label "CORRECT" :svg-label "CORRECT"}
+  "keyselect" {:kind :knob :label "KEY" :svg-label "KEY"}
+  "modeselect" {:kind :knob :label "MODE" :svg-label "MODE"}
   "reset" {:kind :button :svg-label "RESET"}
-  "pause" {:kind :toggle :svg-label "PAUSE"}}
+  "pause" {:kind :toggle :svg-label "PAUSE"}
+  "mute" {:kind :toggle :label "Mute output" :svg-label "MUTE"}}
  :app :goldenpond
  :module {:slug "Goldenpond"
           :plugin "WorldOfCake-Goldenpond"
