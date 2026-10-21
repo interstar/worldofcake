@@ -35,3 +35,4 @@ bridge/native/worldofcake/generated/
 
 # Website: only the generated site/ output is ignored; template/ and content/ are source.
 /website/site/
+/website/__pycache__/
