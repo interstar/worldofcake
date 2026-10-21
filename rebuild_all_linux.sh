@@ -85,6 +85,9 @@ for app in "${OPENFL_APPS[@]}"; do
     lime build "derivatives/openfl/project-$app.xml" neko
 done
 
+step "Build web previews"
+python3 "$ROOT/website/make.py"
+
 step "Clean Rack artifacts"
 "$ROOT/derivatives/vcvrack/build_all.sh" clean
 

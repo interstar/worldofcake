@@ -5,6 +5,8 @@ import worldofcake.SequenceSnapshot;
 
 /** Platform-neutral score data rendered with simple OpenFL primitives. */
 class PianoRoll extends Sprite {
+    /** Fixed-loop is the default used by the Rack and JUCE Goldenpond views. */
+    public var scrollWithPlayhead(default, null):Bool;
     private var displayWidth:Float;
     private var displayHeight:Float;
     private var snapshot:Null<SequenceSnapshot>;
@@ -17,6 +19,7 @@ class PianoRoll extends Sprite {
         displayHeight = height;
         positionTicks = 0;
         zoom = 1.0;
+        scrollWithPlayhead = false;
         redraw();
     }
 
@@ -27,6 +30,12 @@ class PianoRoll extends Sprite {
 
     public function setPositionTicks(value:Float):Void {
         positionTicks = value;
+        redraw();
+    }
+
+    /** Optional alternative: anchor the playhead and scroll the score underneath it. */
+    public function setScrollWithPlayhead(value:Bool):Void {
+        scrollWithPlayhead = value;
         redraw();
     }
 
@@ -61,7 +70,7 @@ class PianoRoll extends Sprite {
             lowest = highest - pitchSpan + 1;
         }
         var visibleLength = snapshot.loopLengthTicks / zoom;
-        var windowStart = positionTicks - visibleLength * 0.25;
+        var windowStart = scrollWithPlayhead ? positionTicks - visibleLength * 0.25 : 0.0;
         var windowEnd = windowStart + visibleLength;
         for (note in snapshot.notes) {
             var firstCopy = Std.int(Math.floor(windowStart / snapshot.loopLengthTicks)) - 1;

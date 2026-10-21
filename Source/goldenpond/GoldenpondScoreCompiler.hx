@@ -32,6 +32,8 @@ class GoldenpondScoreCompiler {
             var velocity = velocityFrom(line.instrumentContext);
             var generated:Array<INote> = data.makeLineGenerator(partId).generateNotes(0);
             for (note in generated) {
+                // The line's instrument context has already applied its octave
+                // transpose. SequenceSnapshot.pitch is the sounding MIDI pitch.
                 notes.push(new SequenceNote(
                     partId,
                     note.getMidiNoteValue(),

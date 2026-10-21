@@ -54,6 +54,14 @@ namespace
                 auto s = module->runner->latestVisualSnapshot();
                 nvgSave(a.vg);
                 nvgScissor(a.vg, 0, 0, box.size.x, box.size.y);
+                // Match OpenFL's network boundary. The Haxe model supplies a
+                // normalized radius, and the playfield maps -1..1 to its width.
+                nvgBeginPath(a.vg);
+                nvgCircle(a.vg, px(0, box.size.x), py(0, box.size.y),
+                          static_cast<float>(s.radius * box.size.x * 0.5));
+                nvgStrokeColor(a.vg, nvgRGB(200, 200, 100));
+                nvgStrokeWidth(a.vg, 1.0f);
+                nvgStroke(a.vg);
                 nvgStrokeColor(a.vg, nvgRGB(255, 200, 100));
                 for (auto& arc : s.arcs)
                     if (arc.source >= 0 && arc.destination >= 0 && (size_t)arc.source < s.nodes.size() &&

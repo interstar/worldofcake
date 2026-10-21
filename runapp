@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# WorldOfCake OpenFL app runner.
+# Builds and launches one app's OpenFL UI in preview mode (no MIDI output),
+# wrapping `lime test derivatives/openfl/project-<app>.xml neko`.
+#
+# Usage: runapp <app> [extra lime arguments...]
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
+
+usage() {
+    cat >&2 <<EOF
+Usage: $0 <app> [extra lime arguments...]
+
+Apps:
+  gbloink
+  zewp
+  kdiagram
+  tileland
+  timeslider
+  goldenpond   (requires the sibling Goldenpond checkout)
+
+Examples:
+  $0 gbloink
+  $0 kdiagram -debug
+EOF
+    exit 1
+}
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
+    usage
+fi
+
+APP="$1"
+shift
+
+case "$APP" in
+    gbloink|zewp|kdiagram|tileland|timeslider|goldenpond) ;;
+    *)
+        echo "Error: unknown app '$APP'" >&2
+        usage
+        ;;
+esac
+
+if [[ "$APP" == "goldenpond" ]]; then
+    GOLDENPOND_ROOT="${GOLDENPOND_ROOT:-$ROOT/../goldenpond/goldenpond}"
+    GP_SRC="$GOLDENPOND_ROOT/current/haxe/src/goldenpond"
+    if [[ ! -d "$GP_SRC" ]]; then
+        echo "Error: Goldenpond source not found at $GP_SRC" >&2
+        echo "Check out the Goldenpond library as a sibling, or set GOLDENPOND_ROOT." >&2
+        exit 1
+    fi
+fi
+
+exec lime test "derivatives/openfl/project-$APP.xml" neko "$@"

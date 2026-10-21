@@ -33,6 +33,5 @@ bridge/native/worldofcake/generated/
 .sunlit/
 *.log
 
-.cursor/
-.sunlit/
-*.log
+# Website: only the generated site/ output is ignored; template/ and content/ are source.
+/website/site/
