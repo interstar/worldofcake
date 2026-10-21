@@ -1,5 +1,0 @@
-{:paths ["src" "test"]
- :deps {org.clojure/clojure {:mvn/version "1.11.1"}
-        instaparse/instaparse {:mvn/version "1.5.0"}}
- :aliases {:generate {:main-opts ["-m" "worldofcake.laylagen.main"]}
-           :test {:main-opts ["-m" "worldofcake.laylagen.test-runner"]}}}

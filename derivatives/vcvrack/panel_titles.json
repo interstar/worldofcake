@@ -1,0 +1,28 @@
+{
+  "default": {
+    "font": "/usr/share/fonts/truetype/lato/Lato-Medium.ttf",
+    "fill": "#4a453c",
+    "center_x": true,
+    "x": 0.0,
+    "y": 11.5,
+    "font_size": 7.0,
+    "tracking_em": 0.045
+  },
+  "modules": {
+    "gbloink": {
+      "title": "GLR : Gbloink!"
+    },
+    "timeslider": {
+      "title": "GLR : Time Sliders"
+    },
+    "kdiagram": {
+      "title": "GLR : K-Diagram"
+    },
+    "tileland": {
+      "title": "GLR : TileLand"
+    },
+    "zewp": {
+      "title": "GLR : Zewp!"
+    }
+  }
+}

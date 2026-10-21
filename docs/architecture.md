@@ -27,25 +27,24 @@ Important source areas:
 - `Source/platform/`: simple instrumentation adapters such as `MonitorInstrument`.
 - `bridge/haxe/`: Haxe harness classes used by native runners.
 - `bridge/native/`: hand-written shared C++ native bridge code, including `ControlThread`, `ControlRunnerBase`, `SpscRingBuffer`, `StatePersistence`, bridge POD types (`WorldOfCakeBridgeTypes.h`), `HaxeRuntimeBoot`, `WorldOfCakeOutputMapping`, and the per-app `*ControlRunner` shells. The `worldofcake/generated/` subtree is generated output (§6), not hand-written bridge code.
-- `laylagen/`: WoC-owned Layla/EDN generator source, generator tests, and the Java/package entry point. This is maintained source, not a build cache.
 - `layouts/openfl/`: canonical OpenFL Layla/EDN sources.
 - `layouts/rack/`: authored Rack-specific Layla/EDN variants. These are source-of-truth inputs and must be versioned.
 - `derivatives/vcvrack/`: VCV Rack module shells, Rack-specific panels/widgets, shared Rack build helpers, and install scripts.
 - `derivatives/juce/`: JUCE/VST3 module shells, shared JUCE helpers (`common/`), and the Windows JUCE build script.
+- `derivatives/openfl/`: OpenFL target shell — per-app `project-*.xml` Lime build descriptors and the OpenFL `Assets/` directory.
 - `derivatives/Rack-SDK-*/`: vendored VCV Rack SDKs (Linux and Windows) used by the Rack builds; local caches, not source.
-- `vendor/layla/`: prebuilt `worldofcake-laylagen.jar` and its SHA-256, produced locally by `laylagen/package-worldofcake-laylagen.sh` from the Clojure generator source plus the external Layla library.
+- `vendor/layla/`: prebuilt `worldofcake-laylagen.jar` and its SHA-256 — the self-contained Layla/EDN generator (Layla parser + WoC generator + Clojure + Instaparse), rebuilt by the project maintainer outside this repository.
 - `test/native/`: native C++ harness and Rack stress tests (`GbloinkHarness.cpp`, `GoldenpondRackStress.cpp`, `run-goldenpond-rack-stress.sh`).
 - `build/`: generated/intermediate build output. Rack artifacts are isolated under `build/vcvrack/<module>/<platform>/`, JUCE/VST under `build/juce/`, and headless Haxe test output under `build/headless-*/`.
 - `hxml/tests/`: Haxe headless/native test descriptors (invoked with `haxe hxml/tests/...`). Distinct from the C++ unit tests under `bridge/native/tests/` and the native stress tests under `test/native/`.
-- `project-*.xml`: per-app OpenFL project files kept at the repo root for direct `lime build` use.
 
 OpenFL app builds usually use the per-app project files, for example:
 
-- `lime build project-gbloink.xml neko`
-- `lime build project-kdiagram.xml neko`
-- `lime build project-tileland.xml neko`
-- `lime build project-timeslider.xml neko`
-- `lime build project-zewp.xml neko`
+- `lime build derivatives/openfl/project-gbloink.xml neko`
+- `lime build derivatives/openfl/project-kdiagram.xml neko`
+- `lime build derivatives/openfl/project-tileland.xml neko`
+- `lime build derivatives/openfl/project-timeslider.xml neko`
+- `lime build derivatives/openfl/project-zewp.xml neko`
 
 Rack builds use the module Makefiles via the shared include in `derivatives/vcvrack/common/plugin.mk`; `derivatives/vcvrack/install_linux_local.sh` builds/packages/installs all Linux Rack modules on this machine.
 
@@ -203,7 +202,7 @@ Responsibilities:
 Layout is moving toward one source of truth per target:
 
 - Layla owns spatial panel composition.
-- companion EDN owns component metadata such as ranges, labels, colors, widget hints, target bindings, and behavior-facing labels/defaults. The EDN map key is the semantic identity source; laylagen assigns app-local numeric control UIDs in layout order. Essential app controls such as reset, pause, toggles, and rotate buttons are spatial Layla components in the canonical OpenFL layout.
+- companion EDN owns component metadata such as ranges, labels, colors, widget hints, target bindings, and behavior-facing labels/defaults. The EDN map key is the semantic identity source; the generator assigns app-local numeric control UIDs in layout order. Essential app controls such as reset, pause, toggles, and rotate buttons are spatial Layla components in the canonical OpenFL layout.
 - generated Haxe code lives under `Source/generated/<app>/` (composition, layout constants, and control IDs such as `<App>ControlIdsGenerated.hx`; each directory also carries a copy of its source EDN as `geometry.edn`).
 - app-local `*Layout.hx` files wrap generated layout constants and provide a stable app-facing layout API.
 - maintained app code should not import `*LayoutGenerated` directly. The intentional exception is the app-local `*Layout.hx` facade. Maintained behavior code may use generated control-ID classes directly or through temporary app-local aliases during migration.
@@ -411,7 +410,7 @@ VST transport policy is adapter-owned. Gbloink and K-Diagram are free-running mo
 
 Common checks:
 
-- OpenFL app build: `lime build project-<app>.xml neko`.
+- OpenFL app build: `lime build derivatives/openfl/project-<app>.xml neko`.
 - Headless Haxe tests: `haxe hxml/tests/test-<app>-headless.hxml`.
 - Native Haxe tests: `haxe hxml/tests/test-<app>-native.hxml` where present.
 - Native C++ unit tests: `bridge/native/tests/WorldOfCakeCoordinates_test.cpp` and `WorldOfCakeControlMetadata_test.cpp`.
@@ -437,7 +436,7 @@ Current constraints:
 - Resize currently replaces world mappers, but existing component instances may retain the mapper they were constructed with. This deserves a focused pass before relying heavily on dynamic resize behavior.
 - Output semantics differ by host: MIDI/MIDI-CC are the base assumption, while Rack exposes gates/CV whose musical meaning is user-patched.
 - OpenFL component UIDs are generated from Layla/EDN for the full canonical app UI. Rack control IDs for Rack-visible components are generated from the Rack Layla/EDN variant; Rack output/socket IDs remain Rack-local because sockets are physical host connection points.
-- `laylagen` is an offline build-time generator. A complete rebuild regenerates OpenFL Haxe composition/ID files, native C++ control-ID and metadata headers (from Layla/EDN, not from Haxe), JUCE layout headers, Rack metadata/layout headers, and Rack SVGs before compiling targets. Generated files are not hand-edited or treated as source; the generated native C++ under `bridge/native/worldofcake/generated/` is gitignored.
+- The Layla/EDN generator (the `laylagen` tool, distributed as `vendor/layla/worldofcake-laylagen.jar`) is an offline build-time generator maintained outside this repository. A complete rebuild regenerates OpenFL Haxe composition/ID files, native C++ control-ID and metadata headers (from Layla/EDN, not from Haxe), JUCE layout headers, Rack metadata/layout headers, and Rack SVGs before compiling targets. Generated files are not hand-edited or treated as source; the generated native C++ under `bridge/native/worldofcake/generated/` is gitignored.
 - The generation pass also emits target-neutral native control metadata (`*ControlMetadataGenerated.h`) from the EDN component semantics. This is the common contract consumed by Rack and JUCE/VST adapters for ranges, choices, labels, defaults, and text values. Host adapters may translate that contract into Rack parameters or JUCE widgets, but must not duplicate the semantic tables. Host-only concerns (Rack sockets/panel geometry, JUCE widget classes and host I/O) remain outside this common metadata layer.
 - Generated knob metadata also provides shared `normalize` and `denormalize` helpers. These define the adapter boundary explicitly: the WorldOfCake value remains in its semantic range, while a host such as Rack may expose a normalized `0..1` parameter and convert at the edge. Persistence, parameter synchronization, and host automation should use these helpers rather than repeating range arithmetic.
 - Control metadata also carries semantic `unit` and `output` tags (for example `speed`/`midi-note`, `midi-velocity`/`midi-note`, or `bpm`/`transport`). These tags describe the WorldOfCake meaning and intended musical destination; they are not Rack or JUCE parameter IDs and do not replace host-specific output wiring.

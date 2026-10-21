@@ -1,0 +1,1 @@
+{"slug":"WorldOfCake-Goldenpond","name":"World of Cake - Goldenpond","version":"2.0.0","license":"AGPL-3.0-or-later","brand":"WorldOfCake","author":"Gilbert Lister Research","modules":[{"slug":"Goldenpond","name":"Goldenpond","description":"Text-driven four-part looping note sequencer.","tags":["Sequencer"]}]}

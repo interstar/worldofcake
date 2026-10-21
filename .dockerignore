@@ -1,7 +1,7 @@
 .git
 .git/**
 build
-Export
+derivatives/openfl/Export
 derivatives/*/build
 derivatives/*/dist
 derivatives/*/native

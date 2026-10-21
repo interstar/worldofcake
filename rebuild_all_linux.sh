@@ -6,10 +6,6 @@
 # Layla checkout, Clojure, or Maven; the only Layla-related prerequisite is a
 # Java 11+ runtime. The Haxe / Lime / OpenFL and VCV Rack SDK toolchains are
 # still required for their respective steps (as they are for any local build).
-#
-# Generator unit tests are a maintainer step run before packaging the JAR (see
-# laylagen/deps.edn and laylagen/package-worldofcake-laylagen.sh), not part of
-# this distribution build.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -22,7 +18,7 @@ GOLDENPOND_ROOT="${GOLDENPOND_ROOT:-$ROOT/../goldenpond/goldenpond}"
 
 if [[ ! -f "$JAR" ]]; then
     echo "Missing bundled generator JAR: $JAR" >&2
-    echo "Restore vendor/layla from git, or rebuild it with laylagen/package-worldofcake-laylagen.sh (maintainers only)." >&2
+    echo "Restore it from git (it is committed under vendor/layla)." >&2
     exit 1
 fi
 
@@ -35,7 +31,7 @@ step() {
 }
 
 step "Clean generated and build outputs"
-rm -rf build Export Source/generated bridge/native/worldofcake/generated
+rm -rf build derivatives/openfl/Export Source/generated bridge/native/worldofcake/generated
 
 step "Generate Layla UI outputs"
 for app in "${APPS[@]}"; do
@@ -86,7 +82,7 @@ fi
 step "Build OpenFL Neko apps"
 for app in "${OPENFL_APPS[@]}"; do
     echo "--- $app ---"
-    lime build "project-$app.xml" neko
+    lime build "derivatives/openfl/project-$app.xml" neko
 done
 
 step "Clean Rack artifacts"

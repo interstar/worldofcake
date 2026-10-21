@@ -1,0 +1,26 @@
+{
+  "slug": "WorldOfCake-Zewp",
+  "name": "World of Cake — Zewp",
+  "version": "2.0.0",
+  "license": "proprietary",
+  "brand": "WorldOfCake",
+  "author": "",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Zewp",
+      "name": "Zewp",
+      "description": "Moving glyphs with fixed six-slot X/Y/gate outputs (Haxe core + Rack shell).",
+      "tags": [
+        "Sequencer",
+        "Controller"
+      ]
+    }
+  ]
+}

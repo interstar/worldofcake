@@ -1,0 +1,26 @@
+{
+  "slug": "WorldOfCake-KDiagram",
+  "name": "World of Cake — KDiagram",
+  "version": "2.0.0",
+  "license": "proprietary",
+  "brand": "WorldOfCake",
+  "author": "",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "KDiagram",
+      "name": "KDiagram",
+      "description": "World of Cake K-diagram graph sequencer (Haxe core + Rack shell).",
+      "tags": [
+        "Sequencer",
+        "Polyphonic"
+      ]
+    }
+  ]
+}

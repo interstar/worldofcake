@@ -1,6 +1,12 @@
 /build/
 Source/generated/
 
+# WoC generator source is maintained by the project owner outside this repo.
+/laylagen/
+
+# Maintainer-only notes (machine-specific paths and procedures).
+/docs/MAINTAINER.md
+
 # Local VCV Rack SDK caches and legacy per-module build outputs.
 /derivatives/Rack-SDK-*/
 /derivatives/Rack-SDK-*.zip
@@ -15,8 +21,18 @@ Source/generated/
 /derivatives/vcvrack/*/libwinpthread-1.dll
 
 # OpenFL/Lime build output and local scratch/debug dumps.
-/Export/
+/derivatives/openfl/Export/
 /out.txt
 /derivatives/vcvrack/diagnostics/
 /derivatives/vcvrack/postmortem/
 bridge/native/worldofcake/generated/
+
+# AI-assistant caches and local build logs.
+.codestory/
+.cursor/
+.sunlit/
+*.log
+
+.cursor/
+.sunlit/
+*.log

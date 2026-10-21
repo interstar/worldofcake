@@ -8,7 +8,7 @@ JAR="$ROOT/vendor/layla/worldofcake-laylagen.jar"
 
 if [[ ! -f "$JAR" ]]; then
     echo "Missing bundled generator JAR: $JAR" >&2
-    echo "Restore vendor/layla from git, or rebuild it with laylagen/package-worldofcake-laylagen.sh (maintainers only)." >&2
+    echo "Restore it from git (it is committed under vendor/layla)." >&2
     exit 1
 fi
 

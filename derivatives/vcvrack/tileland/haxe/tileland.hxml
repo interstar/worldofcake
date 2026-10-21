@@ -1,0 +1,5 @@
+-cp ../../../bridge/haxe
+-cp ../../../Source
+-D HXCPP_M64
+-D HXCPP_LINK_STATIC
+worldofcake.bridge.TileLandHarness

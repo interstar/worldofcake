@@ -1,0 +1,25 @@
+{
+  "slug": "WorldOfCake-Gbloink",
+  "name": "World of Cake — Gbloink",
+  "version": "2.0.1",
+  "license": "proprietary",
+  "brand": "WorldOfCake",
+  "author": "",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "Gbloink",
+      "name": "Gbloink",
+      "description": "World of Cake Gbloink sequencer (Haxe core + Rack shell; work in progress).",
+      "tags": [
+        "Sequencer"
+      ]
+    }
+  ]
+}

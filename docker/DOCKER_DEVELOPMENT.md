@@ -10,9 +10,8 @@ The image contains:
 - Lime 8.1.3;
 - OpenFL 9.3.4;
 - Java 11;
-- a self-contained WorldOfCake/Layla layout-generator JAR;
-- the Linux Rack 2.6.6 SDK;
-- the Layla parser source required by the generator.
+- a self-contained WorldOfCake/Layla layout-generator JAR (Layla parser + generator + Clojure + Instaparse);
+- the Linux Rack 2.6.6 SDK.
 
 Windows/MSYS2/Visual Studio Rack builds are not provided by this Linux image. GUI previews and MIDI/audio-device access remain host concerns.
 
@@ -76,6 +75,8 @@ Native Haxe test targets can be run in the same way:
 
 The native target writes its generated executable beneath the repository's `build/` tree.
 
+Two shared-framework headless suites are also available: `hxml/tests/test-sequence-player-headless.hxml` and `hxml/tests/test-sequencer-core-status-headless.hxml`.
+
 ## Layla generation and checks
 
 The bundled JAR includes Layla, the WorldOfCake generator, Clojure, and Instaparse. It requires only Java:
@@ -111,7 +112,7 @@ Generated files under `Source/generated/` and `bridge/native/worldofcake/generat
 Build an OpenFL Neko target without opening a window:
 
 ```bash
-./docker/docker-run-linux-build.sh haxelib run lime build project-gbloink.xml neko
+./docker/docker-run-linux-build.sh haxelib run lime build derivatives/openfl/project-gbloink.xml neko
 ```
 
 Build the other applications by replacing `gbloink` with `kdiagram`, `tileland`, `timeslider`, or `zewp`.
@@ -142,7 +143,7 @@ The Rack build may emit warnings from hxcpp headers and GCC; warnings do not by 
 
 ## Persistent build outputs and caches
 
-The standard helper mounts the repository, so `build/`, `Export/`, generated files, and Rack artifacts persist on the host. The Haxe libraries are installed into the image and do not need a separate volume.
+The standard helper mounts the repository, so `build/`, `derivatives/openfl/Export/`, generated files, and Rack artifacts persist on the host. The Haxe libraries are installed into the image and do not need a separate volume.
 
 For an interactive container with an additional named cache volume:
 
@@ -160,16 +161,6 @@ Use a cache volume only when you deliberately want build artifacts to survive in
 
 ## Updating the bundled Layla generator
 
-Normal users do not need Layla installed. Maintainers updating the vendored generator need a Layla checkout and a Clojure/JVM development environment:
-
-```bash
-LAYLA_ROOT=/path/to/layla \
-  ./laylagen/package-worldofcake-laylagen.sh \
-  vendor/layla/worldofcake-laylagen.jar
-sha256sum vendor/layla/worldofcake-laylagen.jar \
-  > vendor/layla/worldofcake-laylagen.jar.sha256
-```
-
-The packaging script combines the canonical Layla source, the WorldOfCake generator, Clojure, and Instaparse into one Java 11-compatible executable JAR. Commit the JAR and checksum together, and record the Layla commit used to produce it.
+Normal users do not need Layla installed. The generator is maintained outside this repository; the project maintainer rebuilds `vendor/layla/worldofcake-laylagen.jar` (a self-contained JAR combining the Layla parser, the WorldOfCake generator, Clojure, and Instaparse) and commits the JAR together with its SHA-256 checksum.
 
 The image pins the Haxe ecosystem versions and verifies both the bundled Rack SDK and the bundled Layla generator artifact.

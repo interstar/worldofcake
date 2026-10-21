@@ -1,0 +1,26 @@
+{
+  "slug": "WorldOfCake-TimeSlider",
+  "name": "World of Cake — TimeSlider",
+  "version": "2.0.0",
+  "license": "proprietary",
+  "brand": "WorldOfCake",
+  "author": "",
+  "authorEmail": "",
+  "authorUrl": "",
+  "pluginUrl": "",
+  "manualUrl": "",
+  "sourceUrl": "",
+  "donateUrl": "",
+  "changelogUrl": "",
+  "modules": [
+    {
+      "slug": "TimeSlider",
+      "name": "TimeSlider",
+      "description": "World of Cake TimeSlider: three lagging sliders as CV (Haxe core + Rack shell).",
+      "tags": [
+        "Sequencer",
+        "Controller"
+      ]
+    }
+  ]
+}
