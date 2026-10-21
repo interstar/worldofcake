@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	
+	<meta title="Gbloink!" package="net.synaesmedia.gbloink" version="1.0.0" company="Gilbert Lister Research" />
+	<app main="gbloink.GbloinkMain" path="Export" file="Gbloink" />
+	<window width="930" height="600" resizable="true" />
+	
+	<source path="../../Source" />
+	
+	<haxelib name="openfl" />
+	
+	<haxedef name="HXCPP_CHECK_POINTER"/>
+	<haxedef name="HXCPP_STACK_TRACE"/>
+	<haxedef name="HXCPP_STACK_LINE"/>
+	<haxedef name="debug" />
+	<haxedef name="woc_preview" />
+	
+	<assets path="Assets" rename="assets" />
+	
+</project>

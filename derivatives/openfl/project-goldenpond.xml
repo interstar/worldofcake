@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+    <meta title="Goldenpond" package="net.synaesmedia.goldenpond" version="1.0.0" company="Gilbert Lister Research" />
+    <app main="goldenpond.GoldenpondMain" path="Export" file="Goldenpond" />
+    <window width="1400" height="700" resizable="true" />
+    <source path="../../Source" />
+    <source path="../../goldenpond/goldenpond/current/haxe/src/goldenpond" />
+    <haxelib name="openfl" />
+    <haxedef name="HXCPP_CHECK_POINTER" />
+    <haxedef name="HXCPP_STACK_TRACE" />
+    <haxedef name="HXCPP_STACK_LINE" />
+    <haxedef name="debug" />
+    <haxedef name="woc_preview" />
+</project>
