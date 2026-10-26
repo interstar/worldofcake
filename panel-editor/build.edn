@@ -1,0 +1,6 @@
+{:main woc.editor.client
+ :output-to "resources/public/js/editor.js"
+ :output-dir "resources/public/js/out"
+ :asset-path "/js/out"
+ :optimizations :none
+ :source-map true}

@@ -1,0 +1,6 @@
+{:paths ["src" "resources" "../vendor/layla/worldofcake-laylagen.jar"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/clojurescript {:mvn/version "1.11.132"}}
+ :aliases {:build {:main-opts ["-m" "cljs.main" "-co" "build.edn" "-c" "woc.editor.client"]}
+           :serve {:main-opts ["-m" "woc.editor.server"]}
+           :test {:extra-paths ["test"] :main-opts ["-m" "woc.editor.test-runner"]}}}
