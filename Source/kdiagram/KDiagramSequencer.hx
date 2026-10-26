@@ -3,7 +3,6 @@ package kdiagram;
 import generated.kdiagram.KDiagramControlIdsGenerated;
 
 import haxe.Json;
-import worldofcake.Event;
 import worldofcake.ISequencerControl;
 import worldofcake.SequencerCore;
 import worldofcake.CoordinateMapper;
@@ -22,12 +21,14 @@ private class Cursor {
     public var isMoving:Bool;
     public var currentNode:Int;
     public var cursorSpeed:Float;
+    /** Network units (radius 0.9) per second of real time (the speed knob's unit). */
+    public static inline var DEFAULT_CURSOR_SPEED:Float = 0.5;
     
     public function new(channel:Int, color:Int) {
         this.channel = channel;
         this.color = color;
         this.isMoving = false;
-        this.cursorSpeed = 0.2;
+        this.cursorSpeed = DEFAULT_CURSOR_SPEED;
         this.pos = new LocalPoint(0, 0);
         this.target = new LocalPoint(0, 0);
     }
@@ -38,30 +39,20 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
     public static inline var PLAY_AREA_UID:Int = KDiagramControlIdsGenerated.PLAYAREA;
     public static inline var CURSOR_SELECT_UID:Int = KDiagramControlIdsGenerated.SELECTCURSOR;
     public static inline var SCALE_SELECT_UID:Int = KDiagramControlIdsGenerated.SCALESELECT;
-    public static inline var CC_EVENT_TYPE:Int = 1;
-    public static inline var NOTE_EVENT_TYPE:Int = 0;
-    public static inline var SPEED_UID_BASE:Int = KDiagramControlIdsGenerated.REDSPEED;
-    public static inline var SPEED_UID_COUNT:Int = 3;
-    public static inline var SPEED_SLIDER_1_UID:Int = SPEED_UID_BASE;
-    public static inline var SPEED_SLIDER_2_UID:Int = SPEED_UID_BASE + 1;
-    public static inline var SPEED_SLIDER_3_UID:Int = SPEED_UID_BASE + 2;
-    public static inline var CHANNEL_SLIDER_UID:Int = KDiagramControlIdsGenerated.CHANNEL;
+    /** Speed controls by cursor. Control IDs follow layout order, so they are listed, not computed. */
+    public static var SPEED_UIDS(default, never):Array<Int> = [
+        KDiagramControlIdsGenerated.REDSPEED, KDiagramControlIdsGenerated.GREENSPEED, KDiagramControlIdsGenerated.BLUESPEED];
+    /** First of the three consecutive MIDI channels the cursors play on. */
+    public static inline var CHANNEL_UID:Int = KDiagramControlIdsGenerated.CHANNEL;
     public static inline var RESET_UID:Int = KDiagramControlIdsGenerated.RESET;
     public static inline var PAUSE_UID:Int = KDiagramControlIdsGenerated.PAUSE;
     public static inline var ROTATE_LEFT_UID:Int = KDiagramControlIdsGenerated.ROTATE_LEFT;
     public static inline var ROTATE_RIGHT_UID:Int = KDiagramControlIdsGenerated.ROTATE_RIGHT;
+    public static inline var NOTE_LENGTH_UID:Int = KDiagramControlIdsGenerated.NOTE_LENGTH;
+    public static inline var DEFAULT_NOTE_LENGTH:Float = 0.05;
 
-    public static inline function speedUid(index:Int):Int {
-        return SPEED_UID_BASE + index;
-    }
-
-    public static inline function speedIndexForUid(uid:Int):Int {
-        return uid - SPEED_UID_BASE;
-    }
-
-    public static inline function isSpeedUid(uid:Int):Bool {
-        return uid >= SPEED_UID_BASE && uid < SPEED_UID_BASE + SPEED_UID_COUNT;
-    }
+    public static inline function speedUid(index:Int):Int return SPEED_UIDS[index];
+    public static inline function isSpeedUid(uid:Int):Bool return SPEED_UIDS.indexOf(uid) >= 0;
     /** Random graph size for `resetNetwork`. */
     public static inline var NETWORK_NODE_COUNT:Int = 12;
     /** ~one leaf with no outgoing arcs; all other nodes get ≥1 exit. */
@@ -75,10 +66,13 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
     
     private var selectedCursorIndex:Int = 0;
     private var random:IRandomSource;
+    /** Seconds between each note-on and its note-off. */
+    private var noteLength:Float = DEFAULT_NOTE_LENGTH;
     
     public function new(?random:IRandomSource) {
         this.random = random == null ? new SystemRandomSource() : random;
         super(true);
+        bindLifecycleControls(PAUSE_UID);
         noteCalc = new NoteCalculator(2.0);
         
         selectedCursorIndex = 0;
@@ -87,7 +81,18 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
             new Cursor(2, 0x00FF00),  // Green cursor - channel 2
             new Cursor(3, 0x0000FF)   // Blue cursor - channel 3
         ];
+        // Each cursor's X and Y, in cursor order, on that cursor's channel.
+        declareControlOutputs(KDiagramControlIdsGenerated.controlOutputs());
+        setBaseMidiChannel(1);
         resetNetwork();
+    }
+
+    /** Each cursor's position, from -1..1 on each axis, as two control outputs from 0 to 1. */
+    function publishCursorOutputs():Void {
+        for (i in 0...cursors.length) {
+            setControlOutput(i * 2, (cursors[i].pos.x + 1) * 0.5);
+            setControlOutput(i * 2 + 1, (cursors[i].pos.y + 1) * 0.5);
+        }
     }
     
     // ISequencer implementation
@@ -113,13 +118,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                     cursor.pos = cursor.target;
                     elapsed += travelTime;
                     remaining -= travelTime;
-                    emitEvent(new Event(
-                        startTime + elapsed,
-                        NOTE_EVENT_TYPE,
-                        cursor.channel,
-                        noteForLocalY(cursor.pos.y),
-                        100
-                    ));
+                    emitNote(startTime + elapsed, cursor.channel, noteForLocalY(cursor.pos.y), 100, noteLength);
                     var nextNode = network.nextFrom(cursor.currentNode);
                     if (nextNode != -1) {
                         cursor.currentNode = nextNode;
@@ -141,24 +140,9 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                     remaining = 0;
                 }
             }
-            if (cursor.isMoving || elapsed > 0) {
-                    emitEvent(new Event(
-                    currentTime,
-                    CC_EVENT_TYPE,
-                    cursor.channel,
-                    1,  // CC number for X position
-                    Std.int((cursor.pos.x * 127))
-                ));
-                emitEvent(new Event(
-                    currentTime,
-                    CC_EVENT_TYPE,
-                    cursor.channel,
-                    2,  // CC number for Y position
-                    Std.int((cursor.pos.y * 127))
-                ));
-            }
         }
-        
+        publishCursorOutputs();
+
         return true;
     }
     
@@ -225,6 +209,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
         out.add(',"paused":'); out.add(paused ? 'true' : 'false');
         out.add(',"scale":"'); out.add(noteCalc.current); out.add('"');
         out.add(',"selectedCursorIndex":'); out.add(selectedCursorIndex);
+        out.add(',"noteLength":'); out.add(noteLength);
         out.add(',"networkRadius":'); out.add(network == null ? 0.9 : network.radius);
         out.add(',"nodes":[');
         for (i in 0...nodeParts.length) { if (i > 0) out.add(','); var n:Dynamic = nodeParts[i]; out.add('{"angle":'); out.add(n.angle); out.add(',"d":'); out.add(n.d); out.add(',"arcs":['); for (j in 0...n.arcs.length) { if (j > 0) out.add(','); var a:Dynamic=n.arcs[j]; out.add('{"dest":'); out.add(a.dest); out.add(',"l1":'); out.add(a.l1); out.add(',"l2":'); out.add(a.l2); out.add(',"count":'); out.add(a.count); out.add('}'); } out.add(']}'); }
@@ -252,6 +237,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
             if (Reflect.hasField(o, "scale")) {
                 noteCalc.setCurrent(cast Reflect.field(o, "scale"));
             }
+            if (Reflect.hasField(o, "noteLength")) setNoteLength(Std.parseFloat(Std.string(Reflect.field(o, "noteLength"))));
             selectedCursorIndex = Reflect.hasField(o, "selectedCursorIndex") ? Std.int(Reflect.field(o, "selectedCursorIndex")) : 0;
             if (selectedCursorIndex < 0) {
                 selectedCursorIndex = 0;
@@ -266,7 +252,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                 resetNetwork();
                 return;
             }
-            events = [];
+            flushOutput();
             var cArr:Array<Dynamic> = Reflect.field(o, "cursors");
             if (cArr != null && cArr.length == cursors.length) {
                 for (i in 0...cursors.length) {
@@ -290,7 +276,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                     }
                     c.isMoving = Reflect.hasField(cd, "isMoving") && Reflect.field(cd, "isMoving") == true;
                     c.currentNode = Reflect.hasField(cd, "currentNode") ? Std.int(Reflect.field(cd, "currentNode")) : 0;
-                    c.cursorSpeed = Reflect.hasField(cd, "cursorSpeed") ? Std.parseFloat(Std.string(Reflect.field(cd, "cursorSpeed"))) : 0.2;
+                    c.cursorSpeed = Reflect.hasField(cd, "cursorSpeed") ? Std.parseFloat(Std.string(Reflect.field(cd, "cursorSpeed"))) : Cursor.DEFAULT_CURSOR_SPEED;
                     var nc = network.getNodeCount();
                     if (nc > 0) {
                         if (c.currentNode < 0 || c.currentNode >= nc) {
@@ -299,6 +285,9 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                     }
                 }
             }
+            // The cursors play on consecutive channels from the first one's.
+            setBaseMidiChannel(cursors[0].channel);
+            publishCursorOutputs();
             dirty = true;
         } catch (_:Dynamic) {
             resetNetwork();
@@ -312,6 +301,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
         }
         network.rotate(deltaAngle);
         rotateCursors(deltaAngle);
+        publishCursorOutputs();
         dirty = true;
     }
 
@@ -344,6 +334,8 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
         }
         for (i in 0...cursors.length) {
             cursors[i].channel = b + i;
+            controlOutputs[i * 2].setChannel(b + i);
+            controlOutputs[i * 2 + 1].setChannel(b + i);
         }
         dirty = true;
     }
@@ -476,23 +468,29 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
     public function textSubmitted(uid:Int, text:String):Void {}
 
     public function newValue(uid:Int, value:Float):Void {
-        if (isSpeedUid(uid)) {  // Speed sliders
-            cursors[speedIndexForUid(uid)].cursorSpeed = value;
-        } else if (uid == CHANNEL_SLIDER_UID) {  // Channel slider
-            var baseChannel = Math.floor(value);  // Convert to integer
-            for (i in 0...cursors.length) {
-                cursors[i].channel = baseChannel + i;  // Channels will be baseChannel, baseChannel+1, baseChannel+2
-            }
+        if (applyLifecycleValue(uid, value)) return;
+        if (isSpeedUid(uid)) {
+            cursors[SPEED_UIDS.indexOf(uid)].cursorSpeed = value;
+        } else if (uid == CHANNEL_UID) {
+            setBaseMidiChannel(Math.floor(value));
+        } else if (uid == NOTE_LENGTH_UID) {
+            setNoteLength(value);
         } else if (uid == CURSOR_SELECT_UID) {
             setSelectedCursorIndex(Std.int(Math.round(value)));
         } else if (uid == SCALE_SELECT_UID) {
             var index = Std.int(Math.max(0, Math.min(SCALE_NAMES.length - 1, Math.round(value))));
             setScale(SCALE_NAMES[index]);
-        } else if (uid == PAUSE_UID) {
-            if (value > 0.5) pause(); else resume();
         }
         dirty = true;
     }
+    public function getNoteLength():Float return noteLength;
+
+    public function setNoteLength(seconds:Float):Void {
+        if (!Math.isFinite(seconds)) return;
+        noteLength = Math.max(SequencerCore.MIN_NOTE_DURATION, seconds);
+        dirty = true;
+    }
+
     public function buttonPressed(uid:Int):Void {
         if (uid == RESET_UID) {
             reset();
@@ -501,13 +499,6 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
         } else if (uid == ROTATE_RIGHT_UID) {
             rotateNetwork(0.1);
         }
-    }
-    
-    // Helper methods
-    public function generateEvents():Void {
-        // We're already generating events in advanceTime()
-        // This method is called after drawing, but we don't need
-        // to generate additional events here
     }
     
     public function getNetwork():Network {
@@ -530,14 +521,10 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                     reset();
                 
                 case "[":  // Rotate network counter-clockwise
-                    network.rotate(-0.1);
-                    rotateCursors(-0.1);
-                    dirty = true;
-                
+                    rotateNetwork(-0.1);
+
                 case "]":  // Rotate network clockwise
-                    network.rotate(0.1);
-                    rotateCursors(0.1);
-                    dirty = true;
+                    rotateNetwork(0.1);
             }
         }
     }
@@ -584,6 +571,7 @@ class KDiagramSequencer extends SequencerCore implements ISequencerControl {
                 cursor.isMoving = true;
             }
         }
+        publishCursorOutputs();
         dirty = true;
     }
     

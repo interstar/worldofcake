@@ -15,6 +15,7 @@ import worldofcake.WindowPoint;
 
 /** A small editable single-line control for app-specific text parameters. */
 class TextInput extends Sprite implements IComponent {
+    public static inline var FIELD_HEIGHT:Float = 26;
     private var common:ComponentCommon;
     private var field:TextField;
 
@@ -30,18 +31,23 @@ class TextInput extends Sprite implements IComponent {
         x = windowPos.x;
         y = windowPos.y;
 
+        // A single text line, vertically centred in its cell, on a light face.
+        var height = Math.min(windowSize.y, FIELD_HEIGHT);
+        var top = (windowSize.y - height) * 0.5;
+        graphics.lineStyle(1, Chrome.BORDER);
+        graphics.beginFill(Chrome.FACE);
+        graphics.drawRoundRect(0.5, top + 0.5, windowSize.x - 1, height - 1, Chrome.CORNER, Chrome.CORNER);
+        graphics.endFill();
+        graphics.lineStyle();
+
         field = new TextField();
         field.type = TextFieldType.INPUT;
-        field.defaultTextFormat = new TextFormat("_sans", 14, 0x20242A, false);
-        field.background = true;
-        field.backgroundColor = 0xF0F1F2;
-        field.border = true;
-        field.borderColor = 0x70757B;
+        field.defaultTextFormat = new TextFormat("_sans", 13, Chrome.TEXT, false);
         field.text = defaultText == null ? "" : defaultText;
-        field.x = 2;
-        field.y = 2;
-        field.width = Math.max(1, windowSize.x - 4);
-        field.height = Math.max(1, windowSize.y - 4);
+        field.x = 6;
+        field.y = top + Math.max(0, (height - 18) * 0.5);
+        field.width = Math.max(1, windowSize.x - 12);
+        field.height = Math.min(height, 20);
         field.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
         field.addEventListener(FocusEvent.FOCUS_OUT, onFocusOut);
         addChild(field);

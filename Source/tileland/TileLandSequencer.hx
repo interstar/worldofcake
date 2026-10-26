@@ -58,6 +58,7 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
         this.rows = TileLandLayout.GRID_ROWS;
         this.cols = TileLandLayout.GRID_COLS;
         super(true);
+        bindLifecycleControls(PAUSE_UID);
         this.visualVersion = 0;
         buildGridAndCursors();
     }
@@ -98,14 +99,14 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
             // Generate CC events for position
             emitEvent(new Event(
                 currentTime,
-                1,  // CC event type
+                worldofcake.EventType.ControlChange,
                 cursor.channel,
                 1,  // CC number for X position
                 Std.int((cursor.position.x / areaWidth) * 127)
             ));
             emitEvent(new Event(
                 currentTime,
-                1,  // CC event type
+                worldofcake.EventType.ControlChange,
                 cursor.channel,
                 2,  // CC number for Y position
                 Std.int(((areaHeight - cursor.position.y) / areaHeight) * 127)
@@ -286,12 +287,10 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
     public function textSubmitted(uid:Int, text:String):Void {}
     public function newValue(uid:Int, value:Float):Void {
+        if (applyLifecycleValue(uid, value)) return;
         if (isSpeedUid(uid)) {  // Speed sliders
             var cursorIndex = speedIndexForUid(uid);
             cursors[cursorIndex].speed = value;  // Update cursor's speed directly
-            dirty = true;
-        } else if (uid == PAUSE_UID) {
-            if (value > 0.5) pause(); else resume();
             dirty = true;
         }
     }

@@ -118,6 +118,10 @@ class LoopingNotePlayer {
         if (endInclusive <= startExclusive) return;
         var firstLoop = Math.floor((startExclusive - snapshotOriginTick) / snapshot.loopLengthTicks) - 1;
         var lastLoop = Math.floor((endInclusive - snapshotOriginTick) / snapshot.loopLengthTicks) + 1;
+        // Release notes ending in this range before starting new ones, so a pitch
+        // that ends exactly where it is struck again is released first and the
+        // new note is not silenced by the old note's note-off.
+        releaseEndedNotes(endInclusive);
         for (loopIndex in firstLoop...lastLoop + 1) {
             var loopStart = snapshotOriginTick + loopIndex * snapshot.loopLengthTicks;
             for (note in snapshot.notes) {
@@ -128,16 +132,27 @@ class LoopingNotePlayer {
             }
         }
 
+        // Notes that both started and ended within this range.
+        releaseEndedNotes(endInclusive);
+    }
+
+    private function releaseEndedNotes(endInclusive:Float):Void {
         var writeIndex = 0;
         for (readIndex in 0...activeNotes.length) {
             var activeNote = activeNotes[readIndex];
-            if (activeNote.endTick > startExclusive && activeNote.endTick <= endInclusive) {
+            if (activeNote.endTick <= endInclusive) {
                 emit(activeNote.endTick, SequenceNoteEvent.NOTE_OFF, activeNote.note, 0);
-            } else if (activeNote.endTick > endInclusive) {
+            } else {
                 activeNotes[writeIndex++] = activeNote;
             }
         }
         while (activeNotes.length > writeIndex) activeNotes.pop();
+    }
+
+    /** Forget sounding notes without emitting note-offs: the host side already
+        released them (an output boundary), so their scheduled ends are moot. */
+    public function forgetActiveNotes():Void {
+        activeNotes = [];
     }
 
     private function emitAllNotesOff(time:Float):Void {

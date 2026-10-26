@@ -6,6 +6,10 @@ import worldofcake.LocalPoint;
 
 class Zewp {
     private static inline var LOOK_AHEAD_STEPS:Int = 8;
+    /** Turning speed while blocked, radians per second (π/12 per 60 Hz frame). */
+    public static inline var TURN_RATE:Float = 15.707963267948966; // 5π
+    /** Each look-ahead probe is this much further along the path in time. */
+    static inline var LOOK_AHEAD_STEP_SECONDS:Float = 1.0 / 120.0;
     /** Centre position in Zewp local play-area coordinates. */
     public var position:LocalPoint;
     public var angle:Float;
@@ -33,7 +37,7 @@ class Zewp {
         this.ccNumber = ccNumber;
         this.inFront = false;
         this.lastGlyphPosition = new LocalPoint(x, y);
-        this.dAngle = (random.nextFloat() < 0.5) ? Math.PI / 12 : -Math.PI / 12;
+        this.dAngle = (random.nextFloat() < 0.5) ? TURN_RATE : -TURN_RATE;
         setAngle(0);
     }
 
@@ -78,8 +82,8 @@ class Zewp {
                 }
             }
 
-            px += velocityVector.x / 2;
-            py += velocityVector.y / 2;
+            px += velocityVector.x * LOOK_AHEAD_STEP_SECONDS;
+            py += velocityVector.y * LOOK_AHEAD_STEP_SECONDS;
         }
 
         inFront = false;
@@ -99,14 +103,13 @@ class Zewp {
         return rotX >= -length && rotX <= length && rotY >= -4 && rotY <= 4;
     }
 
-    /** Preserve the original 1 ms feel while expressing motion and turning per elapsed second. */
+    /** Move (units/s) or, when blocked, turn (rad/s) for `delta` seconds of real time. */
     public function update(zewps:Array<Zewp>, blocks:Array<Block>, width:Int, height:Int, delta:Float):Void {
-        var legacyTicks = delta * 1000.0;
         if (lookAhead(zewps, blocks, width, height)) {
-            setAngle(angle + dAngle * legacyTicks);
+            setAngle(angle + dAngle * delta);
         } else {
-            position.x += velocityVector.x * legacyTicks;
-            position.y += velocityVector.y * legacyTicks;
+            position.x += velocityVector.x * delta;
+            position.y += velocityVector.y * delta;
         }
 
         constrainGlyphToArea(width, height);

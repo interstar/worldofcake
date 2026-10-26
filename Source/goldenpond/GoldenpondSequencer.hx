@@ -11,8 +11,6 @@ import generated.goldenpond.GoldenpondControlIdsGenerated;
 /** WoC lifecycle wrapper around Goldenpond compilation and note playback. */
 class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequencerControl {
     public static inline var PLAYBACK_SPEED:Float = 1.0;
-    public static inline var NOTE_ON_EVENT_TYPE:Int = 0;
-    public static inline var NOTE_OFF_EVENT_TYPE:Int = 2;
 
     public var project:GoldenData;
     public var player:LoopingNotePlayer;
@@ -24,10 +22,15 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     private var correctionChordCount:Int;
     private var cachedBpm:Float;
     private var cachedPpq:Float;
+    /** Tick/time anchor: the player advances at the tempo in force, so a tempo
+        change re-anchors here instead of rescaling the timeline already played. */
+    private var anchorTick:Float = 0.0;
+    private var anchorTime:Float = 0.0;
     private var cachedProjectJson:Null<String>;
 
     public function new(?initialProject:GoldenData) {
         super(true);
+        bindLifecycleControls(GoldenpondControlIdsGenerated.PAUSE, GoldenpondControlIdsGenerated.MUTE);
         project = initialProject == null ? defaultProject() : initialProject;
         lastCompileError = null;
         pianoRollZoom = 1.0;
@@ -43,17 +46,20 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
 
     public function compileNow():Bool {
         invalidateProjectJsonCache();
-        // A rebuilt score supersedes all events from the previous key/scale/
-        // pattern. Never let stale notes leak into the new sequence.
-        clearEvents();
         try {
             var compiled = GoldenpondScoreCompiler.compile(project);
             var time = project.makeTimeManipulator();
-            cachedBpm = time.getBPM();
-            cachedPpq = time.getPPQ();
+            var nextBpm = time.getBPM();
+            var nextPpq = time.getPPQ();
+            var nextCorrectionChordCount = Std.int(Math.round(compiled.loopLengthTicks / (project.ppq * project.chordDuration)));
             var now = player.getPositionTicks();
             player.publish(compiled, now);
-            correctionChordCount = Std.int(Math.round(compiled.loopLengthTicks / (project.ppq * project.chordDuration)));
+            // Only discard queued events once the complete replacement score
+            // has compiled and been accepted. A bad edit keeps the last good
+            // score, its timing, and its already queued events intact.
+            clearEvents();
+            setTempo(nextBpm, nextPpq);
+            correctionChordCount = nextCorrectionChordCount;
             correctionRevision++;
             lastCompileError = null;
             dirty = true;
@@ -69,7 +75,7 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         servicePendingCompile(delta);
         var deltaTicks = delta * PLAYBACK_SPEED * cachedBpm * cachedPpq / 60.0;
         player.advanceTicks(deltaTicks);
-        drainPlayerEvents(cachedBpm, cachedPpq);
+        drainPlayerEvents();
         return true;
     }
 
@@ -89,7 +95,7 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         if (normalized < 30) normalized = 30;
         if (normalized > 240) normalized = 240;
         project.bpm = normalized;
-        cachedBpm = normalized;
+        setTempo(normalized, cachedPpq);
         invalidateProjectJsonCache();
         dirty = true;
     }
@@ -98,17 +104,12 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         resetTransport();
     }
 
-    override public function resetTransport(unpause:Bool = true):Void {
-        super.resetTransport(unpause);
+    override public function resetTransport():Void {
+        super.resetTransport();
         player.reset();
-        if (!unpause) player.stop();
-        drainPlayerEvents(project.bpm, project.ppq);
-    }
-
-    override public function resetTransportPreservingState():Void {
-        super.resetTransportPreservingState();
-        player.reset();
-        drainPlayerEvents(project.bpm, project.ppq);
+        anchorTick = 0.0;
+        anchorTime = 0.0;
+        drainPlayerEvents();
     }
 
     public function exportStateJson():String {
@@ -129,14 +130,17 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
             var saved:Dynamic = Json.parse(json);
             if (saved == null || saved.kind != "goldenpond" || saved.project == null) return;
             var restored = GoldenData.makeFromJSON(saved.project, new TimedSequence.DeserializationHelper());
+            if (restored == null) return;
             project = restored;
             markStateReplaced();
             currentTime = saved.currentTime == null ? 0 : Std.parseFloat(Std.string(saved.currentTime));
             paused = saved.paused == true;
             muted = saved.muted == true;
             player = new LoopingNotePlayer();
+            anchorTick = 0.0;
+            anchorTime = currentTime;
             compileNow();
-            drainPlayerEvents(project.bpm, project.ppq);
+            drainPlayerEvents();
         } catch (_:Dynamic) {
             // Invalid state is ignored, matching the ISequencer persistence contract.
         }
@@ -165,6 +169,7 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     public function mouseDown(uid:Int, point:worldofcake.LocalPoint):Void {}
     public function mouseUp(uid:Int, point:worldofcake.LocalPoint):Void {}
     public function newValue(uid:Int, value:Float):Void {
+        if (applyLifecycleValue(uid, value)) return;
         if (uid == GoldenpondControlIdsGenerated.BPM) {
             project.bpm = Std.int(Math.max(30, Math.min(240, value)));
             requestCompile();
@@ -181,10 +186,6 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         } else if (uid == GoldenpondControlIdsGenerated.MODESELECT) {
             project.setMode(Std.int(Math.max(0, Math.min(6, Math.round(value)))));
             requestCompile();
-        } else if (uid == GoldenpondControlIdsGenerated.PAUSE) {
-            if (value > 0.5) pause(); else resume();
-        } else if (uid == GoldenpondControlIdsGenerated.MUTE) {
-            setMuted(value > 0.5);
         } else if (uid == GoldenpondControlIdsGenerated.ZOOM) {
             pianoRollZoom = Math.max(1.0, Math.min(8.0, value));
             dirty = true;
@@ -200,7 +201,6 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
 
     public function buttonPressed(uid:Int):Void {
         if (uid == GoldenpondControlIdsGenerated.RESET) reset();
-        else if (uid == GoldenpondControlIdsGenerated.PAUSE) pause();
     }
     public function keyPressed(uid:Int, key:String):Void {}
 
@@ -208,6 +208,7 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     public function getPositionTicks():Float return player.getPositionTicks();
     public function getLoopPositionTicks():Float return player.getLoopPositionTicks();
     public function getPianoRollZoom():Float return pianoRollZoom;
+    public function hasCompileError():Bool return lastCompileError != null;
 
     public function getCorrectionRevision():Int return correctionRevision;
     public function getCorrectionTarget():Int return project.correctionTarget;
@@ -225,7 +226,7 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
     public function getCorrectionChordIndex(time:Float):Int {
         var chordTicks = project.ppq * project.chordDuration;
         if (!Math.isFinite(time) || time < 0 || chordTicks <= 0 || correctionChordCount <= 0) return -1;
-        var ticks = time * PLAYBACK_SPEED * cachedBpm * cachedPpq / 60.0;
+        var ticks = toGoldenpondTicks(time);
         var progressionIndex = Std.int(Math.floor(ticks / chordTicks));
         return progressionIndex % correctionChordCount;
     }
@@ -254,8 +255,24 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         }
     }
 
+    private function secondsPerTick():Float {
+        return 60.0 / (cachedBpm * cachedPpq * PLAYBACK_SPEED);
+    }
+
     private function toGoldenpondTicks(time:Float):Float {
-        return time * PLAYBACK_SPEED * cachedBpm * cachedPpq / 60.0;
+        return anchorTick + (time - anchorTime) / secondsPerTick();
+    }
+
+    private function tickToTime(tick:Float):Float {
+        return anchorTime + (tick - anchorTick) * secondsPerTick();
+    }
+
+    private function setTempo(bpm:Float, ppq:Float):Void {
+        if (bpm == cachedBpm && ppq == cachedPpq) return;
+        anchorTick = player == null ? 0.0 : player.getPositionTicks();
+        anchorTime = currentTime;
+        cachedBpm = bpm;
+        cachedPpq = ppq;
     }
 
     private function partForControl(uid:Int, kind:String):Int {
@@ -286,14 +303,25 @@ class GoldenpondSequencer extends worldofcake.SequencerCore implements ISequence
         cachedProjectJson = null;
     }
 
-    private function drainPlayerEvents(bpm:Float, ppq:Float):Void {
-        var secondsPerTick = 60.0 / (bpm * ppq * PLAYBACK_SPEED);
+    /** The boundary released every sounding note; the player must not later
+        send note-offs for them, which could cut short a re-struck pitch. */
+    override function flushOutput():Void {
+        super.flushOutput();
+        if (player != null) player.forgetActiveNotes();
+    }
+
+    private function drainPlayerEvents():Void {
         while (player.hasEventBefore(player.getPositionTicks())) {
             var note = player.getNextEvent();
-            var type = note.type == worldofcake.SequenceNoteEvent.NOTE_ON ? NOTE_ON_EVENT_TYPE : NOTE_OFF_EVENT_TYPE;
+            var type:worldofcake.EventType = note.type == worldofcake.SequenceNoteEvent.NOTE_ON ? NoteOn : NoteOff;
             // WoC's native note contract is channel/part, pitch, velocity.
-            emitEvent(new Event(note.timestampTicks * secondsPerTick, type, note.partId, note.pitch, note.velocity));
+            // Due by the player's position, so never later than now (rounding in
+            // the tick/time mapping must not hold an event back a tick).
+            var time = Math.min(tickToTime(note.timestampTicks), currentTime);
+            emitEvent(new Event(time, type, note.partId, note.pitch, note.velocity));
         }
+        // Notes started while output is closed (muted) were never sent.
+        if (!canEmit()) player.forgetActiveNotes();
     }
 
     private static function defaultProject():GoldenData {

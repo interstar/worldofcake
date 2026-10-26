@@ -56,7 +56,7 @@ class GbloinkView extends ControlValueViewBase {
         if (componentId == Gbloink.PLAY_AREA_UID) {
             if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getScaleIndex());
             redrawPlayArea();
-        } else if (Gbloink.isSpeedUid(componentId)) {
+        } else if (Gbloink.isSpeedUid(componentId) || Gbloink.isNoteVelocityUid(componentId) || componentId == Gbloink.NOTE_LENGTH_UID) {
             redrawValueControl(componentId);
         } else if (componentId == Gbloink.SCALE_SELECT_UID) {
             if (semanticSelect != null) semanticSelect.setSelectedIndex(sequencer.getScaleIndex());

@@ -3,6 +3,8 @@ package tileland;
 import worldofcake.LocalPoint;
 
 class Cursor {
+    /** Tiles per second of real time (the speed knob's unit). */
+    public static inline var DEFAULT_SPEED:Float = 2.0;
     /** Current position in TileLand local play-area coordinates. */
     public var position:LocalPoint;
     public var tileX:Int;
@@ -26,7 +28,7 @@ class Cursor {
         this.channel = channel;
         this.color = color;
         this.progress = 0.0;
-        this.speed = 16.0;
+        this.speed = DEFAULT_SPEED;
         this.position = new LocalPoint(0, 0);
     }
     
@@ -35,18 +37,12 @@ class Cursor {
         this.maxRows = rows;
         this.maxCols = cols;
         
-        // Move along curve
+        // Move along curve. Reaching the end places the cursor exactly at the tile's
+        // exit (the next tile's entry) before moving on, so the position does not
+        // depend on how the elapsed time was split into steps.
         progress += delta * speed;
-        
-        if (progress >= 1.0) {
-            progress = 0.0;
-            var exitDirection = getNextDirection(tile.type, direction);
-            var next = getNextTile(exitDirection);
-            tileX += next.nextTileX;
-            tileY += next.nextTileY;
-            direction = next.entryDirection;
-            return;
-        }
+        var crossed = progress >= 1.0;
+        if (crossed) progress = 1.0;
         
         // Calculate position along curve based on progress (0 to 1)
         var startX:Float = 0;
@@ -123,9 +119,9 @@ class Cursor {
                 endX = tile.position.x + tile.size/2;
                 endY = tile.position.y + tile.size;
                 
-            case _:
-                position = new LocalPoint(tile.position.x + tile.size/2, tile.position.y + tile.size/2);
-                return;
+            case _: // unknown direction: sit at the tile centre
+                startX = controlX = endX = tile.position.x + tile.size/2;
+                startY = controlY = endY = tile.position.y + tile.size/2;
         }
         
         // Quadratic Bézier formula to match curveTo in TileLandView
@@ -135,6 +131,15 @@ class Cursor {
             mt*mt*startX + 2*mt*t*controlX + t*t*endX,
             mt*mt*startY + 2*mt*t*controlY + t*t*endY
         );
+
+        if (crossed) {
+            progress = 0.0;
+            var exitDirection = getNextDirection(tile.type, direction);
+            var next = getNextTile(exitDirection);
+            tileX += next.nextTileX;
+            tileY += next.nextTileY;
+            direction = next.entryDirection;
+        }
     }
     
     private function getNextDirection(tileType:Int, currentDir:Direction):Direction {

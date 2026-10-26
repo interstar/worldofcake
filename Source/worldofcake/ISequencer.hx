@@ -6,6 +6,9 @@ interface ISequencer {
 
     function advanceTime(delta:Float):Void;
 
+    /** Logical model time in seconds since the last transport reset. */
+    function getLogicalTime():Float;
+
     /**
         Synchronize forward to authoritative elapsed transport time in seconds.
         Hosts may call this instead of estimating elapsed time from callback cadence.
@@ -17,9 +20,10 @@ interface ISequencer {
         Start a new host-transport epoch without resetting musical/editor state.
         Pending events are discarded and logical time returns to zero. Hosts use
         this for seeks, loop jumps, and transport restarts before resuming forward
-        synchronization with `resyncTime()`.
+        synchronization with `resyncTime()`. The explicit pause and mute state is
+        preserved.
     **/
-    function resetTransport(unpause:Bool = true):Void;
+    function resetTransport():Void;
 
     function hasEventBefore(timeLimit:Float):Bool;
     function getNextEvent():Event;
@@ -30,17 +34,32 @@ interface ISequencer {
     **/
     function correctInputNote(note:Int, time:Float, previousNote:Int = -1):Int;
 
-    /** Stop simulation and logical time until `resume()`. No-ops where inapplicable. */
-    function pause():Void;
-
-    /** Continue after `pause()`. No-ops where inapplicable. */
-    function resume():Void;
+    /**
+        Explicit pause: stop simulation and logical time while engaged. Pausing is
+        an output boundary (sounding notes are released, pending events dropped).
+    **/
+    function setPaused(value:Bool):Void;
 
     /** Whether explicit user/model pause is currently engaged. */
     function isPaused():Bool;
 
+    /**
+        Mute musical output while the model, logical time, and visuals keep running.
+        Muting is an output boundary like pause. Adapters that publish outputs other
+        than events (e.g. CV derived from snapshots) must also honour `isMuted()`.
+    **/
+    function setMuted(value:Bool):Void;
+
     /** Whether musical output is muted while the model continues running. */
     function isMuted():Bool;
+
+    /**
+        Continuous controls the sequencer publishes, each a value from 0 to 1 with
+        its MIDI routing (see `ControlOutput`). Hosts read `published` values and
+        present them as a VST parameter, Rack CV, etc.; MIDI CC is already in the
+        event stream. Empty for sequencers without continuous controls.
+    **/
+    function getControlOutputs():Array<ControlOutput>;
 
     /** Whether the host transport gate currently permits model advancement. */
     function isTransportRunning():Bool;
@@ -50,7 +69,8 @@ interface ISequencer {
 
     /**
         Return to this sequencer's default run state (e.g. clear user edits, new random layout).
-        Meaning is app-specific; implementations may no-op.
+        Meaning is app-specific; implementations may no-op. Logical time restarts, but the
+        explicit pause and mute state is preserved (see `resetTransport()`).
     **/
     function reset():Void;
 

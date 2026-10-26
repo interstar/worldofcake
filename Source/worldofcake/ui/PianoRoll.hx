@@ -12,6 +12,7 @@ class PianoRoll extends Sprite {
     private var snapshot:Null<SequenceSnapshot>;
     private var positionTicks:Float;
     private var zoom:Float;
+    private var error:Bool;
 
     public function new(width:Float, height:Float) {
         super();
@@ -20,6 +21,7 @@ class PianoRoll extends Sprite {
         positionTicks = 0;
         zoom = 1.0;
         scrollWithPlayhead = false;
+        error = false;
         redraw();
     }
 
@@ -41,6 +43,12 @@ class PianoRoll extends Sprite {
 
     public function setZoom(value:Float):Void {
         zoom = Math.max(1.0, value);
+        redraw();
+    }
+
+    public function setError(value:Bool):Void {
+        if (error == value) return;
+        error = value;
         redraw();
     }
 
@@ -100,6 +108,10 @@ class PianoRoll extends Sprite {
         graphics.lineStyle(2, 0xF2F2F2, 0.8);
         graphics.moveTo(playhead, 0);
         graphics.lineTo(playhead, displayHeight);
+        if (error) {
+            graphics.lineStyle(1.5, 0xC85A62, 0.85);
+            graphics.drawRect(0.75, 0.75, displayWidth - 1.5, displayHeight - 1.5);
+        }
     }
 
     private function partColour(partId:Int):Int {

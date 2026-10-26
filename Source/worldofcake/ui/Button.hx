@@ -1,8 +1,6 @@
 package worldofcake.ui;
 
 import openfl.display.Sprite;
-import openfl.text.TextField;
-import openfl.text.TextFormat;
 import worldofcake.CoordinateMapper;
 import worldofcake.ISequencerControl;
 import worldofcake.LocalPoint;
@@ -13,15 +11,18 @@ class Button extends Sprite implements IComponent {
     private var common:ComponentCommon;
     private var label:String;
     private var color:Int;
+    /** Shared icon op list (see `IconPainter`), drawn instead of the label when present. */
+    private var icon:Array<Float>;
     private var pressed:Bool;
 
     public function new(uid:Int, panelPos:PanelPoint, panelSize:PanelPoint, windowToPanelMapper:CoordinateMapper,
-                        sequencer:ISequencerControl, label:String, color:Int) {
+                        sequencer:ISequencerControl, label:String, color:Int, ?icon:Array<Float>) {
         super();
         common = new ComponentCommon(uid, panelPos, panelSize, windowToPanelMapper,
             new LocalPoint(0, 0), new LocalPoint(panelSize.x, panelSize.y), sequencer);
         this.label = label;
         this.color = color;
+        this.icon = icon;
         this.pressed = false;
         var windowPos = panelToWindow(panelPos);
         x = windowPos.x;
@@ -51,31 +52,8 @@ class Button extends Sprite implements IComponent {
         graphics.clear();
         while (numChildren > 0) removeChildAt(0);
         var size = common.getWindowSize();
-        graphics.lineStyle(pressed ? 3 : 1, 0x101010);
-        graphics.beginFill(pressed ? darken(color) : color);
-        graphics.drawRect(0, 0, size.x, size.y);
-        graphics.endFill();
-        addLabel(size.x, size.y);
-    }
-
-    private function darken(c:Int):Int {
-        var r = Std.int(((c >> 16) & 0xFF) * 0.7);
-        var g = Std.int(((c >> 8) & 0xFF) * 0.7);
-        var b = Std.int((c & 0xFF) * 0.7);
-        return (r << 16) | (g << 8) | b;
-    }
-
-    private function addLabel(width:Float, height:Float):Void {
-        var field = new TextField();
-        field.defaultTextFormat = new TextFormat("_sans", 12, 0xFFFFFF, true, null, null, null, null, "center");
-        field.selectable = false;
-        field.mouseEnabled = false;
-        field.text = label;
-        field.x = 0;
-        field.y = Math.max(0, (height - 18) * 0.5);
-        field.width = width;
-        field.height = 20;
-        addChild(field);
+        Chrome.drawFace(this, size.x, size.y, false, pressed);
+        Chrome.drawContent(this, size.x, size.y, label, icon, color);
     }
 
     public function getUID():Int return common.uid;

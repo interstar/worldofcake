@@ -16,7 +16,10 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
     public static inline var SPEED_UID:Int = ZewpControlIdsGenerated.SPEED;
     public static inline var RESET_UID:Int = ZewpControlIdsGenerated.RESET;
     public static inline var PAUSE_UID:Int = ZewpControlIdsGenerated.PAUSE;
-    public static inline var CC_EVENT_TYPE:Int = 1;
+    /** Slowest base speed, play-area units per second; each zewp gets 1-2x this. */
+    public static inline var MIN_SPEED:Float = 240.0;
+    public static inline var MIN_SPEED_MULTIPLIER:Float = 0.1;
+    public static inline var MAX_SPEED_MULTIPLIER:Float = 4.0;
 
     public var areaWidth:Int;
     public var areaHeight:Int;
@@ -33,6 +36,8 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
     public function new(width:Int, height:Int, ?random:IRandomSource) {
         this.random = random == null ? new SystemRandomSource() : random;
         super(true);
+        bindLifecycleControls(PAUSE_UID);
+        maxStepSeconds = SequencerCore.PHYSICS_STEP_SECONDS;
         areaWidth = width;
         areaHeight = height;
         speedMultiplier = 1.0;
@@ -58,7 +63,7 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
     private function createZewp(index:Int):Zewp {
         var x = 80 + random.nextFloat() * (areaWidth - 160);
         var y = 80 + random.nextFloat() * (areaHeight - 160);
-        var velocity = (4 + random.nextFloat() * 4) * speedMultiplier;
+        var velocity = (MIN_SPEED + random.nextFloat() * MIN_SPEED) * speedMultiplier;
         return new Zewp(x, y, 10, velocity, COLORS[index % COLORS.length], 1, 10 + index, random);
     }
 
@@ -69,17 +74,10 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
     }
 
     override function advanceModel(delta:Float):Bool {
-        // Preserve the original 1 ms physics granularity even when a native
-        // frontend presents snapshots at a lower GUI rate. Turning and
-        // look-ahead are discrete decisions, so one coarse 33 ms step would
-        // skip intermediate collisions and produce visibly erratic jumps.
-        var remaining = delta;
-        while (remaining > 0) {
-            var step = remaining > 0.001 ? 0.001 : remaining;
-            for (zewp in zewps) {
-                zewp.update(zewps, blocks, areaWidth, areaHeight, step);
-            }
-            remaining -= step;
+        // `maxStepSeconds` keeps steps at 1 ms: turning and look-ahead are discrete
+        // decisions, so one coarse step would skip collisions.
+        for (zewp in zewps) {
+            zewp.update(zewps, blocks, areaWidth, areaHeight, delta);
         }
         return true;
     }
@@ -182,12 +180,11 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
 
     public function textSubmitted(uid:Int, text:String):Void {}
     public function newValue(uid:Int, value:Float):Void {
+        if (applyLifecycleValue(uid, value)) return;
         if (uid == POPULATION_UID) {
             setPopulation(Std.int(Math.round(value)));
         } else if (uid == SPEED_UID) {
             setSpeedMultiplier(value);
-        } else if (uid == PAUSE_UID) {
-            if (value > 0.5) pause(); else resume();
         }
         dirty = true;
     }
@@ -203,7 +200,7 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
         for (zewp in zewps) {
             emitEvent(new Event(
                 currentTime,
-                CC_EVENT_TYPE,
+                worldofcake.EventType.ControlChange,
                 zewp.channel,
                 zewp.ccNumber,
                 Std.int((zewp.position.y / areaHeight) * 127)
@@ -227,7 +224,7 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
     }
 
     public function setSpeedMultiplier(value:Float):Void {
-        var next = Math.max(1.0 / 3.0, Math.min(1.5, value));
+        var next = Math.max(MIN_SPEED_MULTIPLIER, Math.min(MAX_SPEED_MULTIPLIER, value));
         var ratio = speedMultiplier > 0 ? next / speedMultiplier : 1.0;
         speedMultiplier = next;
         for (zewp in zewps) {

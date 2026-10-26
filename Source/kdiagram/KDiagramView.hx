@@ -2,7 +2,6 @@ package kdiagram;
 
 import openfl.display.Graphics;
 import worldofcake.CoordinateMapper;
-import worldofcake.ui.Slider;
 import worldofcake.ui.ControlValueViewBase;
 import worldofcake.ui.PlayArea;
 import worldofcake.ui.SemanticSelect;
@@ -12,7 +11,7 @@ import generated.kdiagram.KDiagramControlIdsGenerated;
 class KDiagramView extends ControlValueViewBase {
     private var sequencer:KDiagramSequencer;
     private var playArea:PlayArea;
-    private var channelSlider:Slider;
+    private var channelSelect:SemanticSelect;
     private var cursorSelect:SemanticSelect;
     private var scaleSelect:SemanticSelect;
     private var nodeColor:Int = 0x787878;  // Match Rack node fill
@@ -32,6 +31,7 @@ class KDiagramView extends ControlValueViewBase {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
             if (cursorSelect != null) cursorSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
             if (scaleSelect != null) scaleSelect.setSelectedIndex(sequencer.getScaleIndex());
+            if (channelSelect != null) channelSelect.setSelectedIndex(sequencer.getBaseMidiChannel() - 1);
             return sequencer.consumeDirty();
         }
         return KDiagramControlIdsGenerated.REDRAW_CONTROL_UIDS.indexOf(uid) >= 0;
@@ -53,11 +53,8 @@ class KDiagramView extends ControlValueViewBase {
     private function redraw(uid:Int):Void {
         if (uid == KDiagramSequencer.PLAY_AREA_UID) {
             redrawPlayArea();
-        } else if (KDiagramSequencer.isSpeedUid(uid)) {
+        } else if (KDiagramSequencer.isSpeedUid(uid) || uid == KDiagramSequencer.NOTE_LENGTH_UID) {
             redrawValueControl(uid);
-        } else if (uid == KDiagramSequencer.CHANNEL_SLIDER_UID) {
-            // Channel slider needs redrawing
-            channelSlider.redraw();
         } else if (uid == KDiagramSequencer.CURSOR_SELECT_UID) {
             if (cursorSelect != null) cursorSelect.setSelectedIndex(sequencer.getSelectedCursorIndex());
         } else if (uid == KDiagramSequencer.SCALE_SELECT_UID) {
@@ -70,8 +67,9 @@ class KDiagramView extends ControlValueViewBase {
         g.clear();
         
         // Draw background
-        g.beginFill(0x12141A);
-        g.drawRect(0, 0, KDiagramLayout.PLAY_AREA_WIDTH, KDiagramLayout.PLAY_AREA_HEIGHT);
+        g.beginFill(0x13161C);
+        g.drawRoundRect(0, 0, KDiagramLayout.PLAY_AREA_WIDTH, KDiagramLayout.PLAY_AREA_HEIGHT,
+            worldofcake.ui.Chrome.CORNER * 1.5, worldofcake.ui.Chrome.CORNER * 1.5);
         g.endFill();
         
         // Draw network
@@ -140,9 +138,9 @@ class KDiagramView extends ControlValueViewBase {
     }
 
 
-    public function setChannelSlider(slider:Slider):Void {
-        channelSlider = slider;
-        addChild(slider);
+    public function setChannelSelect(select:SemanticSelect):Void {
+        channelSelect = select;
+        addChild(select);
     }
 
     public function setCursorSelect(select:SemanticSelect):Void {

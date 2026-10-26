@@ -6,7 +6,6 @@ import worldofcake.SequenceSnapshot;
 import worldofcake.ui.ControlValueViewBase;
 import worldofcake.ui.PianoRoll;
 import worldofcake.ui.PlayArea;
-import worldofcake.ui.PanelStatus;
 import worldofcake.ui.TextInput;
 import worldofcake.ui.SemanticSelect;
 
@@ -14,7 +13,6 @@ class GoldenpondView extends ControlValueViewBase {
     private var sequencer:GoldenpondSequencer;
     private var playArea:PlayArea;
     private var pianoRoll:PianoRoll;
-    private var status:PanelStatus;
     private var correctionTargetSelect:SemanticSelect;
     private var keySelect:SemanticSelect;
     private var modeSelect:SemanticSelect;
@@ -34,11 +32,6 @@ class GoldenpondView extends ControlValueViewBase {
     }
 
     public function addTextInput(value:TextInput):Void addChild(value);
-    public function setStatus(value:PanelStatus):Void {
-        status = value;
-        addChild(value);
-        updateStatus();
-    }
 
     public function setCorrectionTargetSelect(value:SemanticSelect):Void {
         correctionTargetSelect = value;
@@ -70,11 +63,6 @@ class GoldenpondView extends ControlValueViewBase {
         pianoRoll.setScore(sequencer.getSnapshot());
         pianoRoll.setZoom(sequencer.getPianoRollZoom());
         pianoRoll.setPositionTicks(sequencer.getLoopPositionTicks());
-        updateStatus();
-    }
-
-    private function updateStatus():Void {
-        if (status == null) return;
-        status.setText(sequencer.lastCompileError == null ? "" : "Error: " + sequencer.lastCompileError);
+        pianoRoll.setError(sequencer.hasCompileError());
     }
 }

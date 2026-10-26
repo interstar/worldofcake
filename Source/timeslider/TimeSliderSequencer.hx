@@ -1,9 +1,8 @@
 package timeslider;
 
 import generated.timeslider.TimeSliderControlIdsGenerated;
-import generated.timeslider.TimeSliderLayoutGenerated;
+import generated.timeslider.TimeSliderTracksGenerated;
 import haxe.Json;
-import worldofcake.Event;
 import worldofcake.ISequencerControl;
 import worldofcake.SequencerCore;
 import worldofcake.LocalPoint;
@@ -13,8 +12,6 @@ class TimeSlider {
     public var uid:Int;
     /** Track rectangle in TimeSlider local play-area coordinates. */
     public var bounds:LocalRect;
-    public var channel:Int;
-    public var ccNumber:Int;
     public var current:Float;
     public var destination:Float;
     public var speed:Float;
@@ -25,11 +22,9 @@ class TimeSlider {
     /** Seconds when clicking the **right** edge (fast). */
     public var maxSpeed:Float;
 
-    public function new(uid:Int, x:Float, y:Float, width:Float, height:Float, channel:Int, ccNumber:Int, minSpeed:Float, maxSpeed:Float) {
+    public function new(uid:Int, x:Float, y:Float, width:Float, height:Float, minSpeed:Float, maxSpeed:Float) {
         this.uid = uid;
         this.bounds = LocalRect.fromTopLeft(new LocalPoint(x, y), width, height);
-        this.channel = channel;
-        this.ccNumber = ccNumber;
         this.minSpeed = minSpeed;
         this.maxSpeed = maxSpeed;
         this.current = bounds.height() / 2;
@@ -108,16 +103,18 @@ class TimeSlider {
         return true;
     }
 
-    public function getValue():Int {
-        return Std.int((bounds.height() - current) / bounds.height() * 127);
+    /** Position as a value from 0 (bottom of the track) to 1 (top). */
+    public function normalizedValue():Float {
+        return (bounds.height() - current) / bounds.height();
     }
 }
 
 class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public static inline var RESET_UID:Int = TimeSliderControlIdsGenerated.RESET;
     public static inline var PAUSE_UID:Int = TimeSliderControlIdsGenerated.PAUSE;
-    public static inline var CC_EVENT_TYPE:Int = 1;
-    public static inline var BASE_CC:Int = 20;
+
+    /** Control ID of a track's MIDI channel selector. */
+    public static inline function channelUid(track:Int):Int return TimeSliderTracksGenerated.CHANNEL_UIDS[track];
     /** Four parallel tracks (OpenFL + Rack). */
     public static inline var SLIDER_COUNT:Int = 4;
 
@@ -131,26 +128,44 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     private var maxSpeed:Float;
     public function new(width:Int, height:Int, minSpeed:Float, maxSpeed:Float) {
         super(true);
+        bindLifecycleControls(PAUSE_UID);
         areaWidth = width;
         areaHeight = height;
         this.minSpeed = minSpeed;
         this.maxSpeed = maxSpeed;
 
-        sliders = buildSliders(width, height, minSpeed, maxSpeed);
+        sliders = buildSliders();
+        // One control output per track, in track order; each carries its CC number and MIDI channel.
+        declareControlOutputs(TimeSliderControlIdsGenerated.controlOutputs());
+        publishTrackValues();
     }
 
-    static function buildSliders(width:Int, height:Int, minSpeed:Float, maxSpeed:Float):Array<TimeSlider> {
-        return [
-            new TimeSlider(TimeSliderControlIdsGenerated.CC1TRACK, TimeSliderLayoutGenerated.CC1TRACK_X, TimeSliderLayoutGenerated.CC1TRACK_Y, TimeSliderLayoutGenerated.CC1TRACK_WIDTH, TimeSliderLayoutGenerated.CC1TRACK_HEIGHT, 1, 1, minSpeed, maxSpeed),
-            new TimeSlider(TimeSliderControlIdsGenerated.CC2TRACK, TimeSliderLayoutGenerated.CC2TRACK_X, TimeSliderLayoutGenerated.CC2TRACK_Y, TimeSliderLayoutGenerated.CC2TRACK_WIDTH, TimeSliderLayoutGenerated.CC2TRACK_HEIGHT, 1, 2, minSpeed, maxSpeed),
-            new TimeSlider(TimeSliderControlIdsGenerated.CC3TRACK, TimeSliderLayoutGenerated.CC3TRACK_X, TimeSliderLayoutGenerated.CC3TRACK_Y, TimeSliderLayoutGenerated.CC3TRACK_WIDTH, TimeSliderLayoutGenerated.CC3TRACK_HEIGHT, 1, 3, minSpeed, maxSpeed),
-            new TimeSlider(TimeSliderControlIdsGenerated.CC4TRACK, TimeSliderLayoutGenerated.CC4TRACK_X, TimeSliderLayoutGenerated.CC4TRACK_Y, TimeSliderLayoutGenerated.CC4TRACK_WIDTH, TimeSliderLayoutGenerated.CC4TRACK_HEIGHT, 1, 4, minSpeed, maxSpeed)
-        ];
+    /** Track geometry comes from the generated layout. */
+    function buildSliders():Array<TimeSlider> {
+        return TimeSliderTracksGenerated.buildTracks(minSpeed, maxSpeed);
     }
 
+    /** Resets the tracks' positions and motion. Their MIDI channels are routing, so they are kept. */
     public function reset():Void {
         resetTransport();
-        sliders = buildSliders(areaWidth, areaHeight, minSpeed, maxSpeed);
+        sliders = buildSliders();
+        publishTrackValues();
+    }
+
+    /** MIDI channel (1..16) of a track's CC messages. */
+    public function getChannel(index:Int):Int {
+        return index < 0 || index >= controlOutputs.length ? 1 : controlOutputs[index].channel;
+    }
+
+    public function setChannel(index:Int, channel:Float):Void {
+        if (index < 0 || index >= controlOutputs.length || !Math.isFinite(channel)) return;
+        controlOutputs[index].setChannel(Math.round(channel));
+        dirty = true;
+    }
+
+    /** Each track's position is its control output. */
+    function publishTrackValues():Void {
+        for (i in 0...sliders.length) setControlOutput(i, sliders[i].normalizedValue());
     }
 
     override function advanceModel(delta:Float):Bool {
@@ -160,20 +175,22 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                 changed = true;
             }
         }
+        if (changed) publishTrackValues();
         return changed;
     }
 
     public function exportStateJson():String {
         var sliderParts:Array<Dynamic> = [];
-        for (s in sliders) {
+        for (i in 0...sliders.length) {
+            var s = sliders[i];
             sliderParts.push({
                 slot: sliderParts.length,
                 x: s.bounds.left,
                 y: s.bounds.top,
                 width: s.bounds.width(),
                 height: s.bounds.height(),
-                channel: s.channel,
-                ccNumber: s.ccNumber,
+                channel: getChannel(i),
+                ccNumber: controlOutputs[i].ccNumber,
                 minSpeed: s.minSpeed,
                 maxSpeed: s.maxSpeed,
                 current: s.current,
@@ -229,7 +246,7 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                     layoutOk = false;
                 }
             }
-            sliders = buildSliders(areaWidth, areaHeight, minSpeed, maxSpeed);
+            sliders = buildSliders();
             if (layoutOk) {
                 for (i in 0...arr.length) {
                     var e = arr[i];
@@ -242,12 +259,14 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                     ts.destination = Reflect.hasField(e, "destination") ? Std.parseFloat(Std.string(Reflect.field(e, "destination"))) : ts.current;
                     ts.moving = Reflect.hasField(e, "moving") && Reflect.field(e, "moving") == true;
                     ts.speed = Reflect.hasField(e, "speed") ? Std.parseFloat(Std.string(Reflect.field(e, "speed"))) : 0;
+                    if (Reflect.hasField(e, "channel")) setChannel(slot, Std.parseFloat(Std.string(Reflect.field(e, "channel"))));
                 }
             }
             for (s in sliders) {
                 s.minSpeed = minSpeed;
                 s.maxSpeed = maxSpeed;
             }
+            publishTrackValues();
             dirty = true;
         } catch (_:Dynamic) {}
     }
@@ -266,31 +285,15 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
     public function textSubmitted(uid:Int, text:String):Void {}
     public function newValue(uid:Int, value:Float):Void {
-        if (uid == PAUSE_UID) {
-            if (value > 0.5) pause(); else resume();
-        }
+        if (applyLifecycleValue(uid, value)) return;
+        // Channel selectors send the choice index: 0 is MIDI channel 1.
+        var track = TimeSliderTracksGenerated.CHANNEL_UIDS.indexOf(uid);
+        if (track >= 0) setChannel(track, value + 1);
     }
     public function buttonPressed(uid:Int):Void {
         if (uid == RESET_UID) reset();
     }
     public function keyPressed(uid:Int, key:String):Void {}
-
-    public function generateEvents():Void {
-        if (paused) {
-            return;
-        }
-        for (slider in sliders) {
-            if (slider.moving) {
-                emitEvent(new Event(
-                    currentTime,
-                    CC_EVENT_TYPE,
-                    slider.channel,
-                    slider.ccNumber,
-                    slider.getValue()
-                ));
-            }
-        }
-    }
 
     public function getSliders():Array<TimeSlider> {
         return sliders;

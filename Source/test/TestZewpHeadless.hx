@@ -25,8 +25,8 @@ class TestZewpHeadless {
         app.mouseDragged(ZewpSequencer.PLAY_AREA_UID,new LocalPoint(nx,ny));
         app.mouseUp(ZewpSequencer.PLAY_AREA_UID,new LocalPoint(nx,ny));
         check("zewp drag block",near(block.bounds.center().x,nx)&&near(block.bounds.center().y,ny));
-        var x=app.getZewps()[0].position.x; app.pause(); app.advanceTime(1); check("zewp pause",near(x,app.getZewps()[0].position.x));
-        app.resume(); app.advanceTime(-1); app.advanceTime(Math.NaN); check("zewp invalid delta",near(x,app.getZewps()[0].position.x));
+        var x=app.getZewps()[0].position.x; app.setPaused(true); app.advanceTime(1); check("zewp pause",near(x,app.getZewps()[0].position.x));
+        app.setPaused(false); app.advanceTime(-1); app.advanceTime(Math.NaN); check("zewp invalid delta",near(x,app.getZewps()[0].position.x));
         app.advanceTime(0.001); var restored=make(999); restored.importStateJson(app.exportStateJson());
         var saved = app.exportStateJson();
         var reread = restored.exportStateJson();
@@ -57,7 +57,7 @@ class TestZewpHeadless {
         app.newValue(ZewpSequencer.SPEED_UID,1.5);
         check("zewp speed multiplier",near(app.getSpeedMultiplier(),1.5)&&near(app.getZewps()[0].velocity,velocity*1.5));
         app.newValue(ZewpSequencer.SPEED_UID,0);
-        check("zewp speed lower clamp",near(app.getSpeedMultiplier(),1.0/3.0));
+        check("zewp speed lower clamp",near(app.getSpeedMultiplier(),ZewpSequencer.MIN_SPEED_MULTIPLIER));
     }
     public static function main():Void { testSeedAndDelta(); testDragPauseState(); testPlayAreaBounds(); testPopulationAndSpeed(); if(failures>0){Sys.println('$failures Zewp test(s) failed');Sys.exit(1);} Sys.println("All Zewp headless tests passed"); }
 }

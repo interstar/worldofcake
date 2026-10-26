@@ -18,7 +18,10 @@ class OpenFLAppBase extends Sprite {
     private var world:ISequencerWorld;
     private var audioTimer:Timer;
     private var panelHost:ResponsivePanelHost;
-    private var lastAudioTime:Float = 0;
+    /** `haxe.Timer.stamp()` of the previous model tick; negative before the first. */
+    private var lastTickStamp:Float = -1;
+    /** Longest step for one tick (matches the native ControlThread). */
+    private static inline var MAX_TICK_SECONDS:Float = 0.25;
     private var frameCount:Int = 0;
     #if !woc_preview
     private var monitor:IInstrument;
@@ -77,15 +80,19 @@ class OpenFLAppBase extends Sprite {
 
     private function onAudioTick(e:TimerEvent):Void {
         var sequencer:ISequencer = world.getSequencer();
-        sequencer.advanceTime(AUDIO_INTERVAL / 1000);
+        // Timers rarely fire at the requested interval; advance by the real time
+        // that elapsed, capped so a stall is not replayed in one step.
+        var now = haxe.Timer.stamp();
+        var elapsed = lastTickStamp < 0 ? AUDIO_INTERVAL / 1000 : Math.min(now - lastTickStamp, MAX_TICK_SECONDS);
+        lastTickStamp = now;
+        sequencer.advanceTime(elapsed);
 
-        while (sequencer.hasEventBefore(lastAudioTime + (AUDIO_INTERVAL / 1000))) {
+        while (sequencer.hasEventBefore(sequencer.getLogicalTime())) {
             var event = sequencer.getNextEvent();
             #if !woc_preview
             monitor.send(event);
             #end
         }
-        lastAudioTime += AUDIO_INTERVAL / 1000;
         frameCount++;
     }
 

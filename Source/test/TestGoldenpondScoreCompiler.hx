@@ -85,6 +85,63 @@ class TestGoldenpondScoreCompiler {
         var editedProject:Dynamic = Json.parse(editedSave.project);
         check(editedProject.chordSequence == "62 71", "save after edit exports fresh project JSON before recompilation");
 
+        // Tempo changes re-anchor the tick/time mapping: no event goes back in
+        // time, so no note-off can land before its note-on and strand the note.
+        var tempo = new GoldenpondSequencer(data);
+        var lastTimestamp = -1.0;
+        var monotonic = true;
+        var noteOns = 0;
+        var noteOffs = 0;
+        function drain() {
+            while (tempo.hasEventBefore(1e9)) {
+                var e = tempo.getNextEvent();
+                if (e.timestamp < lastTimestamp - 1e-9) monotonic = false;
+                lastTimestamp = e.timestamp;
+                if (e.type == worldofcake.EventType.NoteOn) noteOns++;
+                else if (e.type == worldofcake.EventType.NoteOff) noteOffs++;
+            }
+        }
+        for (step in 0...600) {
+            tempo.advanceTime(0.01);
+            if (step == 150) tempo.setHostBpm(200);
+            if (step == 300) tempo.newValue(generated.goldenpond.GoldenpondControlIdsGenerated.BPM, 70);
+            if (step == 450) tempo.setHostBpm(160);
+            drain();
+        }
+        tempo.setPaused(true);
+        drain();
+        check(noteOns > 0, "tempo test plays notes");
+        check(monotonic, "event times never go backwards across tempo changes");
+        check(noteOns == noteOffs, "every note-on is released across tempo changes");
+
+        // A pitch struck again exactly where it ends must arrive as off-then-on,
+        // otherwise a synth (or a gate) silences the new note.
+        var repeat = new GoldenData();
+        repeat.root = 60;
+        repeat.chordSequence = "1 1 1 1";
+        repeat.chordDuration = 1;
+        repeat.ppq = 960;
+        repeat.addLine("1111 4", new MidiInstrumentContext(0, 100, 1.0, 0));
+        var repeating = new GoldenpondSequencer(repeat);
+        var lastByKey = new Map<String, worldofcake.Event>();
+        var onThenOff = 0;
+        var reStruck = 0;
+        for (step in 0...400) {
+            repeating.advanceTime(0.01);
+            while (repeating.hasEventBefore(1e9)) {
+                var e = repeating.getNextEvent();
+                var key = e.data1 + ":" + e.data2;
+                var previous = lastByKey.get(key);
+                if (previous != null && previous.timestamp == e.timestamp) {
+                    if (previous.type == worldofcake.EventType.NoteOn && e.type == worldofcake.EventType.NoteOff) onThenOff++;
+                    if (previous.type == worldofcake.EventType.NoteOff && e.type == worldofcake.EventType.NoteOn) reStruck++;
+                }
+                lastByKey.set(key, e);
+            }
+        }
+        check(reStruck > 0, "repeat test re-strikes a sounding pitch");
+        check(onThenOff == 0, "a re-struck pitch is released before its new note-on");
+
         if (errors == 0) trace("All Goldenpond compiler tests passed!");
         else trace(errors + " Goldenpond compiler tests failed");
     }

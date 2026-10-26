@@ -2,37 +2,29 @@ package timeslider;
 
 import openfl.display.Sprite;
 import openfl.display.Graphics;
-import openfl.text.TextField;
-import openfl.text.TextFormat;
 import worldofcake.IControlPanelView;
+import worldofcake.ui.Chrome;
+import worldofcake.ui.SemanticSelect;
 
+/** Draws each CC lane: a dark lane in the track's colour, filled up to the current value, with the target marked. */
 class TimeSliderView extends Sprite implements IControlPanelView {
+    public static inline var LANE_COLOUR:Int = 0x13161C;
+    public static inline var FILL_ALPHA:Float = 0.35;
+    public static inline var TARGET_COLOUR:Int = 0xFFFFFF;
+
     private var engine:TimeSliderSequencer;
-    private var sliderColor:Int = 0x323232;  // Dark grey background
-    private var currentColor:Int = 0x00FF00;  // Green line for current
-    private var targetColor:Int = 0xFFFF00;  // Yellow line for target
-    private var labels:Array<TextField>;
+    private var channelSelects:Array<SemanticSelect>;
 
     public function new(engine:TimeSliderSequencer) {
         super();
         this.engine = engine;
-        
-        // Create text fields for CC numbers
-        labels = [];
-        var format = new TextFormat("Arial", 12, 0xFFFFFF);
-        
-        for (slider in engine.getSliders()) {
-            var label = new TextField();
-            label.defaultTextFormat = format;
-            label.text = 'CC${slider.ccNumber}';
-            label.width = 40;
-            label.height = 20;
-            label.x = slider.bounds.left;
-            label.y = slider.bounds.top - 20;
-            label.selectable = false;
-            addChild(label);
-            labels.push(label);
-        }
+        channelSelects = [];
+    }
+
+    /** View hook for each track's MIDI channel selector (in track order). */
+    public function addChannelSelect(select:SemanticSelect):Void {
+        channelSelects.push(select);
+        addChild(select);
     }
 
     public function redrawDirty():Void {
@@ -44,32 +36,34 @@ class TimeSliderView extends Sprite implements IControlPanelView {
     private function redraw():Void {
         var g:Graphics = this.graphics;
         g.clear();
+        var sliders = engine.getSliders();
+        for (i in 0...sliders.length) {
+            var slider = sliders[i];
+            var colour = TimeSliderLayout.TRACK_COLOURS[i];
+            var left = slider.bounds.left, top = slider.bounds.top;
+            var width = slider.bounds.width(), height = slider.bounds.height();
 
-        // Draw background
-        g.beginFill(0x000000);
-        g.drawRect(0, 0, engine.areaWidth, engine.areaHeight);
-        g.endFill();
-
-        // Draw sliders
-        for (slider in engine.getSliders()) {
-            // Draw slider background
-            g.lineStyle(1, sliderColor);
-            g.beginFill(sliderColor);
-            g.drawRect(slider.bounds.left, slider.bounds.top, slider.bounds.width(), slider.bounds.height());
+            g.beginFill(LANE_COLOUR);
+            g.drawRoundRect(left, top, width, height, Chrome.CORNER * 1.5, Chrome.CORNER * 1.5);
             g.endFill();
 
-            // Draw current value line (green)
-            g.lineStyle(2, currentColor);
-            g.moveTo(slider.bounds.left, slider.bounds.top + slider.current);
-            g.lineTo(slider.bounds.right, slider.bounds.top + slider.current);
+            // Value: filled from the bottom of the lane up to the current position.
+            g.beginFill(colour, FILL_ALPHA);
+            g.drawRect(left, top + slider.current, width, height - slider.current);
+            g.endFill();
+            g.lineStyle(2, colour);
+            g.moveTo(left, top + slider.current);
+            g.lineTo(left + width, top + slider.current);
 
-            // Draw target value line (yellow)
-            g.lineStyle(2, targetColor);
-            g.moveTo(slider.bounds.left, slider.bounds.top + slider.destination);
-            g.lineTo(slider.bounds.right, slider.bounds.top + slider.destination);
+            // Target the lane is travelling to.
+            if (slider.moving) {
+                g.lineStyle(1, TARGET_COLOUR, 0.7);
+                g.moveTo(left, top + slider.destination);
+                g.lineTo(left + width, top + slider.destination);
+            }
+            g.lineStyle();
+
+            if (i < channelSelects.length) channelSelects[i].setSelectedIndex(engine.getChannel(i) - 1);
         }
-
-        // Generate events after drawing
-        engine.generateEvents();
     }
-} 
+}

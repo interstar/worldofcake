@@ -9,5 +9,10 @@ interface IControlPanel {
     /** Toolbar / hardware buttons: `uid` is app-defined (not part of this interface). */
     function buttonPressed(uid:Int):Void;
     function keyPressed(uid:Int, key:String):Void;
+    /**
+        Current model value presented by a control, or null when the model does not
+        own a value for it. Panels display this rather than keeping their own copy.
+    **/
+    function controlValue(uid:Int):Null<Float>;
 
-} 
+}

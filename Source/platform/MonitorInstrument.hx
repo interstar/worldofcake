@@ -11,7 +11,7 @@ class MonitorInstrument implements IInstrument {
     }
     
     public function send(e:Event):Void {
-        if (e.type == 1) {
+        if (e.type == worldofcake.EventType.ControlChange) {
             trace('CC Event: channel=${e.data1} controller=${e.data2} value=${e.data3}');
         } else {
             trace('Note Event: channel=${e.data1} note=${e.data2} velocity=${e.data3}');

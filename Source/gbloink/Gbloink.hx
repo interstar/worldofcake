@@ -24,6 +24,8 @@ class Ball {
     public var velocity:LocalPoint;
     public var rad:Float;
     public var channel:Int;
+    /** MIDI velocity (1..127) of the notes this ball plays. Not to be confused with `velocity`, its motion. */
+    public var noteVelocity:Int;
 
     public function new(pos:LocalPoint, colour:Int, channel:Int) {
         this.pos = pos;
@@ -32,6 +34,7 @@ class Ball {
         this.velocity = new LocalPoint(2, 2);
         this.rad = 5;
         this.channel = channel;
+        this.noteVelocity = Gbloink.DEFAULT_NOTE_VELOCITY;
     }
 
     public function writeJson(out:StringBuf):Void {
@@ -41,6 +44,7 @@ class Ball {
         out.add(',"vy":'); out.add(Std.string(velocity.y));
         out.add(',"rad":'); out.add(Std.string(rad));
         out.add(',"channel":'); out.add(Std.string(channel));
+        out.add(',"noteVelocity":'); out.add(Std.string(noteVelocity));
         out.add(',"colour":'); out.add(Std.string(colour)); out.add('}');
     }
 
@@ -86,35 +90,32 @@ class Block {
 
 class Gbloink extends SequencerCore implements ISequencerControl {
     public static inline var PLAY_AREA_UID:Int = GbloinkControlIdsGenerated.PLAYAREA;
-    public static inline var SPEED_UID_BASE:Int = GbloinkControlIdsGenerated.REDSPEED;
-    public static inline var SPEED_UID_COUNT:Int = 3;
-    /** Optional toolbar (OpenFL, Rack, ...): clear blocks / toggle pause. */
-    public static inline var BTN_CLEAR_BLOCKS:Int = GbloinkControlIdsGenerated.RESET;
-    public static inline var BTN_PAUSE_TOGGLE:Int = GbloinkControlIdsGenerated.PAUSE;
-    public static inline var MUTE_OUTPUT_UID:Int = GbloinkControlIdsGenerated.MUTE;
+    public static inline var RESET_UID:Int = GbloinkControlIdsGenerated.RESET;
     /** Latch 0 = off, 1 = play note on play-area edge bounce (hosts map from param). */
     public static inline var EDGE_NOTES_UID:Int = GbloinkControlIdsGenerated.EDGE_NOTES;
+    public static inline var NOTE_LENGTH_UID:Int = GbloinkControlIdsGenerated.NOTE_LENGTH;
+    public static inline var DEFAULT_NOTE_LENGTH:Float = 0.05;
     public static inline var SCALE_SELECT_UID:Int = GbloinkControlIdsGenerated.SCALESELECT;
 
-    public static inline function speedUid(index:Int):Int {
-        return SPEED_UID_BASE + index;
-    }
+    /** Per-ball controls, indexed by ball. Control IDs follow layout order, so they are listed, not computed. */
+    public static var SPEED_UIDS(default, never):Array<Int> = [
+        GbloinkControlIdsGenerated.REDSPEED, GbloinkControlIdsGenerated.GREENSPEED, GbloinkControlIdsGenerated.BLUESPEED];
+    public static var NOTE_VELOCITY_UIDS(default, never):Array<Int> = [
+        GbloinkControlIdsGenerated.REDVELOCITY, GbloinkControlIdsGenerated.GREENVELOCITY, GbloinkControlIdsGenerated.BLUEVELOCITY];
+    public static inline var DEFAULT_NOTE_VELOCITY:Int = 100;
 
-    public static inline function speedIndexForUid(uid:Int):Int {
-        return uid - SPEED_UID_BASE;
-    }
-
-    public static inline function isSpeedUid(uid:Int):Bool {
-        return uid >= SPEED_UID_BASE && uid < SPEED_UID_BASE + SPEED_UID_COUNT;
-    }
+    public static inline function speedUid(index:Int):Int return SPEED_UIDS[index];
+    public static inline function isSpeedUid(uid:Int):Bool return SPEED_UIDS.indexOf(uid) >= 0;
+    public static inline function noteVelocityUid(index:Int):Int return NOTE_VELOCITY_UIDS[index];
+    public static inline function isNoteVelocityUid(uid:Int):Bool return NOTE_VELOCITY_UIDS.indexOf(uid) >= 0;
     private static var SCALE_NAMES:Array<String> = ["chromatic", "major", "minor", "harmonic_minor", "melodic_minor", "minor_blues"];
-    /** The legacy OpenFL model advanced nominally once per millisecond. */
-    private static inline var LEGACY_TICKS_PER_SECOND:Float = 1000.0;
-    /** Applied to default `(2,2)` motion and to `setBallSpeed` targets. */
-    private static inline var BALL_SPEED_SCALE:Float = 0.25;
+    /** Ball speed in play-area units per second of real time (the knob's unit). */
+    public static inline var DEFAULT_BALL_SPEED:Float = 120.0;
 
     /** When true, bouncing off the play-area border emits the same note events as block hits. */
     private var edgeNotesEnabled:Bool;
+    /** Seconds between each note-on and its note-off. */
+    private var noteLength:Float;
     
     private var areaSize:LocalPoint;
     private var random:IRandomSource;
@@ -126,8 +127,11 @@ class Gbloink extends SequencerCore implements ISequencerControl {
         this.areaSize = size;
         this.random = random == null ? new SystemRandomSource() : random;
         super(false);
+        maxStepSeconds = SequencerCore.PHYSICS_STEP_SECONDS;
+        bindLifecycleControls(GbloinkControlIdsGenerated.PAUSE, GbloinkControlIdsGenerated.MUTE);
         this.noteCalc = new NoteCalculator(size.y);
         this.edgeNotesEnabled = false;
+        this.noteLength = DEFAULT_NOTE_LENGTH;
 
         // Spread across 700×500 local space so all three are easy to see (OpenFL + Rack + future ports).
         initBalls();
@@ -140,23 +144,12 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             new Ball(new LocalPoint(360, 260), 0x00FF00, 2),
             new Ball(new LocalPoint(605, 400), 0x0000FF, 3)
         ];
-        for (b in balls) {
-            b.velocity.x *= BALL_SPEED_SCALE * LEGACY_TICKS_PER_SECOND;
-            b.velocity.y *= BALL_SPEED_SCALE * LEGACY_TICKS_PER_SECOND;
-        }
+        for (i in 0...balls.length) setBallSpeed(i, DEFAULT_BALL_SPEED);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // ISequencer methods
     ///////////////////////////////////////////////////////////////////////////
-
-    override public function pause():Void {
-        super.pause();
-    }
-
-    override public function resume():Void {
-        super.resume();
-    }
 
     public function reset():Void {
         blocks = [];
@@ -190,12 +183,13 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             blocks[i].writeJson(out);
         }
         out.add('],"edgeNotes":'); out.add(edgeNotesEnabled ? 'true' : 'false');
+        out.add(',"noteLength":'); out.add(Std.string(noteLength));
         out.add('}');
         return out.toString();
     }
 
     public function importStateJson(json:String):Void {
-        events = [];
+        flushOutput();
         if (json == null || StringTools.trim(json) == "") {
             return;
         }
@@ -219,6 +213,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
                 paused = cast Reflect.field(o, "paused");
             }
             if (Reflect.hasField(o, "muted")) muted = Reflect.field(o, "muted") == true;
+            if (Reflect.hasField(o, "noteLength")) setNoteLength(cast Reflect.field(o, "noteLength"));
             if (Reflect.hasField(o, "edgeNotes")) {
                 edgeNotesEnabled = Reflect.field(o, "edgeNotes") == true;
             }
@@ -263,6 +258,9 @@ class Gbloink extends SequencerCore implements ISequencerControl {
                         if (Reflect.hasField(raw, "rad")) {
                             b.rad = cast Reflect.field(raw, "rad");
                         }
+                        if (Reflect.hasField(raw, "noteVelocity")) {
+                            b.noteVelocity = clampNoteVelocity(cast Reflect.field(raw, "noteVelocity"));
+                        }
                         clampBallToPlayArea(b);
                         balls.push(b);
                     }
@@ -289,27 +287,24 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     public function mouseDragged(uid:Int, point:LocalPoint):Void {}
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
     public function newValue(uid:Int, value:Float):Void {
+        if (applyLifecycleValue(uid, value)) return;
         if (isSpeedUid(uid)) {
-            setBallSpeed(speedIndexForUid(uid), value);
+            setBallSpeed(SPEED_UIDS.indexOf(uid), value);
             dirty = true;
+        } else if (isNoteVelocityUid(uid)) {
+            setNoteVelocity(NOTE_VELOCITY_UIDS.indexOf(uid), value);
+        } else if (uid == NOTE_LENGTH_UID) {
+            setNoteLength(value);
         } else if (uid == EDGE_NOTES_UID) {
             edgeNotesEnabled = value > 0.5;
             dirty = true;
-        } else if (uid == BTN_PAUSE_TOGGLE) {
-            setPaused(value > 0.5);
-        } else if (uid == MUTE_OUTPUT_UID) {
-            setMuted(value > 0.5);
         } else if (uid == SCALE_SELECT_UID) {
             var index = Std.int(Math.max(0, Math.min(SCALE_NAMES.length - 1, Math.round(value))));
             setScale(SCALE_NAMES[index]);
         }
     }
     public function buttonPressed(uid:Int):Void {
-        if (uid == BTN_CLEAR_BLOCKS) {
-            clearBlocks();
-        } else if (uid == BTN_PAUSE_TOGGLE) {
-            setPaused(!paused);
-        }
+        if (uid == RESET_UID) reset();
     }
 
     public function isEdgeNotesEnabled():Bool {
@@ -321,16 +316,6 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             edgeNotesEnabled = v;
             dirty = true;
         }
-    }
-
-    public function setPaused(p:Bool):Void {
-        if (p) pause(); else resume();
-    }
-
-    public function clearBlocks():Void {
-        blocks = [];
-        events = [];
-        dirty = true;
     }
 
     // Main interaction: click to add/remove blocks
@@ -369,12 +354,34 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     public function getBallSpeed(ballIndex:Int):Float {
         if (ballIndex < 0 || ballIndex >= balls.length) return 0.0;
         var velocity = balls[ballIndex].velocity;
-        return Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y)
-            / (BALL_SPEED_SCALE * LEGACY_TICKS_PER_SECOND);
+        return Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
     }
 
     public function getBlocks():Array<Block> {
         return blocks;
+    }
+
+    /** MIDI velocity (1..127) of the notes a ball plays. */
+    public function getNoteVelocity(ballIndex:Int):Int {
+        return ballIndex < 0 || ballIndex >= balls.length ? DEFAULT_NOTE_VELOCITY : balls[ballIndex].noteVelocity;
+    }
+
+    public function setNoteVelocity(ballIndex:Int, value:Float):Void {
+        if (ballIndex < 0 || ballIndex >= balls.length || !Math.isFinite(value)) return;
+        balls[ballIndex].noteVelocity = clampNoteVelocity(value);
+        dirty = true;
+    }
+
+    private static function clampNoteVelocity(value:Float):Int {
+        return Std.int(Math.max(1, Math.min(127, Math.round(value))));
+    }
+
+    public function getNoteLength():Float return noteLength;
+
+    public function setNoteLength(seconds:Float):Void {
+        if (!Math.isFinite(seconds)) return;
+        noteLength = Math.max(SequencerCore.MIN_NOTE_DURATION, seconds);
+        dirty = true;
     }
 
     public function setScale(scaleName:String):Void {
@@ -382,8 +389,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
         noteCalc.setCurrent(scaleName);
         // Notes already queued under the previous scale must not leak through
         // after a scale change.  The next collision will publish using the new
-        // calculator immediately.
-        events = [];
+        // calculator immediately. Releases already queued are kept.
+        clearEvents();
         dirty = true;
     }
 
@@ -436,8 +443,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     // Private utility
     ///////////////////////////////////////////////////////////////////////////
 
-    private function pushEvent(evtType:Int, channel:Int, data2:Int, data3:Int):Void {
-        emitEvent(new Event(currentTime, evtType, channel, data2, data3));
+    private function playNote(ball:Ball, note:Int):Void {
+        emitNote(currentTime, ball.channel, note, ball.noteVelocity, noteLength);
     }
 
     private function removeBlock(block:Block):Void {
@@ -476,8 +483,6 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             return;
         }
 
-        speed *= BALL_SPEED_SCALE * LEGACY_TICKS_PER_SECOND;
-
         var ball = balls[ballIndex];
         var vx = ball.velocity.x;
         var vy = ball.velocity.y;
@@ -501,13 +506,13 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             nextX = ball.rad;
             ball.velocity.x = -ball.velocity.x;
             if (edgeNotesEnabled) {
-                pushEvent(0, ball.channel, noteCalc.transform(nextY), 100);
+                playNote(ball, noteCalc.transform(nextY));
             }
         } else if (nextX > areaSize.x - ball.rad) {
             nextX = areaSize.x - ball.rad;
             ball.velocity.x = -ball.velocity.x;
             if (edgeNotesEnabled) {
-                pushEvent(0, ball.channel, noteCalc.transform(nextY), 100);
+                playNote(ball, noteCalc.transform(nextY));
             }
         }
 
@@ -515,13 +520,13 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             nextY = ball.rad;
             ball.velocity.y = -ball.velocity.y;
             if (edgeNotesEnabled) {
-                pushEvent(0, ball.channel, noteCalc.transform(nextY), 100);
+                playNote(ball, noteCalc.transform(nextY));
             }
         } else if (nextY > areaSize.y - ball.rad) {
             nextY = areaSize.y - ball.rad;
             ball.velocity.y = -ball.velocity.y;
             if (edgeNotesEnabled) {
-                pushEvent(0, ball.channel, noteCalc.transform(nextY), 100);
+                playNote(ball, noteCalc.transform(nextY));
             }
         }
 
@@ -573,7 +578,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
 
         for (block in blocks) {
             if (block.hit(nextX, ball.pos.y, ball.rad)) {
-                pushEvent(0, ball.channel, noteCalc.transform(ball.pos.y), 100);
+                playNote(ball, noteCalc.transform(ball.pos.y));
                 // If the ball is already embedded (for example because a
                 // block was clicked over it), velocity alone is not a useful
                 // side selector: it can eject the ball through the whole
@@ -600,7 +605,7 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             }
 
             if (block.hit(ball.pos.x, nextY, ball.rad)) {
-                pushEvent(0, ball.channel, noteCalc.transform(ball.pos.y), 100);
+                playNote(ball, noteCalc.transform(ball.pos.y));
                 if (ball.pos.y > block.bounds.top && ball.pos.y < block.bounds.bottom) {
                     var topGap = ball.pos.y - block.bounds.top;
                     var bottomGap = block.bounds.bottom - ball.pos.y;

@@ -24,11 +24,13 @@ class TestGbloinkHeadless {
         return new Gbloink(new LocalPoint(700, 500), new SeededRandomSource(seed));
     }
 
+    /** Ball speed is play-area units per second of real time (the knob's unit). */
     static function testLegacyPacing():Void {
         var app = make(1);
         app.advanceTime(0.001);
-        check("legacy 1 ms x pacing", near(app.balls[0].pos.x, 95.5));
-        check("legacy 1 ms y pacing", near(app.balls[0].pos.y, 85.5));
+        var perAxis = Gbloink.DEFAULT_BALL_SPEED / Math.sqrt(2) * 0.001;
+        check("real-time 1 ms x pacing", near(app.balls[0].pos.x, 95 + perAxis));
+        check("real-time 1 ms y pacing", near(app.balls[0].pos.y, 85 + perAxis));
     }
 
     static function testCadenceIndependence():Void {
@@ -58,10 +60,10 @@ class TestGbloinkHeadless {
     static function testPauseAndInvalidDelta():Void {
         var app = make(9);
         var x = app.balls[0].pos.x;
-        app.pause();
+        app.setPaused(true);
         app.advanceTime(1.0);
         check("pause freezes model", near(app.balls[0].pos.x, x) && near(app.getLogicalTime(), 0));
-        app.resume();
+        app.setPaused(false);
         app.advanceTime(-1.0);
         app.advanceTime(Math.NaN);
         check("invalid delta ignored", near(app.balls[0].pos.x, x) && near(app.getLogicalTime(), 0));
@@ -70,7 +72,8 @@ class TestGbloinkHeadless {
     static function testStateRoundTrip():Void {
         var source = make(77);
         source.mouseDown(Gbloink.PLAY_AREA_UID, new LocalPoint(250, 210));
-        source.newValue(Gbloink.SPEED_UID_BASE, 0.05);
+        source.newValue(Gbloink.speedUid(0), 0.05);
+        source.newValue(Gbloink.noteVelocityUid(2), 37.4);
         source.newValue(Gbloink.SCALE_SELECT_UID, 4);
         source.advanceTime(0.025);
         var restored = make(99);
@@ -80,6 +83,7 @@ class TestGbloinkHeadless {
         check("state ball position", near(restored.balls[0].pos.x, source.balls[0].pos.x));
         check("state ball speed", near(restored.getBallSpeed(0), 0.05));
         check("state scale", restored.getScaleIndex() == 4);
+        check("state note velocity", restored.getNoteVelocity(2) == 37 && restored.getNoteVelocity(0) == Gbloink.DEFAULT_NOTE_VELOCITY);
     }
 
     static function testSemanticScaleSelection():Void {
@@ -93,15 +97,36 @@ class TestGbloinkHeadless {
         app.mouseDown(Gbloink.PLAY_AREA_UID, new LocalPoint(250, 210));
         app.advanceTime(0.25);
         var blocks = app.exportBlocksJson();
-        app.resetTransport(false);
+        app.resetTransport();
+        check("running transport reset stays running", !app.isPaused());
+        app.advanceTime(0.25);
+        app.setPaused(true);
+        app.resetTransport();
         check("transport reset returns to zero", near(app.getLogicalTime(), 0));
         check("transport reset preserves layout", app.exportBlocksJson() == blocks);
         var x = app.balls[0].pos.x;
         app.resyncTime(1.0);
         check("paused transport reset remains paused", near(app.balls[0].pos.x, x));
-        app.resume();
+        app.setPaused(false);
         app.resyncTime(1.0);
         check("transport resumes from new epoch", near(app.getLogicalTime(), 1.0));
+    }
+
+    /** Each ball plays its notes at its own MIDI velocity. */
+    static function testNoteVelocityPerBall():Void {
+        var app = make(5);
+        app.setEdgeNotesEnabled(true);
+        app.newValue(Gbloink.noteVelocityUid(0), 20);
+        app.newValue(Gbloink.noteVelocityUid(1), 200);
+        app.newValue(Gbloink.noteVelocityUid(2), Math.NaN);
+        var seen = new Map<Int, Int>();
+        for (_ in 0...200) {
+            app.advanceTime(0.05);
+            for (e in app.events) if (e.type == worldofcake.EventType.NoteOn) seen.set(e.data1, e.data3);
+        }
+        check("red ball notes use its velocity", seen.get(1) == 20);
+        check("velocity is clamped to 127", seen.get(2) == 127);
+        check("invalid velocity ignored", seen.get(3) == Gbloink.DEFAULT_NOTE_VELOCITY);
     }
 
     public static function main():Void {
@@ -111,6 +136,7 @@ class TestGbloinkHeadless {
         testPauseAndInvalidDelta();
         testStateRoundTrip();
         testSemanticScaleSelection();
+        testNoteVelocityPerBall();
         testTransportEpochResetPreservesLayout();
         if (failures > 0) {
             Sys.println('$failures Gbloink headless test(s) failed');

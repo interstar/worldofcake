@@ -57,27 +57,42 @@ class SemanticSelect extends Sprite implements IComponent {
         if (presentation == "compact") drawCompact(size.x, size.y); else drawSegmented(size.x, size.y);
     }
 
+    /** One segment per choice in its colour: solid when selected, a light tint otherwise. */
     private function drawSegmented(width:Float, height:Float):Void {
         var itemWidth = width / labels.length;
         for (i in 0...labels.length) {
-            graphics.lineStyle(i == selectedIndex ? 3 : 1, i == selectedIndex ? 0xFFFFFF : 0x202020);
-            graphics.beginFill(colours[i], i == selectedIndex ? 1.0 : 0.4);
-            graphics.drawRect(i * itemWidth, 0, itemWidth, height); graphics.endFill();
-            addLabel(labels[i], i * itemWidth, 0, itemWidth, height);
+            var selected = i == selectedIndex;
+            graphics.lineStyle(1, colours[i], selected ? 1.0 : 0.55);
+            graphics.beginFill(colours[i], selected ? 1.0 : 0.16);
+            graphics.drawRoundRect(i * itemWidth + 1, 0.5, itemWidth - 2, height - 1, Chrome.CORNER, Chrome.CORNER);
+            graphics.endFill();
+            addLabel(labels[i], i * itemWidth, 0, itemWidth, height, selected ? 0xFFFFFF : Chrome.TEXT, selected);
         }
+        graphics.lineStyle();
     }
 
+    /** Light face with the current choice and a chevron at each end (click a half to step). */
     private function drawCompact(width:Float, height:Float):Void {
-        graphics.lineStyle(2, 0xFFFFFF); graphics.beginFill(0x242832);
-        graphics.drawRect(0, 0, width, height); graphics.endFill();
-        addLabel("<", 0, 0, width * 0.18, height);
-        addLabel(labels[selectedIndex], width * 0.18, 0, width * 0.64, height);
-        addLabel(">", width * 0.82, 0, width * 0.18, height);
+        Chrome.drawFace(this, width, height, false, false);
+        var chevron = Math.min(height * 0.18, 5);
+        var margin = Math.min(height * 0.7, 18);
+        chevronAt(margin * 0.6, height * 0.5, -chevron);
+        chevronAt(width - margin * 0.6, height * 0.5, chevron);
+        addLabel(labels[selectedIndex], margin, 0, width - 2 * margin, height, Chrome.TEXT, false);
     }
 
-    private function addLabel(text:String, px:Float, py:Float, width:Float, height:Float):Void {
+    private function chevronAt(cx:Float, cy:Float, half:Float):Void {
+        graphics.lineStyle(1.6, Chrome.TEXT, 1.0, false, null, openfl.display.CapsStyle.ROUND, openfl.display.JointStyle.ROUND);
+        graphics.moveTo(cx - half * 0.5, cy - Math.abs(half));
+        graphics.lineTo(cx + half * 0.5, cy);
+        graphics.lineTo(cx - half * 0.5, cy + Math.abs(half));
+        graphics.lineStyle();
+    }
+
+    private function addLabel(text:String, px:Float, py:Float, width:Float, height:Float,
+                              colour:Int = 0xFFFFFF, bold:Bool = true):Void {
         var field = new TextField();
-        field.defaultTextFormat = new TextFormat("_sans", 12, 0xFFFFFF, true, null, null, null, null, "center");
+        field.defaultTextFormat = new TextFormat("_sans", 12, colour, bold, null, null, null, null, "center");
         field.selectable = false; field.mouseEnabled = false; field.text = text;
         field.x = px; field.y = py + Math.max(0, (height - 18) * 0.5); field.width = width; field.height = 20;
         addChild(field);

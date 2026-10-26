@@ -49,10 +49,10 @@ class TestTileLandHeadless {
         check("tileland speed command", near(app.getCursorSpeed(0), 8.0));
 
         var before = app.getCursors()[0].position.x;
-        app.pause();
+        app.setPaused(true);
         app.advanceTime(1.0);
         check("tileland pause", near(app.getCursors()[0].position.x, before));
-        app.resume();
+        app.setPaused(false);
         app.advanceTime(-1.0);
         app.advanceTime(Math.NaN);
         check("tileland invalid delta", near(app.getCursors()[0].position.x, before));

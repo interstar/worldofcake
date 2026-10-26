@@ -46,9 +46,9 @@ class TestKDiagramHeadless {
         check("kdiag channel", app.getBaseMidiChannel() == 7);
         check("kdiag selection", app.getSelectedCursorIndex() == 2);
         var x = app.getCursorPosX(0);
-        app.pause(); app.advanceTime(1.0);
+        app.setPaused(true); app.advanceTime(1.0);
         check("kdiag pause", near(x, app.getCursorPosX(0)));
-        app.resume(); app.advanceTime(-1); app.advanceTime(Math.NaN);
+        app.setPaused(false); app.advanceTime(-1); app.advanceTime(Math.NaN);
         check("kdiag invalid delta", near(x, app.getCursorPosX(0)));
 
         app.advanceTime(0.25);
@@ -85,7 +85,7 @@ class TestKDiagramHeadless {
         var found = false;
         while (app.hasEventBefore(app.getLogicalTime())) {
             var event = app.getNextEvent();
-            if (event.type == KDiagramSequencer.NOTE_EVENT_TYPE && event.data1 == app.getBaseMidiChannel()) {
+            if (event.type == worldofcake.EventType.NoteOn && event.data1 == app.getBaseMidiChannel()) {
                 found = true;
                 check("kdiag note pitch uses cursor y", event.data2 == expected);
                 break;
@@ -98,12 +98,32 @@ class TestKDiagramHeadless {
         check("kdiag scale state round trip", restored.getScaleIndex() == app.getScaleIndex());
     }
 
+    /** Each cursor's X and Y are control outputs 0..1, sent as in-range CCs on that cursor's channel. */
+    static function testControlOutputs():Void {
+        var app = make();
+        app.setBaseMidiChannel(5);
+        app.events = [];
+        app.advanceTime(0.5);
+        var outputs = app.getControlOutputs();
+        check("kdiag six control outputs", outputs.length == 6);
+        check("kdiag outputs follow cursors", Math.abs(outputs[0].published - (app.getCursorPosX(0) + 1) / 2) < 1e-9
+            && Math.abs(outputs[5].published - (app.getCursorPosY(2) + 1) / 2) < 1e-9);
+        var ccs = app.events.filter(e -> e.type == worldofcake.EventType.ControlChange);
+        check("kdiag CCs are sent", ccs.length > 0);
+        check("kdiag CC values are 7-bit", ccs.filter(e -> e.data3 < 0 || e.data3 > 127).length == 0);
+        check("kdiag CCs on cursor channels", ccs.filter(e -> e.data1 < 5 || e.data1 > 7).length == 0);
+        check("kdiag CC numbers are X=1, Y=2", ccs.filter(e -> e.data2 != 1 && e.data2 != 2).length == 0);
+        app.newValue(KDiagramSequencer.CHANNEL_UID, 9);
+        check("kdiag channel control moves outputs", outputs[0].channel == 9 && outputs[5].channel == 11);
+    }
+
     public static function main():Void {
         testSeedAndCadence();
         testControlsPauseState();
         testNodeClickRestartsSelectedCursor();
         testSemanticCursorSelection();
         testScaleAndNotePitch();
+        testControlOutputs();
         if (failures > 0) { Sys.println('$failures K-Diag headless test(s) failed'); Sys.exit(1); }
         Sys.println("All K-Diag headless tests passed");
     }
