@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ControlRunnerBase.h"
+#include "HarnessControlRunner.h"
 #include "SpscRingBuffer.h"
 #include "WorldOfCakeBridgeTypes.h"
 #include <worldofcake/bridge/TileLandHarness.h>
@@ -12,7 +12,7 @@
 namespace worldofcake::bridge
 {
     /** TileLand adapter using the common dual-input lifecycle and publication boundary. */
-    class TileLandControlRunner : public ControlRunnerBase
+    class TileLandControlRunner : public HarnessControlRunner<TileLandHarness_obj>
     {
       public:
         explicit TileLandControlRunner(int seed);
@@ -35,7 +35,7 @@ namespace worldofcake::bridge
       private:
         void createModel() override;
         void destroyModel() override;
-        void applyCommand(const ControlCommand& command) override;
+        void applyAppCommand(const ControlCommand& command) override;
         TileLandControlSnapshot captureControlSnapshot(std::uint64_t generation);
         TileLandVisualSnapshot captureVisualSnapshot(std::uint64_t generation);
         void publishSnapshots();
@@ -45,7 +45,6 @@ namespace worldofcake::bridge
         TileLandVisualSnapshot visualSnapshot;
         int cachedTileVersion = -1;
         std::uint64_t nextGeneration = 1;
-        ::hx::ObjectPtr<TileLandHarness_obj> harness;
         int modelSeed = 0;
         bool modelCreated = false;
     };

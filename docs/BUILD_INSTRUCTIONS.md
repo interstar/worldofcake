@@ -397,7 +397,7 @@ To use another JUCE checkout:
 .\derivatives\juce\build-windows.ps1 -Config Release -JuceDir 'D:\SDKs\JUCE'
 ```
 
-The wrapper supports `Gbloink`, `TimeSliders`, and `Goldenpond`:
+The wrapper supports `Gbloink`, `TimeSliders`, `Goldenpond`, and `KDiagram`:
 
 The generated `Mute output` control is separate from `Pause`. Mute suppresses emitted MIDI while the WorldOfCake model and, for Goldenpond, DAW-synchronised transport continue advancing. Pause changes the model state. Both controls are defined in Layla/EDN and adapters must consume their generated IDs and geometry.
 
@@ -405,6 +405,7 @@ The generated `Mute output` control is separate from `Pause`. Mute suppresses em
 .\derivatives\juce\build-windows.ps1 -Plugin Gbloink -Target WorldOfCakeGbloink_VST3 -Config Release
 .\derivatives\juce\build-windows.ps1 -Plugin TimeSliders -Target WorldOfCakeTimeSliders_VST3 -Config Release
 .\derivatives\juce\build-windows.ps1 -Plugin Goldenpond -Target WorldOfCakeGoldenpond_VST3 -Config Release
+.\derivatives\juce\build-windows.ps1 -Plugin KDiagram -Target WorldOfCakeKDiagram_VST3 -Config Release
 ```
 
 The wrapper:
@@ -424,6 +425,7 @@ build/juce/cmake-vs2022/WorldOfCakeGbloink_artefacts/Release/VST3/WorldOfCake Gb
 build/juce/cmake-vs2022/WorldOfCakeGbloink_artefacts/Release/Standalone/WorldOfCake Gbloink.exe
 build/juce/cmake-vs2022/WorldOfCakeTimeSliders_artefacts/Release/VST3/WorldOfCake TimeSliders.vst3
 build/juce/cmake-vs2022/WorldOfCakeGoldenpond_artefacts/Release/VST3/WorldOfCake Goldenpond.vst3
+build/juce/cmake-vs2022/WorldOfCakeKDiagram_artefacts/Release/VST3/WorldOfCake K-Diagram.vst3
 ```
 
 The `.vst3` item is a bundle directory. Copy the whole directory, not only the binary inside it. A normal system-wide VST3 location is:
@@ -451,14 +453,14 @@ VST adapters must reuse the WorldOfCake native bridge rather than reimplementing
 
 When layouts change, regenerate with the bundled generator JAR (`java -jar vendor\layla\worldofcake-laylagen.jar …`) before rebuilding. Generated files are not hand-edited.
 
-The Gbloink runner uses a host-clock mailbox and simulates 20 ms ahead in 1 ms host-neutral physics steps. Prepared events carry a transport epoch and absolute logical timestamp. A fixed-capacity native scheduler converts those timestamps to offsets within the current audio block and retains future events for later blocks. Stop, seek, and other transport discontinuities increment the epoch, discard stale events, and emit panic note-offs. Notes currently have a bounded 50 ms duration.
+The Gbloink runner uses a host-clock mailbox and simulates 20 ms ahead in 1 ms host-neutral physics steps. Prepared events carry a transport epoch and absolute logical timestamp. The Haxe model emits complete notes: each note-on is followed by a note-off after the user's **Note length** (default 50 ms), and pause/mute/reset release sounding notes. The shared `bridge/native/NoteOutputScheduler.h` converts timestamps to offsets within the current audio block, retains future events, delivers late note-offs instead of dropping them, and releases sounding notes on stop, seek, and other host discontinuities.
 
-The native editor reads only published visual snapshots and sends commands through the bounded GUI queue. Click the field to add or remove note blocks, or enable **Wall notes** to hear collisions with the boundary. The three speed controls and scale selector drive the same semantic control IDs used by the other WorldOfCake targets.
+The native editor reads only published visual snapshots and sends commands through the bounded GUI queue. Click the field to add or remove note blocks, or enable **Wall notes** to hear collisions with the boundary. The three speed controls, note length, and scale selector drive the same semantic control IDs used by the other WorldOfCake targets.
 
-Run the native scheduler regression test after changing timing or MIDI code:
+Run the native note scheduler regression test after changing timing or MIDI code (plain C++, also available as the `NoteOutputSchedulerTest` CMake target):
 
 ```powershell
-& '.\build\juce\cmake-vs2022\WocMidiSchedulerTest_artefacts\Release\WocMidiSchedulerTest.exe'
+cmd /c '"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++17 /EHsc /W4 /Ibridge\native bridge\native\tests\NoteOutputScheduler_test.cpp /Fe:build\NoteOutputScheduler_test.exe /Fo:build\ && build\NoteOutputScheduler_test.exe'
 ```
 
 The remaining first-milestone validation is host-side: scan in FL Studio, test MIDI routing and transport changes, save/reload a project, and stress multiple plug-in instances. Steinberg validator/pluginval are not yet part of the wrapper.

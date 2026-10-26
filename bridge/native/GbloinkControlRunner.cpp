@@ -1,9 +1,7 @@
 #include "GbloinkControlRunner.h"
-#include "WorldOfCakeControlIds.h"
 #include <cmath>
 namespace worldofcake::bridge
 {
-    namespace ControlIds = worldofcake::control::gbloink;
     GbloinkControlRunner::GbloinkControlRunner(double w, double h, int seed)
         : modelWidth(w), modelHeight(h), modelSeed(seed)
     {
@@ -38,31 +36,23 @@ namespace worldofcake::bridge
             const double hostTime = hostTransportTime.load(std::memory_order_acquire);
             if (epoch != observedHostTransportEpoch) {
                 observedHostTransportEpoch = epoch;
-                hostClockBaseTime = 0.0;
+                // The new epoch starts now: anchor to the current host time rather
+                // than replaying everything since the host's clock began.
+                hostClockBaseTime = hostTime;
                 logicalTime = 0.0;
                 // A host transport epoch is not an explicit user resume. Preserve
                 // the model's pause latch across stop/start and seek boundaries.
-                harness->resetTransportPreservingState();
+                harness->resetTransport();
             }
             const double targetTime = std::max(0.0, hostTime - hostClockBaseTime);
             if (std::isfinite(targetTime) && targetTime > logicalTime) {
-                // The host publishes a point ahead of its current audio block. Keep
-                // the physics resolution independent of the host buffer size so a
-                // large block cannot tunnel a ball through a narrow obstacle.
-                constexpr double maxSimulationStep = 0.001;
-                while (logicalTime + maxSimulationStep < targetTime) {
-                    harness->advanceTime(maxSimulationStep);
-                    logicalTime += maxSimulationStep;
-                    currentStage = 4;
-                    drainEvents();
-                }
-                const double remainder = targetTime - logicalTime;
-                if (remainder > 0.0) {
-                    harness->advanceTime(remainder);
-                    logicalTime = targetTime;
-                    currentStage = 4;
-                    drainEvents();
-                }
+                // The host publishes a point ahead of its current audio block. The
+                // model splits the step into its own physics resolution, so a large
+                // block cannot tunnel a ball through a narrow obstacle.
+                harness->advanceTime(targetTime - logicalTime);
+                logicalTime = targetTime;
+                currentStage = 4;
+                drainEvents();
             }
         } else if (std::isfinite(delta) && delta > 0) {
             harness->advanceTime(delta);
@@ -91,24 +81,20 @@ namespace worldofcake::bridge
         std::lock_guard<std::mutex> l(snapshotMutex);
         return snapshot;
     }
-    void GbloinkControlRunner::applyCommand(const ControlCommand& c)
+    void GbloinkControlRunner::applyAppCommand(const ControlCommand& c)
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue) {
-            if (c.controlId == ControlIds::kReset)
-                harness->reset();
-            else if (c.controlId == ControlIds::kPause)
-                harness->setPaused(c.value > .5);
-            else
-                harness->setValue(c.controlId, c.value);
-        }
+        else if (c.kind == CommandKind::setValue)
+            harness->setValue(c.controlId, c.value);
     }
     void GbloinkControlRunner::drainEvents()
     {
         while (harness->hasEventBefore(logicalTime)) {
             PreparedEvent e;
-            e.timestamp = harness->nextEventTimestamp();
+            // Model time restarts at each transport epoch; hosts schedule on their own
+            // clock, so publish host time (base is 0 when no host clock is used).
+            e.timestamp = hostClockBaseTime + harness->nextEventTimestamp();
             e.transportEpoch = observedHostTransportEpoch;
             e.type = harness->nextEventType();
             e.channel = harness->nextEventChannel();
@@ -134,6 +120,7 @@ namespace worldofcake::bridge
             n.balls[i].radius = harness->ballRadius(i);
             n.balls[i].colour = harness->ballColour(i);
             n.ballSpeeds[i] = harness->ballSpeed(i);
+            n.ballNoteVelocities[i] = harness->ballNoteVelocity(i);
         }
         auto count = harness->blockCount();
         n.blocks.reserve((size_t)count);
@@ -150,6 +137,7 @@ namespace worldofcake::bridge
         n.muted = harness->muted();
         n.edgeNotes = harness->edgeNotes();
         n.scaleIndex = harness->scaleIndex();
+        n.noteLength = harness->noteLength();
         std::lock_guard<std::mutex> l(snapshotMutex);
         snapshot = std::move(n);
     }

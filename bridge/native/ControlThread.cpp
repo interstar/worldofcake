@@ -3,6 +3,7 @@
 #include <hxcpp.h>
 #include <hx/Native.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <utility>
@@ -14,17 +15,13 @@ namespace worldofcake::bridge
         stop();
     }
 
-    bool ControlThread::start(double periodSeconds, Tick tick, Lifecycle setup, Lifecycle teardown,
-                              double callbackDeltaSeconds)
+    bool ControlThread::start(double periodSeconds, Tick tick, Lifecycle setup, Lifecycle teardown)
     {
         if (worker.joinable() || !std::isfinite(periodSeconds) || periodSeconds <= 0.0 || !tick)
             return false;
 
-        const double callbackDelta =
-            (std::isfinite(callbackDeltaSeconds) && callbackDeltaSeconds > 0.0) ? callbackDeltaSeconds : periodSeconds;
-
         stopRequested.store(false, std::memory_order_release);
-        worker = std::thread([this, periodSeconds, callbackDelta, callback = std::move(tick),
+        worker = std::thread([this, periodSeconds, callback = std::move(tick),
                               onSetup = std::move(setup), onTeardown = std::move(teardown)] {
             // The control worker is the sole Haxe owner. NativeAttach balances
             // its hxcpp GC registration when the thread exits.
@@ -41,8 +38,14 @@ namespace worldofcake::bridge
             const auto period =
                 std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(periodSeconds));
             auto deadline = Clock::now();
+            auto lastTick = deadline;
             while (!stopRequested.load(std::memory_order_acquire)) {
-                callback(callbackDelta);
+                const auto tickStart = Clock::now();
+                const double elapsed = std::chrono::duration<double>(tickStart - lastTick).count();
+                lastTick = tickStart;
+                const double maxTick = kMaxTickSeconds; // by value: Rack builds as C++11
+                const double step = elapsed > 0.0 ? std::min(elapsed, maxTick) : periodSeconds;
+                callback(step);
                 deadline += period;
                 std::unique_lock<std::mutex> lock(waitMutex);
                 wake.wait_until(lock, deadline, [this] { return stopRequested.load(std::memory_order_acquire); });

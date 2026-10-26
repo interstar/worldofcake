@@ -123,20 +123,21 @@ Graph creation, cursor starts, arc selection, and subsequent traversal now use t
 
 ## Zewp compatibility result
 
-Zewp completes the five-app audit. Its default ten agents and twenty draggable blocks use seeded construction in tests, and state schema v3 saves the complete world, motion, turn direction, speed multiplier, logical time, and pause state. Movement and turning use elapsed seconds while preserving the former 1 ms default feel. OpenFL population is adjustable from 0–40 and speed from one-third to 1.5 times default. Because obstacle avoidance is a nonlinear sampled simulation, exact chaotic trajectories can still vary with control cadence; hosts should use the declared bounded control cadence rather than arbitrarily coarse steps.
+Zewp completes the five-app audit. Its default ten agents and twenty draggable blocks use seeded construction in tests, and state schema v3 saves the complete world, motion, turn direction, speed multiplier, logical time, and pause state. Movement (units/s) and turning (rad/s) use real elapsed seconds, stepped at 1 ms for obstacle avoidance. Population is adjustable from 0–40 and speed from 0.1 to 4 times default. Because obstacle avoidance is a nonlinear sampled simulation, exact chaotic trajectories can still vary with control cadence; hosts should use the declared bounded control cadence rather than arbitrarily coarse steps.
 
 The native output contract remains ten continuous Y-position values. The previous `generateEvents()` method was invoked from view drawing rather than the audio/control timer, so it is retained only as a legacy OpenFL path. GUI down/drag/up commands move obstacles through the GUI SPSC queue. A fixed visual snapshot publishes at most ten agents and twenty blocks. The later Rack/VST design must decide how dynamic agents map to stable control identities; the OpenFL UI experiment does not pre-empt that decision.
 
 ## Behavioural calibration
 
-Gbloink velocities are now expressed in logical play-area units per second. The conversion preserves the existing OpenFL default at its nominal 1 ms cadence:
+All apps now run in real time on every host, with speeds defined per real second (see `architecture.md`, *Time and speed*). Earlier, Rack advanced most models 1 ms per 1/60 s wake-up (about 1/17 of real time) and OpenFL's speed depended on how often its 1 ms timer actually fired, so the same knob gave different speeds per platform. Defaults were chosen between the old Rack feel and the old labelled values and are expected to be tuned by ear:
 
 ```text
-old default: 0.5 units per 1 ms tick
-new default: 500 units per second
+Gbloink ball speed     10-1000 play-area units/s   default 120
+K-Diagram cursor speed 0.05-8 network units/s      default 0.5
+TileLand cursor speed  0.25-40 tiles/s             default 2
+Zewp speed multiplier  0.1-4 x (240-480 units/s)   default 1
+TimeSlider travel time 0.5-120 s                   (unchanged)
 ```
-
-The existing Rack modules previously treated the number of `advanceTime` calls as a simulation-rate control. Their feel will change when they consume this delta-based model. Stage 4 replaces that transitional timing with the shared WorldOfCake runner and should redesign or recalibrate the Rack `Sim rate` control deliberately.
 
 ## Deterministic randomness
 

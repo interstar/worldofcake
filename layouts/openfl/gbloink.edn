@@ -7,34 +7,50 @@
                :view-class "GbloinkView"
                :composition-class "GbloinkCompositionGenerated"
                :layout-class "GbloinkLayoutGenerated"}
- :geometry {:panel-width 930.0
+ ;; Play area is 823x588: the 700x500 world's 1.4 aspect ratio.
+ :geometry {:panel-width 1050.0
             :panel-height 600.0
-            :outer-padding 50.0
-            :root-gap 20.0
-            :nested-gap 10.0}
+            :outer-padding 6.0
+            :root-gap 6.0
+            :nested-gap 6.0}
  :components
- {"title" {:kind :title :text "GLR : Gbloink!"}
-  "playarea" {:kind :play-area
+ {"playarea" {:kind :play-area
               :local-width 700.0
               :local-height 500.0}
-  "redspeed" {:kind :knob :minimum 0.05 :maximum 4.0 :default 2.0 :mapping :logarithmic :unit :speed :output :midi-note
-              :label "R" :colour "0xFF0000" :view-hook "addValueControl"}
-  "greenspeed" {:kind :knob :minimum 0.05 :maximum 4.0 :default 2.0 :mapping :logarithmic :unit :speed :output :midi-note
-                :label "G" :colour "0x00FF00" :view-hook "addValueControl"}
-  "bluespeed" {:kind :knob :minimum 0.05 :maximum 4.0 :default 2.0 :mapping :logarithmic :unit :speed :output :midi-note
-               :label "B" :colour "0x0000FF" :view-hook "addValueControl"}
-  "reset" {:kind :button :label "Reset" :colour "0x606874"}
-  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}
-  "mute" {:kind :toggle :label "Mute output" :tooltip "Keep the balls moving but suppress MIDI output." :default false :colour "0x606874"}
-  "edge-notes" {:kind :toggle :label "Edge" :default false :colour "0x606874"}
-  "controltop" {:kind :spacer}
-  "controlmiddle" {:kind :spacer}
-  "controlbottom" {:kind :spacer}
-  "scaleselect" {:kind :semantic-select :default-index 0 :presentation "compact"
+
+  ;; One box per ball. Each row holds that ball's controls; the heading names the column.
+  "speed-heading" {:kind :text :text "Speed"}
+  "velocity-heading" {:kind :text :text "Velocity"}
+  "red" {:kind :box :fill "0xD4473D" :fill-alpha 0.16 :border "0xD4473D" :border-alpha 0.55 :padding 6.0}
+  "green" {:kind :box :fill "0x2F9A48" :fill-alpha 0.16 :border "0x2F9A48" :border-alpha 0.55 :padding 6.0}
+  "blue" {:kind :box :fill "0x3A74D0" :fill-alpha 0.16 :border "0x3A74D0" :border-alpha 0.55 :padding 6.0}
+  "redspeed" {:kind :knob :minimum 10.0 :maximum 1000.0 :default 120.0 :mapping :logarithmic :unit :units-per-second :output :midi-note
+              :label "Red speed" :show-label false :colour "0xD4473D" :view-hook "addValueControl"}
+  "redvelocity" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
+              :label "Red velocity" :show-label false :tooltip "MIDI velocity of the red ball's notes." :colour "0xD4473D" :view-hook "addValueControl"}
+  "greenspeed" {:kind :knob :minimum 10.0 :maximum 1000.0 :default 120.0 :mapping :logarithmic :unit :units-per-second :output :midi-note
+                :label "Green speed" :show-label false :colour "0x2F9A48" :view-hook "addValueControl"}
+  "greenvelocity" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
+              :label "Green velocity" :show-label false :tooltip "MIDI velocity of the green ball's notes." :colour "0x2F9A48" :view-hook "addValueControl"}
+  "bluespeed" {:kind :knob :minimum 10.0 :maximum 1000.0 :default 120.0 :mapping :logarithmic :unit :units-per-second :output :midi-note
+               :label "Blue speed" :show-label false :colour "0x3A74D0" :view-hook "addValueControl"}
+  "bluevelocity" {:kind :knob :minimum 1.0 :maximum 127.0 :default 100.0 :unit :midi-velocity :output :midi-note
+              :label "Blue velocity" :show-label false :tooltip "MIDI velocity of the blue ball's notes." :colour "0x3A74D0" :view-hook "addValueControl"}
+
+  "controls" {:kind :box :fill "0xFFFFFF" :border "0xD9DCE1" :padding 8.0}
+  "scaleselect" {:kind :semantic-select :default-index 0 :presentation "compact" :label "Scale"
                  :choices [{:value 0 :label "Chromatic" :colour "0x606874"}
                            {:value 1 :label "Major" :colour "0x606874"}
                            {:value 2 :label "Minor" :colour "0x606874"}
                            {:value 3 :label "Harm minor" :colour "0x606874"}
                            {:value 4 :label "Mel minor" :colour "0x606874"}
-                           {:value 5 :label "Min blues" :colour "0x606874"}]}}
+                           {:value 5 :label "Min blues" :colour "0x606874"}]}
+  "note-length-heading" {:kind :text :text "Note length"}
+  "note-length" {:kind :knob :minimum 0.005 :maximum 2.0 :default 0.05 :mapping :logarithmic :unit :seconds :output :midi-note
+                 :label "Note length" :short-label "Len" :show-label false :tooltip "Time from each note-on to its note-off."
+                 :colour "0x5A616D" :view-hook "addValueControl"}
+  "reset" {:kind :button :label "Reset" :icon :reset :colour "0x3A3F48"}
+  "pause" {:kind :toggle :label "Pause" :icon :pause :default false :colour "0x3A3F48"}
+  "mute" {:kind :toggle :label "Mute output" :icon :mute :tooltip "Keep the balls moving but suppress MIDI output." :default false :colour "0x3A3F48"}
+  "edge-notes" {:kind :toggle :label "Wall notes" :icon :walls :tooltip "Play a note when a ball hits the edge." :default false :colour "0x3A3F48"}}
 }

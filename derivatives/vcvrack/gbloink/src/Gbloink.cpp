@@ -35,6 +35,14 @@ namespace
         &worldofcake::metadata::gbloink::kRedspeed,
         &worldofcake::metadata::gbloink::kGreenspeed,
         &worldofcake::metadata::gbloink::kBluespeed};
+    const auto kVelocityParameters = std::array<const worldofcake::metadata::gbloink::Knob*, 3>{
+        &worldofcake::metadata::gbloink::kRedvelocity,
+        &worldofcake::metadata::gbloink::kGreenvelocity,
+        &worldofcake::metadata::gbloink::kBluevelocity};
+    const int kGateOutputs[3] = {Gbloink::GATE_BALL1_OUTPUT, Gbloink::GATE_BALL2_OUTPUT, Gbloink::GATE_BALL3_OUTPUT};
+    const int kPitchOutputs[3] = {Gbloink::PITCH_BALL1_OUTPUT, Gbloink::PITCH_BALL2_OUTPUT, Gbloink::PITCH_BALL3_OUTPUT};
+    const int kVelocityOutputs[3] = {Gbloink::VELOCITY_BALL1_OUTPUT, Gbloink::VELOCITY_BALL2_OUTPUT,
+                                     Gbloink::VELOCITY_BALL3_OUTPUT};
     /** Matches generated Gbloink Rack panel playfield (dark inset on light panel). */
     constexpr int kPlayfieldBgR = 18;
     constexpr int kPlayfieldBgG = 20;
@@ -140,13 +148,23 @@ Gbloink::Gbloink()
     configSwitch(PAUSE_PARAM, 0.f, 1.f, 0.f, "Pause", {"Run", "Pause"});
     configSwitch(MUTE_PARAM, 0.f, 1.f, 0.f, "Mute output", {"Output", "Muted"});
     configSwitch(EDGE_NOTES_PARAM, 0.f, 1.f, 0.f, "Wall notes", {"Off", "On"});
+    const auto& noteLength = worldofcake::metadata::gbloink::kNote_length;
+    configParam(NOTE_LENGTH_PARAM, 0.f, 1.f,
+                static_cast<float>(worldofcake::metadata::gbloink::normalize(noteLength, noteLength.defaultValue)),
+                noteLength.label);
+    for (int i = 0; i < 3; i++) {
+        const auto* velocity = kVelocityParameters[static_cast<std::size_t>(i)];
+        configParam(VELOCITY_BALL1_PARAM + i, static_cast<float>(velocity->minimum),
+                    static_cast<float>(velocity->maximum), static_cast<float>(velocity->defaultValue), velocity->label);
+        paramQuantities[VELOCITY_BALL1_PARAM + i]->snapEnabled = true;
+    }
     for (int i = 0; i < worldofcake::rack::gbloink::kOutputCount; i++) {
         configOutput(i, worldofcake::rack::gbloink::kOutputLabels[i]);
     }
 
     const auto seed = static_cast<int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     runner.reset(new worldofcake::bridge::GbloinkControlRunner(kLocalW, kLocalH, seed));
-    runner->start(worldofcake::rack::kControlPeriodSeconds, worldofcake::rack::kLogicalDeltaSeconds);
+    runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 
 Gbloink::~Gbloink()
@@ -177,17 +195,24 @@ void Gbloink::enqueueHostValue(int controlId, double value)
 
 void Gbloink::syncPanelToRunner()
 {
-    worldofcake::rack::syncIndexedControlValues(
-        3, ControlIds::kSpeedBase, lastSpeed, 1e-5,
-        [this](int i) {
-            const auto* speed = kSpeedParameters[static_cast<std::size_t>(i)];
-            return worldofcake::metadata::gbloink::denormalize(*speed, params[SPEED_BALL1_PARAM + i].getValue());
-        },
-        [this](int id, double value) { enqueueHostValue(id, value); });
-    worldofcake::rack::syncPauseLatch(params[PAUSE_PARAM].getValue(), lastPause, ControlIds::kPause,
-                                     [this](int id, double value) { enqueueHostValue(id, value); });
-    worldofcake::rack::syncPauseLatch(params[MUTE_PARAM].getValue(), lastMute, ControlIds::kMute,
-                                     [this](int id, double value) { enqueueHostValue(id, value); });
+    for (int i = 0; i < 3; i++) {
+        const auto send = [this](int id, double value) { enqueueHostValue(id, value); };
+        const auto* speed = kSpeedParameters[static_cast<std::size_t>(i)];
+        worldofcake::rack::syncControlValue(
+            worldofcake::metadata::gbloink::denormalize(*speed, params[SPEED_BALL1_PARAM + i].getValue()),
+            lastSpeed[i], 1e-5, ControlIds::speedUid(i), send);
+        worldofcake::rack::syncControlValue(params[VELOCITY_BALL1_PARAM + i].getValue(), lastVelocity[i], 0.5,
+                                            ControlIds::noteVelocityUid(i), send);
+    }
+    worldofcake::rack::syncControlValue(
+        worldofcake::metadata::gbloink::denormalize(worldofcake::metadata::gbloink::kNote_length,
+                                                    params[NOTE_LENGTH_PARAM].getValue()),
+        lastNoteLength, 1e-6, ControlIds::kNoteLength, [this](int id, double value) { enqueueHostValue(id, value); });
+    const auto enqueueHost = [this](const worldofcake::bridge::ControlCommand& c) { runner->enqueueHostCommand(c); };
+    worldofcake::rack::syncLifecycleLatch(params[PAUSE_PARAM].getValue(), lastPause, worldofcake::bridge::pauseCommand,
+                                          enqueueHost);
+    worldofcake::rack::syncLifecycleLatch(params[MUTE_PARAM].getValue(), lastMute, worldofcake::bridge::muteCommand,
+                                          enqueueHost);
     const float resetValue = params[RESET_PARAM].getValue();
     if (ignoreResetUntilReleased) {
         lastResetButton = resetValue;
@@ -195,9 +220,8 @@ void Gbloink::syncPanelToRunner()
             ignoreResetUntilReleased = false;
         else
             params[RESET_PARAM].setValue(0.f);
-    } else {
-        worldofcake::rack::sendButtonRisingEdge(resetValue, lastResetButton, ControlIds::kReset,
-                                                [this](int id, double value) { enqueueHostValue(id, value); });
+    } else if (worldofcake::rack::risingEdge(resetValue, lastResetButton)) {
+        enqueueHost(worldofcake::bridge::resetCommand());
     }
 
     const int scaleIdx = (int)std::round(params[SCALE_PARAM].getValue());
@@ -213,30 +237,25 @@ void Gbloink::syncPanelToRunner()
 void Gbloink::process(const ProcessArgs& args)
 {
     syncPanelToRunner();
+    // The runner releases events when model time reaches them, so they are due
+    // on arrival. Ball channels are 1..3; each gate follows its sounding notes.
     worldofcake::bridge::PreparedEvent event;
     int safetyPops = 0;
-    while (runner->popPreparedEvent(event) && safetyPops++ < 256) {
-        if (event.type == 0) {
-            const int channel = event.channel;
-            const int note = event.data2;
-            const int bi = channel - 1;
-            if (bi >= 0 && bi < 3) {
-                pitchV[bi] = worldofcake::rack::midiNoteToOneVoltPerOctave(note);
-                // Short trigger on block hit (not a sustained gate); ~1 ms at audio rate.
-                gatePulse[bi].trigger(1e-3f);
-            }
+    while (safetyPops++ < 256 && runner->popPreparedEvent(event))
+        notes.schedule(0.0, event);
+    notes.emitDue(0.0, [this](double, const worldofcake::bridge::PreparedEvent& e) {
+        const int bi = e.channel - 1;
+        if (e.type == worldofcake::bridge::NoteOutputScheduler::kNoteOn && bi >= 0 && bi < 3) {
+            pitchV[bi] = worldofcake::rack::midiNoteToOneVoltPerOctave(e.data2);
+            velocityV[bi] = worldofcake::rack::midi7ToUnipolar10V(e.data3);
         }
-    }
+    });
 
     for (int i = 0; i < 3; i++) {
-        if (params[MUTE_PARAM].getValue() > 0.5f) {
-            outputs[GATE_BALL1_OUTPUT + 2 * i].setVoltage(0.f);
-            outputs[PITCH_BALL1_OUTPUT + 2 * i].setVoltage(0.f);
-            continue;
-        }
-        const bool high = gatePulse[i].process(args.sampleTime);
-        outputs[GATE_BALL1_OUTPUT + 2 * i].setVoltage(worldofcake::rack::gate10V(high));
-        outputs[PITCH_BALL1_OUTPUT + 2 * i].setVoltage(pitchV[i]);
+        const bool gate = gates[i].process(notes.soundingNotes(i + 1), notes.noteOnCount(i + 1), args.sampleTime);
+        outputs[kGateOutputs[i]].setVoltage(worldofcake::rack::gate10V(gate));
+        outputs[kPitchOutputs[i]].setVoltage(pitchV[i]);
+        outputs[kVelocityOutputs[i]].setVoltage(velocityV[i]);
     }
 }
 
@@ -269,10 +288,19 @@ void Gbloink::dataFromJson(json_t* rootJ)
     const auto snapshot = runner->latestVisualSnapshot();
     params[PAUSE_PARAM].setValue(snapshot.paused ? 1.f : 0.f);
     lastPause = snapshot.paused ? 1 : 0;
+    params[MUTE_PARAM].setValue(snapshot.muted ? 1.f : 0.f);
+    lastMute = snapshot.muted ? 1 : 0;
     params[SCALE_PARAM].setValue(static_cast<float>(snapshot.scaleIndex));
     lastScaleIdx = snapshot.scaleIndex;
     params[EDGE_NOTES_PARAM].setValue(snapshot.edgeNotes ? 1.f : 0.f);
     lastEdgeNotes = snapshot.edgeNotes ? 1 : 0;
+    params[NOTE_LENGTH_PARAM].setValue(static_cast<float>(
+        worldofcake::metadata::gbloink::normalize(worldofcake::metadata::gbloink::kNote_length, snapshot.noteLength)));
+    lastNoteLength = static_cast<float>(snapshot.noteLength);
+    for (int i = 0; i < 3; i++) {
+        params[VELOCITY_BALL1_PARAM + i].setValue(static_cast<float>(snapshot.ballNoteVelocities[i]));
+        lastVelocity[i] = static_cast<float>(snapshot.ballNoteVelocities[i]);
+    }
 }
 
 GbloinkWidget::GbloinkWidget(Gbloink* module)
@@ -304,6 +332,15 @@ GbloinkWidget::GbloinkWidget(Gbloink* module)
                                                  Gbloink::SPEED_BALL2_PARAM));
     addParam(createParamCentered<Rogan2PSBlue>(mm2px(math::Vec(blueSpeed.x, blueSpeed.y)), module,
                                                 Gbloink::SPEED_BALL3_PARAM));
+    const RackPoint& redVelocity = worldofcake::rack::gbloink::kRedvelocityCenter;
+    const RackPoint& greenVelocity = worldofcake::rack::gbloink::kGreenvelocityCenter;
+    const RackPoint& blueVelocity = worldofcake::rack::gbloink::kBluevelocityCenter;
+    addParam(createParamCentered<Rogan1PSRed>(mm2px(math::Vec(redVelocity.x, redVelocity.y)), module,
+                                              Gbloink::VELOCITY_BALL1_PARAM));
+    addParam(createParamCentered<Rogan1PSGreen>(mm2px(math::Vec(greenVelocity.x, greenVelocity.y)), module,
+                                                Gbloink::VELOCITY_BALL2_PARAM));
+    addParam(createParamCentered<Rogan1PSBlue>(mm2px(math::Vec(blueVelocity.x, blueVelocity.y)), module,
+                                               Gbloink::VELOCITY_BALL3_PARAM));
     const RackPoint& scale = worldofcake::rack::gbloink::kScaleselectCenter;
     const RackPoint& edge = worldofcake::rack::gbloink::kEdgeNotesCenter;
     const RackPoint& reset = worldofcake::rack::gbloink::kResetCenter;
@@ -312,10 +349,13 @@ GbloinkWidget::GbloinkWidget(Gbloink* module)
     addParam(createParamCentered<CKSS>(mm2px(math::Vec(edge.x, edge.y)), module, Gbloink::EDGE_NOTES_PARAM));
     addParam(createParamCentered<LEDButton>(mm2px(math::Vec(reset.x, reset.y)), module, Gbloink::RESET_PARAM));
     addParam(createParamCentered<VCVLatch>(mm2px(math::Vec(pause.x, pause.y)), module, Gbloink::PAUSE_PARAM));
+    const RackPoint& noteLength = worldofcake::rack::gbloink::kNoteLengthCenter;
+    addParam(createParamCentered<RoundBlackKnob>(mm2px(math::Vec(noteLength.x, noteLength.y)), module,
+                                                 Gbloink::NOTE_LENGTH_PARAM));
     const auto& mute = worldofcake::rack::gbloink::kMuteCenter;
     addParam(createParamCentered<VCVLatch>(mm2px(math::Vec(mute.x, mute.y)), module, Gbloink::MUTE_PARAM));
 
-    // Generated Rack output order: red gate, red pitch, green gate, green pitch, blue gate, blue pitch.
+    // Generated Rack output order: per ball (red, green, blue): gate, pitch, velocity.
     for (int i = 0; i < worldofcake::rack::gbloink::kOutputCount; i++) {
         const RackPoint& output = worldofcake::rack::gbloink::kOutputPositions[i];
         addOutput(createOutputCentered<PJ301MPort>(mm2px(math::Vec(output.x, output.y)), module, i));

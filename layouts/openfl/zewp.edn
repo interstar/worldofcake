@@ -20,7 +20,7 @@
               :local-max-x 600.0 :local-max-y 560.0}
   "population" {:kind :knob :minimum 0.0 :maximum 40.0 :default 10.0
                 :label "Zewps" :colour "0xB0B0B0" :view-hook "addValueControl"}
-  "speed" {:kind :knob :minimum 0.333333 :maximum 1.5 :default 1.0
+  "speed" {:kind :knob :minimum 0.1 :maximum 4.0 :default 1.0 :mapping :logarithmic :unit :speed-multiplier
            :label "Speed" :colour "0x40C0FF" :view-hook "addValueControl"}
   "reset" {:kind :button :label "Reset" :colour "0x606874"}
   "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}

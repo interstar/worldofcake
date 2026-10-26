@@ -47,7 +47,7 @@ namespace worldofcake::bridge
         }
         publish();
     }
-    void ZewpControlRunner::applyCommand(const ControlCommand& c)
+    void ZewpControlRunner::applyAppCommand(const ControlCommand& c)
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
@@ -60,10 +60,6 @@ namespace worldofcake::bridge
                 harness->setPopulation(c.value);
             else if (c.controlId == ControlIds::kSpeed)
                 harness->setSpeed(c.value);
-            else if (c.controlId == ControlIds::kReset)
-                harness->reset();
-            else if (c.controlId == ControlIds::kPause)
-                harness->setPaused(c.value > .5);
         }
     }
     void ZewpControlRunner::publish()

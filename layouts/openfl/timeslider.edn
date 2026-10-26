@@ -7,23 +7,53 @@
                :layout-class "TimeSliderLayoutGenerated"}
  :geometry {:panel-width 800.0
             :panel-height 600.0
-            :padding-left 24.0
-            :padding-right 24.0
-            :padding-top 28.0
-            :padding-bottom 48.0
-            :root-gap 12.0
-            :nested-gap 0.0
-            :gaps-by-depth {1 12.0 2 0.0}}
+            :outer-padding 6.0
+            :root-gap 6.0
+            :nested-gap 6.0
+            :gaps-by-depth {2 4.0}}
  :sequencer {:minimum-travel-time 120.0
              :maximum-travel-time 0.5}
+ ;; Continuous controls the model publishes, one per lane (0..1). Hosts present each as a MIDI CC,
+ ;; a VST parameter and Rack CV. The lane's channel selector changes its MIDI channel at run time.
+ :outputs [{:id "cc1" :label "CC 1" :channel 1 :cc 1}
+           {:id "cc2" :label "CC 2" :channel 1 :cc 2}
+           {:id "cc3" :label "CC 3" :channel 1 :cc 3}
+           {:id "cc4" :label "CC 4" :channel 1 :cc 4}]
  :components
- {"cc1label" {:kind :drawn-label :text "CC1"}
-  "cc1track" {:kind :timeslider-track :channel 1 :cc-number 1}
-  "cc2label" {:kind :drawn-label :text "CC2"}
-  "cc2track" {:kind :timeslider-track :channel 1 :cc-number 2}
-  "cc3label" {:kind :drawn-label :text "CC3"}
-  "cc3track" {:kind :timeslider-track :channel 1 :cc-number 3}
-  "cc4label" {:kind :drawn-label :text "CC4"}
-  "cc4track" {:kind :timeslider-track :channel 1 :cc-number 4}
-  "reset" {:kind :button :label "Reset" :colour "0x606874"}
-  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}}
+ {;; One lane per CC. Its heading, MIDI channel and colour are set here; the model starts from them.
+  "cc1label" {:kind :text :text "CC 1"}
+  "cc1channel" {:kind :semantic-select :label "CC 1 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
+                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
+                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
+                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
+                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
+                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
+  "cc1track" {:kind :timeslider-track :colour "0x55B7D9" :channel-control "cc1channel"}
+  "cc2label" {:kind :text :text "CC 2"}
+  "cc2channel" {:kind :semantic-select :label "CC 2 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
+                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
+                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
+                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
+                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
+                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
+  "cc2track" {:kind :timeslider-track :colour "0xE56B6F" :channel-control "cc2channel"}
+  "cc3label" {:kind :text :text "CC 3"}
+  "cc3channel" {:kind :semantic-select :label "CC 3 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
+                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
+                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
+                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
+                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
+                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
+  "cc3track" {:kind :timeslider-track :colour "0x76B947" :channel-control "cc3channel"}
+  "cc4label" {:kind :text :text "CC 4"}
+  "cc4channel" {:kind :semantic-select :label "CC 4 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
+                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
+                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
+                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
+                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
+                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
+  "cc4track" {:kind :timeslider-track :colour "0xC58BE8" :channel-control "cc4channel"}
+
+  "controls-gap" {:kind :spacer}
+  "reset" {:kind :button :label "Reset" :icon :reset :colour "0x3A3F48"}
+  "pause" {:kind :toggle :label "Pause" :icon :pause :default false :colour "0x3A3F48"}}}

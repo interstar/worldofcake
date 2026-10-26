@@ -22,7 +22,6 @@ namespace
 {
     constexpr float W = 600, H = 560;
     namespace ControlIds = worldofcake::control::zewp;
-    constexpr worldofcake::rack::TransportControlIds kTransportIds{ControlIds::kReset, ControlIds::kPause};
     worldofcake::LocalPoint toLocal(worldofcake::PanelPoint p, float w, float h)
     {
         worldofcake::CoordinateMapper m(worldofcake::PanelPoint(0, 0), worldofcake::PanelPoint(w, h),
@@ -135,7 +134,7 @@ ZewpModule::ZewpModule()
         configOutput(i, worldofcake::rack::zewp::kOutputLabels[i]);
     int seed = (int)std::chrono::high_resolution_clock::now().time_since_epoch().count();
     runner.reset(new worldofcake::bridge::ZewpControlRunner((int)W, (int)H, seed));
-    runner->start(worldofcake::rack::kControlPeriodSeconds, worldofcake::rack::kLogicalDeltaSeconds);
+    runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 ZewpModule::~ZewpModule()
 {
@@ -185,7 +184,7 @@ void ZewpModule::process(const ProcessArgs&)
     worldofcake::rack::syncControlValue(params[SPEED_PARAM].getValue(), lastSpeed, 1e-5, ControlIds::kSpeed,
                                         [this](int id, double value) { send(id, value); });
     worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(),
-                                     lastReset, kTransportIds, [this](int id, double v) { send(id, v); });
+                                     lastReset, [this](const worldofcake::bridge::ControlCommand& c) { runner->enqueueHostCommand(c); });
     worldofcake::bridge::ZewpControlSnapshot snap;
     while (runner->popControlSnapshot(snap))
         for (int i = 0; i < 18; ++i)

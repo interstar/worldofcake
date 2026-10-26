@@ -2,7 +2,7 @@
 <project>
     <meta title="Goldenpond" package="net.synaesmedia.goldenpond" version="1.0.0" company="Gilbert Lister Research" />
     <app main="goldenpond.GoldenpondMain" path="Export" file="Goldenpond" />
-    <window width="1400" height="700" resizable="true" />
+    <window width="1400" height="580" resizable="true" background="0xF1EFEA" />
     <source path="../../Source" />
     <source path="../../../goldenpond/goldenpond/current/haxe/src/goldenpond" />
     <haxelib name="openfl" />

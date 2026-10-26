@@ -14,10 +14,18 @@ if (-not (Test-Path -LiteralPath $projectFile)) {
     throw "No standalone OpenFL preview has been migrated for '$App'."
 }
 
-$action = if ($BuildOnly) { 'build' } else { 'test' }
-$arguments = @('run', 'openfl', $action, $projectFile, 'windows')
+# Always build, then launch the exe by full path ourselves: `openfl test` launches it by
+# bare name through cmd, which fails when NoDefaultCurrentDirectoryInExePath is set.
+$arguments = @('run', 'openfl', 'build', $projectFile, 'windows')
 if ($Configuration -eq 'debug') { $arguments += '-debug' }
 
-Write-Host "$action standalone OpenFL preview: $App"
+Write-Host "build standalone OpenFL preview: $App"
 & haxelib @arguments
+if ($LASTEXITCODE -ne 0 -or $BuildOnly) { exit $LASTEXITCODE }
+
+$exeName = ([xml](Get-Content -LiteralPath $projectFile)).project.app.file
+$binDir = Join-Path $repoRoot 'derivatives\openfl\Export\windows\bin'
+$exe = Join-Path $binDir "$exeName.exe"
+Write-Host "run $exe"
+& $exe
 exit $LASTEXITCODE

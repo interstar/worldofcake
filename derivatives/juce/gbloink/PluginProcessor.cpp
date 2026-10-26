@@ -28,12 +28,25 @@ void GbloinkAudioProcessor::prepareToPlay(double sampleRate, int)
     fallbackSamplePosition = 0;
     ++transportEpoch;
     hostPlaying = false;
-    scheduler.prepare(sampleRate);
+    scheduler.clear();
 }
 
 void GbloinkAudioProcessor::releaseResources()
 {
-    scheduler.reset();
+    scheduler.clear();
+}
+
+void GbloinkAudioProcessor::addMidi(juce::MidiBuffer& midi, const worldofcake::bridge::PreparedEvent& event,
+                                    int sampleOffset)
+{
+    const int channel = juce::jlimit(1, 16, event.channel);
+    if (event.type == worldofcake::bridge::NoteOutputScheduler::kNoteOn)
+        midi.addEvent(juce::MidiMessage::noteOn(channel, event.data2, static_cast<juce::uint8>(event.data3)), sampleOffset);
+    else if (event.type == worldofcake::bridge::NoteOutputScheduler::kNoteOff)
+        midi.addEvent(juce::MidiMessage::noteOff(channel, event.data2), sampleOffset);
+    else
+        return;
+    diagnosticMidiMessagesEmitted.fetch_add(1, std::memory_order_relaxed);
 }
 
 bool GbloinkAudioProcessor::isBusesLayoutSupported(const BusesLayout&) const
@@ -61,16 +74,11 @@ void GbloinkAudioProcessor::process(juce::AudioBuffer<FloatType>& buffer, juce::
     // last clock value while the audio callback is returning early.
     runner->setHostTransportRunning(playing);
 
+    // Host play/stop is a discontinuity the model's note tracking cannot see.
     if (playing != hostPlaying) {
         hostPlaying = playing;
         ++transportEpoch;
-        scheduler.reset(&midi);
-    }
-    const bool mutedNow = outputMuted.load(std::memory_order_relaxed);
-    if (mutedNow != lastOutputMuted) {
-        lastOutputMuted = mutedNow;
-        if (mutedNow)
-            scheduler.reset(&midi);
+        scheduler.releaseAll(0.0, [&](double, const worldofcake::bridge::PreparedEvent& e) { addMidi(midi, e, 0); });
     }
     // Keep Gbloink's existing host-clock model, but gate it on the DAW
     // transport.  Holding the last host time prevents Haxe physics and MIDI
@@ -83,27 +91,27 @@ void GbloinkAudioProcessor::process(juce::AudioBuffer<FloatType>& buffer, juce::
     const double requestedTime = static_cast<double>(epochBlockStart + numSamples + lookAheadSamples) / currentSampleRate;
     runner->setHostTransportTime(requestedTime, transportEpoch);
 
+    // The model supplies complete notes (note-on plus note-off) and handles
+    // pause/mute itself; this shell only places them on the host timeline.
     worldofcake::bridge::PreparedEvent event;
     int drained = 0;
     while (drained++ < 256 && runner->popPreparedEvent(event)) {
         diagnosticBridgeReceived.fetch_add(1, std::memory_order_relaxed);
-        if (!mutedNow && event.type == 0 && event.transportEpoch == transportEpoch) {
-            const auto eventSample = static_cast<std::int64_t>(std::llround(event.timestamp * currentSampleRate));
-            if (scheduler.queueTrigger(eventSample, event.transportEpoch, event.channel, event.data2, event.data3))
-                diagnosticTriggersQueued.fetch_add(1, std::memory_order_relaxed);
-        } else
+        const bool staleNoteOn = event.type == worldofcake::bridge::NoteOutputScheduler::kNoteOn &&
+                                 event.transportEpoch != transportEpoch;
+        if (staleNoteOn) {
             diagnosticStaleEvents.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+        scheduler.schedule(event.timestamp, event);
+        if (event.type == worldofcake::bridge::NoteOutputScheduler::kNoteOn)
+            diagnosticTriggersQueued.fetch_add(1, std::memory_order_relaxed);
     }
-    if (mutedNow) {
-        fallbackSamplePosition += numSamples;
-        return;
-    }
-    const auto messagesBefore = midi.getNumEvents();
-    scheduler.renderBlock(midi, epochBlockStart, numSamples, transportEpoch);
-    const auto messagesAfter = midi.getNumEvents();
-    if (messagesAfter > messagesBefore)
-        diagnosticMidiMessagesEmitted.fetch_add(static_cast<std::uint64_t>(messagesAfter - messagesBefore),
-                                                std::memory_order_relaxed);
+    const double blockEndTime = (static_cast<double>(epochBlockStart + numSamples) - 0.5) / currentSampleRate;
+    scheduler.emitDue(blockEndTime, [&](double time, const worldofcake::bridge::PreparedEvent& e) {
+        const auto sample = static_cast<std::int64_t>(std::llround(time * currentSampleRate));
+        addMidi(midi, e, static_cast<int>(juce::jlimit<std::int64_t>(0, numSamples - 1, sample - epochBlockStart)));
+    });
 
     fallbackSamplePosition += numSamples;
 }
@@ -171,9 +179,7 @@ void GbloinkAudioProcessor::setStateInformation(const void* data, int size)
 {
     if (runner == nullptr || data == nullptr || size <= 0)
         return;
-    const std::string state(static_cast<const char*>(data), static_cast<std::size_t>(size));
-    setOutputMuted(state.find("\"muted\":true") != std::string::npos);
-    runner->importStateJson(state);
+    runner->importStateJson(std::string(static_cast<const char*>(data), static_cast<std::size_t>(size)));
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

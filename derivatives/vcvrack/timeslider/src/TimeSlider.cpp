@@ -16,7 +16,6 @@ namespace
 {
     constexpr float W = 800.f, H = 600.f;
     namespace ControlIds = worldofcake::control::timeslider;
-    constexpr worldofcake::rack::TransportControlIds kTransportIds{ControlIds::kReset, ControlIds::kPause};
     constexpr int kTrackControlIds[4] = {ControlIds::kCc1track, ControlIds::kCc2track, ControlIds::kCc3track,
                                          ControlIds::kCc4track};
     struct Play : OpaqueWidget
@@ -82,7 +81,7 @@ TimeSlider::TimeSlider()
     for (int i = 0; i < worldofcake::rack::timeslider::kOutputCount; ++i)
         configOutput(i, worldofcake::rack::timeslider::kOutputLabels[i]);
     runner.reset(new worldofcake::bridge::TimeSliderControlRunner((int)W, (int)H, 120, .5));
-    runner->start(worldofcake::rack::kControlPeriodSeconds, worldofcake::rack::kLogicalDeltaSeconds);
+    runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 TimeSlider::~TimeSlider()
 {
@@ -111,13 +110,10 @@ void TimeSlider::enqueueHostValue(int id, double v)
 void TimeSlider::process(const ProcessArgs&)
 {
     worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(),
-                                     lastReset, kTransportIds, [this](int id, double v) { enqueueHostValue(id, v); });
-    worldofcake::bridge::TimeSliderControlSnapshot s;
-    while (runner->popControlSnapshot(s))
-        for (int i = 0; i < 4; ++i)
-            cvV[i] = worldofcake::rack::midi7ToUnipolar10V(s.sliders[i].midiValue);
+                                     lastReset, [this](const worldofcake::bridge::ControlCommand& c) { runner->enqueueHostCommand(c); });
+    // Each lane's control output (0..1, decided in Haxe) as 0..10 V.
     for (int i = 0; i < 4; ++i)
-        outputs[CV_SLIDER1_OUTPUT + i].setVoltage(cvV[i]);
+        outputs[CV_SLIDER1_OUTPUT + i].setVoltage(10.0f * runner->controlOutputValue(i));
 }
 TimeSliderWidget::TimeSliderWidget(TimeSlider* m)
 {

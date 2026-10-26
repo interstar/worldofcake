@@ -1,16 +1,14 @@
-[
-  title/title(30)
-  <
-    playarea/gbloinkplayarea(70)
-    [
-      controltop/spacer(25)
-      redspeed/knob(90)
-      greenspeed/knob(90)
-      bluespeed/knob(90)
-      controlmiddle/spacer(20)
-      scaleselect/semanticselect(70)
-      <reset/button pause/toggle mute/toggle edge-notes/toggle>(90)
-      controlbottom/spacer(25)
-    ](11)
-  >(570)
-]
+<
+  playarea/gbloinkplayarea(823)
+  [
+    <speed-heading/text velocity-heading/text>(18)
+    <%red redspeed/knob redvelocity/knob>(125)
+    <%green greenspeed/knob greenvelocity/knob>(125)
+    <%blue bluespeed/knob bluevelocity/knob>(125)
+    [%controls
+      scaleselect/semanticselect(32)
+      <note-length-heading/text note-length/knob>(72)
+      <reset/button pause/toggle mute/toggle edge-notes/toggle>(36)
+    ](171)
+  ](209)
+>

@@ -8,7 +8,11 @@
 
 namespace worldofcake::bridge
 {
-    /** Shared non-real-time control thread used by every native WorldOfCake runner. */
+    /**
+        Shared non-real-time control thread used by every native WorldOfCake runner.
+        Each tick receives the real time elapsed since the previous tick, so models
+        advance in real time whatever the wake-up cadence actually achieved.
+    */
     class ControlThread
     {
       public:
@@ -21,8 +25,10 @@ namespace worldofcake::bridge
         ControlThread(const ControlThread&) = delete;
         ControlThread& operator=(const ControlThread&) = delete;
 
-        bool start(double periodSeconds, Tick tick, Lifecycle setup = {}, Lifecycle teardown = {},
-                   double callbackDeltaSeconds = 0.0);
+        /** Longest step handed to one tick; a stall (debugger, sleep) is not replayed at once. */
+        static constexpr double kMaxTickSeconds = 0.25;
+
+        bool start(double periodSeconds, Tick tick, Lifecycle setup = {}, Lifecycle teardown = {});
         void stop();
         bool isRunning() const noexcept
         {

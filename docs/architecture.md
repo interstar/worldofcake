@@ -1,6 +1,6 @@
 # WorldOfCake Architecture
 
-Updated: 2026-10-20
+Updated: 2026-10-24
 
 ## 1. Purpose and Design Direction
 
@@ -58,19 +58,33 @@ The main framework contracts are in `Source/worldofcake/` and `Source/worldofcak
 
 The host-facing sequencer contract:
 
-- `advanceTime(delta)` advances logical time and app state.
+- `advanceTime(delta)` advances logical time and app state by `delta` seconds of **real elapsed time**; `getLogicalTime()` reports it. See *Time and speed* below.
 - `resyncTime(elapsedSeconds)` synchronizes forward to authoritative elapsed transport time; hosts with a monotonic clock call this instead of estimating elapsed time from callback cadence.
-- `resetTransport(unpause)` starts a new host-transport epoch without resetting musical/editor state: pending events are discarded and logical time returns to zero (used for seeks, loop jumps, and transport restarts).
+- `resetTransport()` starts a new host-transport epoch without resetting musical/editor state: pending events are discarded and logical time returns to zero (used for seeks, loop jumps, and transport restarts). It never changes the explicit pause or mute state.
 - `hasEventBefore(timeLimit)` / `getNextEvent()` expose queued musical events.
 - `correctInputNote(note, time, previousNote)` corrects an incoming MIDI note at logical sequencer time; sequencers without a harmonic model return the input unchanged.
-- `pause()` / `resume()` freeze or resume simulation and logical time.
-- `mute output` is separate from pause: it preserves model/transport progression while target adapters suppress emitted musical output.
-- `reset()` returns to an app-defined baseline.
+- `reset()` returns to an app-defined baseline. It calls `resetTransport()`, so a paused sequencer stays paused after reset.
 - `exportStateJson()` / `importStateJson(json)` persist recoverable runtime state.
-- `isMuted()` / `setMuted()` suppress musical event publication without stopping model time.
-- `isPaused()` / `pause()` / `resume()` represent explicit user pause state.
-- `isTransportRunning()` / `setTransportRunning()` represent a separate host transport gate.
+- Three independent gates, each a command plus a query that every sequencer understands:
+  - `setPaused(bool)` / `isPaused()`: explicit user pause; stops simulation and logical time.
+  - `setMuted(bool)` / `isMuted()`: suppresses musical output while model time and visuals keep running. Adapters that publish outputs other than events (CV derived from snapshots, corrected input notes) must also honour the model's mute.
+  - `setTransportRunning(bool)` / `isTransportRunning()`: the host transport gate, separate from the user's pause.
+
+  Pause, mute, and transport stop are output boundaries: sounding notes are released and events prepared before the boundary are discarded.
+
+Note lifetimes belong to the model. Every note-on a sequencer emits is followed by its note-off, either explicitly (Goldenpond's score) or through `SequencerCore.emitNote(time, channel, note, velocity, duration)`, which holds the note-off until model time reaches it and ends an earlier instance of a retriggered note. `CurrentlyPlaying` therefore knows exactly which notes are sounding, and output boundaries release them; `resetTransport()` stamps its releases at the new time origin so they are delivered immediately. Gbloink and K-Diagram expose the duration as a user **Note length** control (default 50 ms), persisted in their state JSON.
+
+The sequencer owns these flags. Panels and host adapters send the commands and present the flags back from the model (§3 `IControlPanel`, §11); they never keep their own copy.
 - `getModelStatus()` exposes the stable `{ ready, stateRevision }` lifecycle snapshot used by native adapters; `markStateReplaced()` advances the revision after model restoration.
+
+### Time and speed
+
+All apps define motion in real time, so the same knob position gives the same speed on every platform:
+
+- Hosts pass the real time that elapsed since the previous call, never a nominal step: the native `ControlThread` measures it between wake-ups, OpenFL measures it with `haxe.Timer.stamp()`, and host-clocked runners (JUCE Gbloink, Goldenpond under a DAW) follow the host transport. A single step is capped at 0.25 s so a stall is not replayed at once.
+- Each app states its speeds in real units, and its knobs carry those units in the EDN metadata (`:unit`), on logarithmic ranges: Gbloink ball speed in play-area units/s (10–1000, default 120); K-Diagram cursor speed in network units/s (0.05–8, default 0.5); TileLand cursor speed in tiles/s (0.25–40, default 2); Zewp a speed multiplier over 240–480 units/s base speeds (0.1–4, default 1); TimeSlider travel time in seconds (0.5–120, log by click position).
+- Physics that needs fine steps declares `maxStepSeconds` (Gbloink and Zewp use `SequencerCore.PHYSICS_STEP_SECONDS`, 1 ms). `advanceTime` splits longer deltas into equal steps no larger than that, so collisions do not depend on the host's tick rate. Apps without collision physics advance analytically (K-Diagram) or split at their own event boundaries (TileLand tiles).
+- `test/TestRealTime.hx` runs every app for one second at 1 ms, 1/60 s and 100 ms host steps and requires the same result, plus absolute checks (a default Gbloink ball travels 120 units in a second; the fastest TimeSlider glide takes 0.5 s).
 
 Persistence JSON is deliberately app-owned. WoC standardizes the entry point and native/Rack transport, but each app writes its own serializer because generic Haxe JSON serialization of arbitrary structures caused Rack stability problems.
 
@@ -81,8 +95,11 @@ The control/input contract:
 - mouse events use a component/control UID plus a `LocalPoint`.
 - value changes use `newValue(uid, value)`.
 - buttons and keyboard use explicit UID/key calls.
+- `controlValue(uid)` returns the current model value presented by a control, or `null` when the model does not own one. Panels display this value instead of keeping their own state.
 
-The sequencer is expected to know what a UID means inside that app.
+The sequencer is expected to know what a UID means inside that app. Panels are views in an MVC relationship with the sequencer: they can read it, it cannot see them.
+
+Lifecycle controls are wired once per app: the constructor calls `bindLifecycleControls(pauseUid, muteUid)` (`SequencerCore`), and `newValue` starts with `if (applyLifecycleValue(uid, value)) return;`. `SequencerCore` then maps those controls to `setPaused` / `setMuted` and answers `controlValue` for them.
 
 ### `IControlPanelView`
 
@@ -110,7 +127,28 @@ The older `IFullApp` split has been removed. `ISequencerWorld` is now the single
 
 ### `Event` and `IInstrument`
 
-Musical output crosses the host boundary as `worldofcake.Event`, a plain data record of `timestamp`, `type`, and three data fields (`data1`/`data2`/`data3`). Hosts interpret `type`: `0` = note-on (`data1` = channel, `data2` = note, `data3` = velocity), `1` = CC (`data2` = controller, `data3` = value), `2` = note-off. `IInstrument.send(e:Event)` is the output-adapter contract; `Source/platform/MonitorInstrument.hx` is the trace-based reference adapter.
+Musical output crosses the host boundary as `worldofcake.Event`, a plain data record of `timestamp`, `type`, and three data fields (`data1`/`data2`/`data3`). `type` is an `EventType`, an `enum abstract` over `Int`: typed in Haxe, a plain integer at the native bridge (`PreparedEvent::type`, mirrored as `NoteOutputScheduler::kNoteOn` etc.):
+
+| `EventType` | Value | `data1` | `data2` | `data3` |
+| --- | --- | --- | --- | --- |
+| `NoteOn` | 0 | channel | note | velocity |
+| `ControlChange` | 1 | channel | controller | 7-bit value |
+| `NoteOff` | 2 | channel | note | — |
+
+`IInstrument.send(e:Event)` is the output-adapter contract; `Source/platform/MonitorInstrument.hx` is the trace-based reference adapter.
+
+### Control outputs
+
+A continuous control a sequencer publishes (a TimeSlider lane, a K-Diagram cursor's X/Y) is **state, not events**: a `ControlOutput` holding a value from 0 to 1 plus its MIDI routing (channel, CC number). Everything about it is decided in Haxe, on the control thread; C++ only copies published values out for hosts that need them at audio or UI rate.
+
+- **Declared once, in EDN** (`:outputs [{:id "cc1" :label "CC 1" :channel 1 :cc 1} ...]`). The generator emits `OUTPUT_<ID>` index constants and a `controlOutputs()` builder in the app's control-IDs class, and a `kControlOutputs` table in the C++ control metadata (VST hosts must declare parameters before the model runs).
+- **Set by the app** with `SequencerCore.setControlOutput(index, value)` after `declareControlOutputs(...)`. Apps never build CC events themselves.
+- **MIDI CC**: the core emits a `ControlChange` event on the output's channel whenever its 7-bit value changes, while output is open (not paused, muted or transport-stopped). After an output boundary the next value is resent. Changing an output's channel (`ControlOutput.setChannel`) also resends.
+- **Published value**: `ControlOutput.published` follows the value while output is open and holds while muted or paused. `ISequencer.getControlOutputs()` exposes the outputs; `SequencerHarness.controlOutputValue(i)` returns the published value.
+- **Native**: after every control tick `HarnessControlRunner` copies the published values into a lock-free table (`ControlRunnerBase::controlOutputValue(i)`, up to `kMaxControlOutputs`).
+- **Hosts**: JUCE presents each output as an output-only host parameter (`jucehost::ControlOutputParameters`, pushed from a message-thread timer); Rack outputs `10 V × value`; MIDI CC is already in the event stream.
+
+Control **inputs** (host parameters, CV or CC driving the model, e.g. K-Diagram rotation from an LFO) are planned as the mirror image: declared in EDN, 0..1, arriving through the command queue. Many will simply be existing knobs exposed as automatable.
 
 ### Other shared Haxe primitives
 
@@ -129,15 +167,15 @@ Musical output crosses the host boundary as `worldofcake.Event`, a plain data re
 `Source/worldofcake/SequencerCore.hx` centralizes common sequencer lifecycle mechanics:
 
 - `currentTime` and event queue storage
-- `pause()` / `resume()`
-- finite-positive-delta guard in `advanceTime(delta)`
+- `setPaused()` / `setMuted()` / `setTransportRunning()` and their queries, sharing one `flushOutput()` output-boundary helper
+- `bindLifecycleControls()` / `applyLifecycleValue()` / `controlValue()` so panel pause/mute controls read and write the model flags
+- finite-positive-delta guard in `advanceTime(delta)`, and splitting into steps no larger than `maxStepSeconds`
 - `dirty` flag plus `consumeDirty()`
 - `emitEvent()` gating: events are published only while unmuted, unpaused, and transport-running; pause/mute/transport-stop are output boundaries
 - `CurrentlyPlaying` note-lifetime tracking so output boundaries flush outstanding note-offs
 - event queue helpers (`hasEventBefore` / `getNextEvent` / `clearEvents`)
-- `getLogicalTime()` / `isPaused()` / `isMuted()` / `isTransportRunning()`
-- `resyncTime()` / `resetTransport()` / `clearEvents()`
-- `setTransportRunning()` and `resetTransportPreservingState()` keep host transport transitions separate from explicit pause/mute choices
+- `getLogicalTime()`
+- `resyncTime()` / `resetTransport()` / `clearEvents()`; `resetTransport()` never changes the explicit pause/mute choices
 - `getModelStatus()` / `markStateReplaced()` lifecycle revision tracking
 
 Apps extend `SequencerCore` and implement their own model advancement, JSON schema, input behavior, and note/CC generation.
@@ -165,7 +203,7 @@ Concrete worlds still own app composition: creating the sequencer, creating the 
 - creates an `ISequencerWorld`
 - adds the view sprite to the display list
 - sets up `ResponsivePanelHost`
-- starts the 1 ms update timer
+- starts the update timer, advancing by the real time measured between timer events
 - advances the sequencer
 - drains queued events to `MonitorInstrument`
 - wires mouse down/move/up, optional keyboard input, resize, and enter-frame redraw
@@ -207,6 +245,29 @@ Layout is moving toward one source of truth per target:
 - app-local `*Layout.hx` files wrap generated layout constants and provide a stable app-facing layout API.
 - maintained app code should not import `*LayoutGenerated` directly. The intentional exception is the app-local `*Layout.hx` facade. Maintained behavior code may use generated control-ID classes directly or through temporary app-local aliases during migration.
 - app `World` classes may import generated `*CompositionGenerated` builders, because worlds are the OpenFL composition boundary.
+
+### Labelled containers and boxes
+
+A Layla container can be named with a `%label` as its first element, e.g. `<%red redspeed/knob>`. Labels share one namespace with leaf IDs. Layla itself attaches no meaning to a label; it is just a name in the layout.
+
+In the WoC generator a label behaves like a leaf ID in two ways:
+
+- the generator emits its geometry (`<LABEL>_X/_Y/_WIDTH/_HEIGHT` in the Haxe layout class, `k<Label>` in the JUCE layout header), whether or not the EDN mentions it;
+- the EDN may give it a component entry. The only component kind allowed on a container is `:box`, a filled, optionally bordered rectangle drawn behind the container's contents. A container entry may also carry `:padding`, which insets the container's children (the box keeps the full rectangle).
+
+```clojure
+"red" {:kind :box :fill "0xD4473D" :fill-alpha 0.16 :border "0xD4473D" :border-alpha 0.55 :padding 6.0}
+```
+
+Nothing is inherited from a container: every control states its own `:colour`. Grouping one ball's controls in a coloured box is a Gbloink convention written in Gbloink's EDN, not a framework concept.
+
+Targets: OpenFL compositions add a `PanelBox` before any control (so it sits behind them); JUCE layout headers carry a `kBoxes` table that editors paint with `jucehost::paintBoxes`; Rack panel SVGs get one `<rect id="box-<label>">` per box (from `:rack-components`).
+
+### Text, optional knob labels, and icons
+
+- `:text` is a static piece of text in a cell, e.g. a column heading (`{:kind :text :text "Speed"}`).
+- A knob's `:label` is its name (host parameter name, tooltip). `:show-label false` stops the panel drawing it under the knob; the default is to draw it.
+- Buttons and toggles may name an `:icon` (`:reset`, `:pause`, `:mute`, `:walls`). Icons are defined once, as a small op list, in `laylagen/src/worldofcake/laylagen/icons.clj`; the generator copies the op list into the Haxe composition and the C++ control metadata, and turns it into SVG paths for Rack panels. OpenFL draws it with `IconPainter`, JUCE with `jucehost::drawIcon`. A control with an icon shows the icon instead of its label.
 
 Examples:
 
@@ -265,7 +326,7 @@ Defined in `Source/worldofcake/ui/`:
 - `Slider`: value control that maps local coordinates to numeric ranges and emits `newValue(uid, value)`.
 - `Knob`: circular value control for music-software-style parameter editing; targets such as Rack/VST may render the same generated control with native knobs.
 - `Button`: momentary command control that emits `buttonPressed(uid)`.
-- `Toggle`: binary value control that emits `newValue(uid, 0/1)`.
+- `Toggle`: binary value control that emits `newValue(uid, 0/1)`. When the sequencer owns the value (`controlValue(uid)` is non-null, e.g. pause/mute) the toggle only displays it, refreshing each frame, and a click requests the opposite of the model's value. Otherwise it keeps a local value.
 - `SemanticSelect`: selection control over named choices that emits `newValue(uid, index)`.
 - `TextInput`: text entry control that emits `textSubmitted(uid, text)`.
 - `PianoRoll`: score/note editing surface.
@@ -281,7 +342,7 @@ TimeSlider uses app-local `TimeSliderTrackComponent` instances instead of the ge
 
 OpenFL runtime flow:
 
-1. `OpenFLAppBase` timer tick calls `world.getSequencer().advanceTime(delta)`.
+1. `OpenFLAppBase` timer tick calls `world.getSequencer().advanceTime(delta)` with the real elapsed time.
 2. The sequencer mutates internal state and queues musical `Event`s.
 3. `OpenFLAppBase` drains ready events via `hasEventBefore/getNextEvent`.
 4. Events are sent to `MonitorInstrument` unless built in preview mode.
@@ -324,9 +385,12 @@ Native host integration lives under `bridge/`.
 
 Key pieces:
 
-- `bridge/haxe/worldofcake/bridge/*Harness.hx`: small Haxe wrappers around one app model instance.
+- `bridge/haxe/worldofcake/bridge/SequencerHarness.hx`: shared harness base owning one `ISequencer` and exposing its lifecycle (time, transport, reset, pause, mute, persistence, model status) to C++.
+- `bridge/haxe/worldofcake/bridge/*Harness.hx`: per-app harnesses extending `SequencerHarness`; they construct the app model and add only app-specific calls.
 - `bridge/native/ControlThread`: background control cadence and hxcpp thread attachment.
-- `bridge/native/ControlRunnerBase.h`: shared C++ runner shell for command queues, thread lifecycle, persistence requests, command drop counters, and logical-time storage.
+- `bridge/native/ControlRunnerBase.h`: shared C++ runner shell for command queues, thread lifecycle, persistence requests, command drop counters, logical-time storage, and real-time-safe copies of the model's pause/mute flags (`isModelPaused()` / `isModelMuted()`).
+- `bridge/native/NoteOutputScheduler.h`: the one audio-thread note output object every host adapter uses (Rack and JUCE). It delivers model events on the host clock in timestamp order, emits late events immediately, never drops a note-off, tracks sounding notes (Rack gates are derived from it), and offers `releaseAll()` for host discontinuities the model cannot see (play/stop, seeks, `prepareToPlay`). Adapters do not flush notes on pause/mute/reset; the model does.
+- `bridge/native/HarnessControlRunner.h`: template layer owning the harness pointer; it applies lifecycle commands for every app and refreshes the pause/mute flags after each command drain. Concrete runners implement only `applyAppCommand`.
 - `bridge/native/SpscRingBuffer.h`: bounded single-producer/single-consumer queues.
 - `bridge/native/StatePersistence.h`: native persistence request/response transport (header-only).
 - `bridge/native/WorldOfCakeBridgeTypes.h`: POD command/snapshot/event types shared across runners and hosts.
@@ -352,6 +416,8 @@ control thread -> prepared-event queue / native visual snapshot
 - The GUI/editor and host/audio sides are the producers for their respective command queues; the control thread is the sole consumer. The shared command/event structures are defined in [`WorldOfCakeBridgeTypes.h`](bridge/native/WorldOfCakeBridgeTypes.h).
 - Host commands are drained before GUI commands on each control tick, so transport, MIDI, CV, and reset commands get priority over UI gestures.
 - Commands are fixed-size POD values. Text submission uses the fixed 256-byte buffer in `ControlCommand`; pointers, Haxe objects, STL containers, and UI objects must never cross an SPSC queue.
+- Lifecycle commands (`CommandKind::setPaused`, `setMuted`, `reset`, built with `pauseCommand()` / `muteCommand()` / `resetCommand()`) need no app control ID; hosts use them for every app. Other commands carry app-local control UIDs.
+- Adapters never keep their own pause/mute state. Editors display the snapshot's `paused` / `muted` and request the opposite; audio threads read `isModelPaused()` / `isModelMuted()`. A host widget whose value the host itself persists (a Rack latch param) only forwards user changes and is restored from the model on patch load.
 - A full queue drops the command and increments its separate drop counter. High-water marks are recorded for diagnostics; queues are not resized or dynamically allocated from the real-time path.
 - Musical events are drained from Haxe by the control thread into prepared native event queues. The audio thread only pops POD `PreparedEvent` values and schedules/outputs them; see the per-app runners such as [`GbloinkControlRunner.cpp`](bridge/native/GbloinkControlRunner.cpp) and [`GoldenpondControlRunner.cpp`](bridge/native/GoldenpondControlRunner.cpp).
 - Visual snapshots are published as native immutable-by-convention snapshots. UI code copies/reads the latest snapshot and never enters Haxe.
@@ -361,7 +427,7 @@ control thread -> prepared-event queue / native visual snapshot
 
 Representative host consumers are [`Gbloink.cpp`](derivatives/vcvrack/gbloink/src/Gbloink.cpp) for Rack and [`PluginProcessor.cpp`](derivatives/juce/gbloink/PluginProcessor.cpp) for JUCE/VST. Their audio/process callbacks consume native events and publish latest-value transport state; they do not call Haxe directly.
 
-All six current apps have Rack-facing native runners using the shared runner pattern. App-specific code remains responsible for harness creation, command dispatch, snapshot capture/publication, event draining, and any app-specific diagnostics.
+All six current apps have Rack-facing native runners using the shared runner pattern. App-specific code remains responsible for harness creation, app command dispatch, snapshot capture/publication, event draining, and any app-specific diagnostics.
 
 ---
 
@@ -375,7 +441,7 @@ Current shape:
 - shared Rack helpers live under `derivatives/vcvrack/common/`.
 - `derivatives/vcvrack/common/plugin.mk` owns shared build rules.
 - `derivatives/vcvrack/common/WocRackTiming.hpp` owns the current Rack control/logical timing policy.
-- `derivatives/vcvrack/common/WocRackTransport.hpp` owns reset/pause/button edge helpers.
+- `derivatives/vcvrack/common/WocRackTransport.hpp` owns button edge helpers and turns pause/mute latches and the reset button into lifecycle commands.
 - `derivatives/vcvrack/common/WocRackParamSync.hpp` owns repeated Rack-param-to-WoC-control mirroring helpers.
 - `derivatives/vcvrack/common/WocRackStateJson.hpp` owns Rack↔JSON persistence wrapping for the app-owned state JSON.
 - `derivatives/vcvrack/common/WocRackVoltage.hpp` owns MIDI↔CV/gate conversion on top of `WorldOfCakeOutputMapping.h`.
@@ -400,7 +466,7 @@ The JUCE target lives in `derivatives/juce/` and currently produces Gbloink, Tim
 - JUCE processors consume native events in `processBlock`, while JUCE editors render generated layout metadata and use host-native widgets only as the platform presentation layer;
 - generated control metadata supplies semantic ranges, choices, labels, units, and defaults; JUCE must not maintain a second hand-written semantic table;
 - coordinate conversion uses the shared WorldOfCake/native coordinate mapper, with only JUCE component/window conversion at the edge;
-- generated JUCE panel geometry lives in `bridge/native/worldofcake/generated/juce/<app>/LayoutGenerated.h` (Layla/EDN-derived, not Haxe-derived); shared JUCE helpers (`WocJuceCoordinateMapper.h`, `WocJuceEditorSupport.h`, `WocMidiScheduler.{h,cpp}`) live in `derivatives/juce/common/`.
+- generated JUCE panel geometry lives in `bridge/native/worldofcake/generated/juce/<app>/LayoutGenerated.h` (Layla/EDN-derived, not Haxe-derived); shared JUCE helpers (`WocJuceCoordinateMapper.h`, `WocJuceEditorSupport.h`) live in `derivatives/juce/common/`; note output uses the host-neutral `NoteOutputScheduler` (§11).
 
 VST transport policy is adapter-owned. Gbloink and K-Diagram are free-running models gated by DAW play/stop; Goldenpond follows DAW transport position/BPM; TimeSliders remain gesture-driven unless a future policy explicitly opts them into transport. Mute suppresses emitted musical events; pause stops model advancement; transport stop is a separate host gate.
 

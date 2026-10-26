@@ -1,5 +1,5 @@
 #pragma once
-#include "ControlRunnerBase.h"
+#include "HarnessControlRunner.h"
 #include "SpscRingBuffer.h"
 #include "WorldOfCakeBridgeTypes.h"
 #include <worldofcake/bridge/ZewpHarness.h>
@@ -8,7 +8,7 @@
 #include <mutex>
 namespace worldofcake::bridge
 {
-    class ZewpControlRunner : public ControlRunnerBase
+    class ZewpControlRunner : public HarnessControlRunner<ZewpHarness_obj>
     {
       public:
         ZewpControlRunner(int width, int height, int seed);
@@ -26,7 +26,7 @@ namespace worldofcake::bridge
         void createModel() override;
         void destroyModel() override;
         void pump(double) override;
-        void applyCommand(const ControlCommand&) override;
+        void applyAppCommand(const ControlCommand&) override;
         void publish();
         int width, height;
         int seed;
@@ -36,6 +36,5 @@ namespace worldofcake::bridge
         std::atomic<std::uint64_t> snapshotDrops{0};
         mutable std::mutex visualMutex;
         ZewpVisualSnapshot visual;
-        ::hx::ObjectPtr<ZewpHarness_obj> harness;
     };
 } // namespace worldofcake::bridge

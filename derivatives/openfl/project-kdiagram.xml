@@ -3,7 +3,7 @@
 	
 	<meta title="K-Diag" package="net.synaesmedia.kdiagram" version="1.0.0" company="Gilbert Lister Research" />
 	<app main="kdiagram.KDiagramMain" path="Export" file="KDiagram" />
-	<window width="800" height="640" resizable="true" />
+	<window width="856" height="640" resizable="true" background="0xF1EFEA" />
 	
 	<source path="../../Source" />
 	

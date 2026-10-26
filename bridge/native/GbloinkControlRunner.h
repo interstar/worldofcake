@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ControlRunnerBase.h"
+#include "HarnessControlRunner.h"
 #include "SpscRingBuffer.h"
 #include "WorldOfCakeBridgeTypes.h"
 #include <worldofcake/bridge/GbloinkHarness.h>
@@ -16,7 +16,7 @@ namespace worldofcake::bridge
         Manual-pump Stage 1 runner. Only its control owner may call pump().
         UI and audio consumers communicate through bounded native queues/snapshots.
     */
-    class GbloinkControlRunner : public ControlRunnerBase
+    class GbloinkControlRunner : public HarnessControlRunner<worldofcake::bridge::GbloinkHarness_obj>
     {
       public:
         GbloinkControlRunner(double width, double height, int seed);
@@ -63,7 +63,7 @@ namespace worldofcake::bridge
         }
 
       private:
-        void applyCommand(const ControlCommand& command) override;
+        void applyAppCommand(const ControlCommand& command) override;
         void drainEvents();
         void publishVisualSnapshot();
         void createModel() override;
@@ -83,6 +83,5 @@ namespace worldofcake::bridge
         bool modelCreated = false;
         std::uint64_t observedHostTransportEpoch = 0;
         double hostClockBaseTime = 0.0;
-        ::hx::ObjectPtr<worldofcake::bridge::GbloinkHarness_obj> harness;
     };
 } // namespace worldofcake::bridge

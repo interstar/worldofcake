@@ -1,5 +1,5 @@
 #pragma once
-#include "ControlRunnerBase.h"
+#include "HarnessControlRunner.h"
 #include "SpscRingBuffer.h"
 #include "WorldOfCakeBridgeTypes.h"
 #include <worldofcake/bridge/GoldenpondHarness.h>
@@ -7,7 +7,7 @@
 #include <mutex>
 
 namespace worldofcake::bridge {
-class GoldenpondControlRunner : public ControlRunnerBase {
+class GoldenpondControlRunner : public HarnessControlRunner<GoldenpondHarness_obj> {
   public:
     GoldenpondControlRunner()
     {
@@ -37,14 +37,14 @@ class GoldenpondControlRunner : public ControlRunnerBase {
   private:
     void createModel() override;
     void destroyModel() override;
-    void applyCommand(const ControlCommand& command) override;
+    void applyAppCommand(const ControlCommand& command) override;
+    void onModelReset() override { logicalTime = 0.0; }
     void drainEvents();
     void publishVisualSnapshot();
     SpscRingBuffer<PreparedEvent, 2048> events;
     std::atomic<std::uint64_t> eventDrops{0};
     std::atomic<std::uint64_t> produced{0};
     std::atomic<std::uint64_t> popped{0};
-    ::hx::ObjectPtr<GoldenpondHarness_obj> harness;
     bool modelCreated = false;
     mutable std::mutex snapshotMutex;
     GoldenpondVisualSnapshot snapshot;

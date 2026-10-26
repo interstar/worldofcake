@@ -1,10 +1,7 @@
 #include "TimeSliderControlRunner.h"
-#include "WorldOfCakeControlIds.h"
-#include "worldofcake/generated/timeslider/TimeSliderControlIdsGenerated.h"
 #include <cmath>
 namespace worldofcake::bridge
 {
-    namespace ControlIds = worldofcake::control::timeslider;
     TimeSliderControlRunner::TimeSliderControlRunner(int w, int h, double slow, double fast)
         : modelWidth(w), modelHeight(h), modelSlow(slow), modelFast(fast)
     {
@@ -45,14 +42,12 @@ namespace worldofcake::bridge
         std::lock_guard<std::mutex> l(visualMutex);
         return visualSnapshot;
     }
-    void TimeSliderControlRunner::applyCommand(const ControlCommand& c)
+    void TimeSliderControlRunner::applyAppCommand(const ControlCommand& c)
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.controlId, c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kReset)
-            harness->reset();
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kPause)
-            harness->setPaused(c.value > .5);
+        else if (c.kind == CommandKind::setValue)
+            harness->setValue(c.controlId, c.value);
     }
     TimeSliderControlSnapshot TimeSliderControlRunner::captureSnapshot()
     {
@@ -70,7 +65,7 @@ namespace worldofcake::bridge
             s.height = harness->sliderHeight(i);
             s.current = harness->sliderCurrent(i);
             s.destination = harness->sliderDestination(i);
-            s.midiValue = harness->sliderMidiValue(i);
+            s.channel = harness->sliderChannel(i);
         }
         return n;
     }

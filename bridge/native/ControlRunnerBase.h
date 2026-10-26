@@ -5,6 +5,7 @@
 #include "StatePersistence.h"
 #include "WorldOfCakeBridgeTypes.h"
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -46,11 +47,16 @@ namespace worldofcake
                 return false;
             }
 
-            bool start(double periodSeconds, double callbackDeltaSeconds = 0.0)
+            bool start(double periodSeconds)
             {
                 return controlThread.start(
-                    periodSeconds, [this](double tickDelta) { pump(tickDelta); }, [this] { createModel(); },
-                    [this] { destroyModel(); }, callbackDeltaSeconds);
+                    periodSeconds,
+                    [this](double tickDelta) {
+                        pump(tickDelta);
+                        onTickComplete();
+                    },
+                    [this] { createModel(); },
+                    [this] { destroyModel(); });
             }
 
             void stop()
@@ -113,6 +119,32 @@ namespace worldofcake
                 return hostCommandHighWater.load();
             }
 
+            /** Real-time-safe copies of the model's pause/mute flags, refreshed every control tick. */
+            bool isModelPaused() const noexcept
+            {
+                return modelPaused.load(std::memory_order_acquire);
+            }
+            bool isModelMuted() const noexcept
+            {
+                return modelMuted.load(std::memory_order_acquire);
+            }
+
+            /** Most control outputs a runner publishes (see `ControlOutput` in Haxe). */
+            static constexpr int kMaxControlOutputs = 16;
+
+            /** Real-time-safe copies of the model's published control outputs, refreshed every control tick. */
+            int controlOutputCount() const noexcept
+            {
+                return controlOutputCountValue.load(std::memory_order_acquire);
+            }
+            /** Value 0..1 of a control output; 0 when there is no such output. */
+            float controlOutputValue(int index) const noexcept
+            {
+                if (index < 0 || index >= controlOutputCount())
+                    return 0.0f;
+                return controlOutputValues[static_cast<std::size_t>(index)].load(std::memory_order_acquire);
+            }
+
           protected:
             ControlRunnerBase()
             {
@@ -125,6 +157,34 @@ namespace worldofcake
                     applyCommand(command);
                 while (guiCommands.pop(command))
                     applyCommand(command);
+                onCommandsApplied();
+            }
+
+            /** Called on the control thread after each command drain. */
+            virtual void onCommandsApplied()
+            {
+            }
+
+            void publishModelLifecycle(bool paused, bool muted) noexcept
+            {
+                modelPaused.store(paused, std::memory_order_release);
+                modelMuted.store(muted, std::memory_order_release);
+            }
+
+            /** Called on the control thread after every tick's `pump`. */
+            virtual void onTickComplete()
+            {
+            }
+
+            void publishControlOutput(int index, float value) noexcept
+            {
+                if (index >= 0 && index < kMaxControlOutputs)
+                    controlOutputValues[static_cast<std::size_t>(index)].store(value, std::memory_order_release);
+            }
+            void publishControlOutputCount(int count) noexcept
+            {
+                controlOutputCountValue.store(count < 0 ? 0 : (count > kMaxControlOutputs ? kMaxControlOutputs : count),
+                                              std::memory_order_release);
             }
 
             virtual void pump(double delta) = 0;
@@ -155,6 +215,10 @@ namespace worldofcake
             std::atomic<std::uint64_t> hostCommandDrops{0};
             std::atomic<std::size_t> guiCommandHighWater{0};
             std::atomic<std::size_t> hostCommandHighWater{0};
+            std::atomic<bool> modelPaused{false};
+            std::atomic<bool> modelMuted{false};
+            std::array<std::atomic<float>, kMaxControlOutputs> controlOutputValues{};
+            std::atomic<int> controlOutputCountValue{0};
         };
     } // namespace bridge
 } // namespace worldofcake

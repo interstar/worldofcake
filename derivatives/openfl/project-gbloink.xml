@@ -3,7 +3,7 @@
 	
 	<meta title="Gbloink!" package="net.synaesmedia.gbloink" version="1.0.0" company="Gilbert Lister Research" />
 	<app main="gbloink.GbloinkMain" path="Export" file="Gbloink" />
-	<window width="930" height="600" resizable="true" />
+	<window width="1050" height="600" resizable="true" background="0xF1EFEA" />
 	
 	<source path="../../Source" />
 	

@@ -19,7 +19,6 @@ namespace
 {
     constexpr float W = 600, H = 600;
     namespace ControlIds = worldofcake::control::tileland;
-    constexpr worldofcake::rack::TransportControlIds kTransportIds{ControlIds::kReset, ControlIds::kPause};
     NVGcolor rgb(int c)
     {
         return nvgRGB((c >> 16) & 255, (c >> 8) & 255, c & 255);
@@ -100,7 +99,7 @@ TileLand::TileLand()
         configOutput(i, worldofcake::rack::tileland::kOutputLabels[i]);
     int seed = (int)std::chrono::high_resolution_clock::now().time_since_epoch().count();
     runner.reset(new worldofcake::bridge::TileLandControlRunner(seed));
-    runner->start(worldofcake::rack::kControlPeriodSeconds, worldofcake::rack::kLogicalDeltaSeconds);
+    runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 TileLand::~TileLand()
 {
@@ -138,7 +137,7 @@ void TileLand::process(const ProcessArgs&)
         },
         [this](int id, double value) { send(id, value); });
     worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(),
-                                     lastReset, kTransportIds, [this](int id, double v) { send(id, v); });
+                                     lastReset, [this](const worldofcake::bridge::ControlCommand& c) { runner->enqueueHostCommand(c); });
     worldofcake::bridge::TileLandControlSnapshot s;
     while (runner->popControlSnapshot(s))
         for (int i = 0; i < 6; ++i)

@@ -1,8 +1,11 @@
 #pragma once
 #include <rack.hpp>
+#include <atomic>
 #include <memory>
 #include <array>
 #include <GoldenpondControlRunner.h>
+#include <NoteOutputScheduler.h>
+#include <WocRackVoltage.hpp>
 #include <string>
 using namespace rack;
 struct Goldenpond;
@@ -37,7 +40,6 @@ struct Goldenpond : Module {
     float lastReset = 0.f;
     float lastValues[14] = {};
     std::uint64_t sequence = 1;
-    int activeNotes[4] = {};
     std::array<std::string, 5> textValues;
     std::array<int, 3> previousCorrectionInput{};
     std::array<bool, 3> correctionInputValid{};
@@ -51,16 +53,26 @@ struct Goldenpond : Module {
     void registerTextField(int index, GoldenpondTextField* field);
     void restoreTextFields();
     GoldenpondTextField* textFields[5] = {};
-    std::array<worldofcake::bridge::PreparedEvent, 2048> scheduledEvents{};
-    std::size_t scheduledEventCount = 0;
+    /** Model note-ons/offs on the Rack clock; a part's gate is high while its notes sound. */
+    worldofcake::bridge::NoteOutputScheduler notes;
+    worldofcake::rack::RetriggerGate gates[4];
+    /** An event mapping further than this from now means the model clock jumped. */
+    static constexpr double kMaxEventSkewSeconds = 0.25;
     double audioTime = 0.0;
     double eventTimeOrigin = 0.0;
     double transportTime = 0.0;
     std::uint64_t transportEpoch = 0;
     std::uint64_t stagedEvents = 0;
-    std::uint64_t stagedDrops = 0;
     std::uint64_t consumedNoteOns = 0;
     std::uint64_t consumedNoteOffs = 0;
     double diagnosticsTime = 0.0;
+    /** Once a second the audio thread publishes counters here; the widget logs them
+        from the UI thread, because logging does file I/O. */
+    std::atomic<std::uint64_t> diagStaged{0}, diagDropped{0}, diagNoteOns{0}, diagNoteOffs{0}, diagPending{0};
+    std::atomic<bool> diagnosticsReady{false};
+    void logDiagnostics();
 };
-struct GoldenpondWidget : ModuleWidget { explicit GoldenpondWidget(Goldenpond*); };
+struct GoldenpondWidget : ModuleWidget {
+    explicit GoldenpondWidget(Goldenpond*);
+    void step() override;
+};

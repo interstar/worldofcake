@@ -1,9 +1,9 @@
 [
   <
-    [cc1label/label(20) cc1track/timeslidertrack(440)]
-    [cc2label/label(20) cc2track/timeslidertrack(440)]
-    [cc3label/label(20) cc3track/timeslidertrack(440)]
-    [cc4label/label(20) cc4track/timeslidertrack(440)]
-  >(470)
-  <reset/button pause/toggle>(42)
+    [cc1label/text(18) cc1channel/semanticselect(26) cc1track/timeslidertrack(500)]
+    [cc2label/text(18) cc2channel/semanticselect(26) cc2track/timeslidertrack(500)]
+    [cc3label/text(18) cc3channel/semanticselect(26) cc3track/timeslidertrack(500)]
+    [cc4label/text(18) cc4channel/semanticselect(26) cc4track/timeslidertrack(500)]
+  >(544)
+  <controls-gap/spacer(6) reset/button pause/toggle>(32)
 ]

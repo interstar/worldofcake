@@ -1,5 +1,6 @@
 #pragma once
 #include "TimeSliderControlRunner.h"
+#include "WocJuceControlOutputs.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 class TimeSliderAudioProcessor final : public juce::AudioProcessor {
@@ -21,5 +22,7 @@ public:
 private:
  template<class T> void process(juce::AudioBuffer<T>&,juce::MidiBuffer&);
  std::unique_ptr<worldofcake::bridge::TimeSliderControlRunner> runner; double rate=44100; std::int64_t position=0;
+ /** The lanes as host parameters (after `runner`, which it reads). */
+ std::unique_ptr<worldofcake::jucehost::ControlOutputParameters> outputParameters;
  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimeSliderAudioProcessor)
 };

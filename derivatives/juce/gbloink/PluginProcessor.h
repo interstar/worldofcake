@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GbloinkControlRunner.h"
-#include "WocMidiScheduler.h"
+#include "NoteOutputScheduler.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -49,20 +49,18 @@ class GbloinkAudioProcessor final : public juce::AudioProcessor
     worldofcake::bridge::GbloinkVisualSnapshot visualSnapshot() const;
     GbloinkPluginDiagnostics diagnostics() const noexcept;
     bool enqueueGuiCommand(const worldofcake::bridge::ControlCommand&) noexcept;
-    void setOutputMuted(bool value) noexcept { outputMuted.store(value, std::memory_order_relaxed); }
 
   private:
     template <typename FloatType>
     void process(juce::AudioBuffer<FloatType>&, juce::MidiBuffer&);
+    void addMidi(juce::MidiBuffer&, const worldofcake::bridge::PreparedEvent&, int sampleOffset);
 
     std::unique_ptr<worldofcake::bridge::GbloinkControlRunner> runner;
-    worldofcake::jucehost::WocMidiScheduler scheduler;
+    worldofcake::bridge::NoteOutputScheduler scheduler;
     double currentSampleRate = 44100.0;
     std::int64_t fallbackSamplePosition = 0;
     std::uint64_t transportEpoch = 1;
     bool hostPlaying = false;
-    std::atomic<bool> outputMuted{false};
-    bool lastOutputMuted = false;
     std::atomic<bool> diagnosticHostPlaying{false};
     std::atomic<std::uint64_t> diagnosticBridgeReceived{0};
     std::atomic<std::uint64_t> diagnosticTriggersQueued{0};

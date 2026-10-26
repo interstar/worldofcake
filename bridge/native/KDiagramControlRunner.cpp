@@ -36,6 +36,8 @@ namespace worldofcake::bridge
                             });
         setDiagnosticStage(DiagnosticStage::applyCommands);
         applyPendingCommands();
+        // A DAW's stopped transport stops the model (and releases its notes); Rack never stops it.
+        harness->setTransportRunning(hostTransportRunning.load(std::memory_order_acquire));
         if (std::isfinite(d) && d > 0) {
             setDiagnosticStage(DiagnosticStage::advanceTime);
             harness->advanceTime(d);
@@ -51,23 +53,15 @@ namespace worldofcake::bridge
     {
         return events.pop(e);
     }
-    bool KDiagramControlRunner::popControlSnapshot(KDiagramControlSnapshot& s) noexcept
-    {
-        return controls.pop(s);
-    }
     KDiagramVisualSnapshot KDiagramControlRunner::latestVisualSnapshot() const
     {
         std::lock_guard<std::mutex> l(visualMutex);
         return visual;
     }
-    void KDiagramControlRunner::applyCommand(const ControlCommand& c)
+    void KDiagramControlRunner::applyAppCommand(const ControlCommand& c)
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kReset)
-            harness->reset();
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kPause)
-            harness->setPaused(c.value > .5);
         else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kRotateLeft)
             harness->rotate(-.12);
         else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kRotateRight)
@@ -93,18 +87,6 @@ namespace worldofcake::bridge
     void KDiagramControlRunner::publishSnapshots()
     {
         auto g = nextGeneration++;
-        setDiagnosticStage(DiagnosticStage::controlSnapshot);
-        KDiagramControlSnapshot c;
-        c.generation = g;
-        c.modelReady = harness->modelReady();
-        c.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
-        c.logicalTime = logicalTime;
-        for (int i = 0; i < 3; i++) {
-            c.values[i * 2] = std::max(0, std::min(127, (int)((harness->cursorX(i) + 1) * .5 * 127)));
-            c.values[i * 2 + 1] = std::max(0, std::min(127, (int)((harness->cursorY(i) + 1) * .5 * 127)));
-        }
-        if (!controls.push(c))
-            snapshotDrops++;
         KDiagramVisualSnapshot n;
         n.generation = g;
         n.modelReady = harness->modelReady();
@@ -114,6 +96,7 @@ namespace worldofcake::bridge
         n.radius = harness->radius();
         n.selectedCursor = harness->selected();
         n.scaleIndex = harness->scaleIndex();
+        n.noteLength = harness->noteLength();
         setDiagnosticStage(DiagnosticStage::graphSnapshot);
         auto nc = harness->nodeCount();
         n.nodes.reserve((size_t)nc);
@@ -198,7 +181,6 @@ namespace worldofcake::bridge
         case DiagnosticStage::applyCommands: return "apply-commands";
         case DiagnosticStage::advanceTime: return "advance-time";
         case DiagnosticStage::drainEvents: return "drain-events";
-        case DiagnosticStage::controlSnapshot: return "control-snapshot";
         case DiagnosticStage::graphSnapshot: return "graph-snapshot";
         case DiagnosticStage::cursorSnapshot: return "cursor-snapshot";
         case DiagnosticStage::publishVisual: return "publish-visual";

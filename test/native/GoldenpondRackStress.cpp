@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     runners.reserve(static_cast<std::size_t>(runnerCount));
     for (int i = 0; i < runnerCount; ++i) {
         auto runner = std::unique_ptr<GoldenpondControlRunner>(new GoldenpondControlRunner());
-        if (!runner->start(kControlPeriod, kControlPeriod)) {
+        if (!runner->start(kControlPeriod)) {
             std::cerr << "FAIL: could not start control runner " << i << '\n';
             return 1;
         }

@@ -4,6 +4,8 @@
 #include <atomic>
 #include <memory>
 #include <KDiagramControlRunner.h>
+#include <NoteOutputScheduler.h>
+#include <WocRackVoltage.hpp>
 using namespace rack;
 struct KDiagram : Module
 {
@@ -20,6 +22,7 @@ struct KDiagram : Module
         SCALE_PARAM,
         ROT_CCW_PARAM,
         ROT_CW_PARAM,
+        NOTE_LENGTH_PARAM,
         NUM_PARAMS
     };
     enum InputIds
@@ -50,9 +53,12 @@ struct KDiagram : Module
     std::atomic<std::uint64_t> guiSequence{1};
     std::uint64_t reportedPersistenceTimeouts = 0;
     std::uint64_t hostSequence = 1;
-    float xy[6] = {}, pitchV[3] = {}, lastSpeed[3] = {-1, -1, -1}, lastReset = 0, lastL = 0, lastR = 0;
+    float pitchV[3] = {}, lastSpeed[3] = {-1, -1, -1}, lastReset = 0, lastL = 0, lastR = 0;
+    float lastNoteLength = -1;
     int lastPause = -1, lastChannel = -1, lastCursor = -1, lastScaleIdx = -1;
-    dsp::PulseGenerator pulse[3];
+    /** Model note-ons/offs; a cursor's gate is high while any of its notes sound. */
+    worldofcake::bridge::NoteOutputScheduler notes;
+    worldofcake::rack::RetriggerGate gates[3];
     KDiagram();
     ~KDiagram() override;
     json_t* dataToJson() override;

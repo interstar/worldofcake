@@ -10,9 +10,9 @@
  :components
  {"playarea" {:kind :play-area
               :local-min-x 0.0 :local-min-y 0.0 :local-max-x 600.0 :local-max-y 600.0}
-  "redspeed" {:kind :knob :minimum 1.0 :maximum 80.0 :default 16.0 :label "R" :colour "0xFF0000" :view-hook "addValueControl"}
-  "greenspeed" {:kind :knob :minimum 1.0 :maximum 80.0 :default 16.0 :label "G" :colour "0x00FF00" :view-hook "addValueControl"}
-  "bluespeed" {:kind :knob :minimum 1.0 :maximum 80.0 :default 16.0 :label "B" :colour "0x0000FF" :view-hook "addValueControl"}
+  "redspeed" {:kind :knob :minimum 0.25 :maximum 40.0 :default 2.0 :mapping :logarithmic :unit :tiles-per-second :label "R" :colour "0xFF0000" :view-hook "addValueControl"}
+  "greenspeed" {:kind :knob :minimum 0.25 :maximum 40.0 :default 2.0 :mapping :logarithmic :unit :tiles-per-second :label "G" :colour "0x00FF00" :view-hook "addValueControl"}
+  "bluespeed" {:kind :knob :minimum 0.25 :maximum 40.0 :default 2.0 :mapping :logarithmic :unit :tiles-per-second :label "B" :colour "0x0000FF" :view-hook "addValueControl"}
   "reset" {:kind :button :label "Reset" :colour "0x606874"}
   "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}
   "controltop" {:kind :spacer} "controlmiddle" {:kind :spacer}

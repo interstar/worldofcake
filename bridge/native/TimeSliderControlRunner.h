@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ControlRunnerBase.h"
+#include "HarnessControlRunner.h"
 #include "WorldOfCakeBridgeTypes.h"
 #include <worldofcake/bridge/TimeSliderHarness.h>
 
@@ -12,7 +12,7 @@
 namespace worldofcake::bridge
 {
     /** TimeSlider adapter using the same lifecycle and command transport as Gbloink. */
-    class TimeSliderControlRunner : public ControlRunnerBase
+    class TimeSliderControlRunner : public HarnessControlRunner<TimeSliderHarness_obj>
     {
       public:
         TimeSliderControlRunner(int width, int height, double slowSeconds, double fastSeconds);
@@ -35,7 +35,7 @@ namespace worldofcake::bridge
       private:
         void createModel() override;
         void destroyModel() override;
-        void applyCommand(const ControlCommand& command) override;
+        void applyAppCommand(const ControlCommand& command) override;
         TimeSliderControlSnapshot captureSnapshot();
         void publishSnapshot();
         void drainEvents();
@@ -47,7 +47,6 @@ namespace worldofcake::bridge
         mutable std::mutex visualMutex;
         TimeSliderControlSnapshot visualSnapshot;
         std::uint64_t nextGeneration = 1;
-        ::hx::ObjectPtr<TimeSliderHarness_obj> harness;
         int modelWidth = 0, modelHeight = 0;
         double modelSlow = 0.0, modelFast = 0.0;
         bool modelCreated = false;

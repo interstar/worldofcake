@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
 #include <WorldOfCakeOutputMapping.h>
 
 namespace worldofcake
@@ -22,6 +23,35 @@ namespace worldofcake
         {
             return static_cast<float>(worldofcake::output::midiNoteToOneVoltPerOctave(note, zeroVoltNote));
         }
+
+        /**
+            Gate for one voice fed by NoteOutputScheduler: high while notes sound,
+            and briefly low when a new note starts on an already-high gate so
+            downstream envelopes see a fresh rising edge.
+        */
+        struct RetriggerGate
+        {
+            static constexpr float kGapSeconds = 0.001f;
+            std::uint32_t lastNoteOns = 0;
+            float lowRemaining = 0.f;
+            bool wasHigh = false;
+
+            bool process(int soundingNotes, std::uint32_t noteOns, float sampleTime)
+            {
+                if (noteOns != lastNoteOns) {
+                    if (wasHigh)
+                        lowRemaining = kGapSeconds;
+                    lastNoteOns = noteOns;
+                }
+                bool high = soundingNotes > 0;
+                if (lowRemaining > 0.f) {
+                    lowRemaining -= sampleTime;
+                    high = false;
+                }
+                wasHigh = high;
+                return high;
+            }
+        };
 
         inline float gate10V(bool high)
         {

@@ -9,7 +9,11 @@
             :root-gap 0.0
             :nested-gap 0.0}
  :rack-components
- {"title" {:kind :title :text "GLR : Goldenpond"}
+ {"part0" {:kind :box :fill "0x55B7D9" :fill-alpha 0.16 :border "0x55B7D9" :border-alpha 0.55}
+  "part1" {:kind :box :fill "0xE56B6F" :fill-alpha 0.16 :border "0xE56B6F" :border-alpha 0.55}
+  "part2" {:kind :box :fill "0x76B947" :fill-alpha 0.16 :border "0x76B947" :border-alpha 0.55}
+  "part3" {:kind :box :fill "0xC58BE8" :fill-alpha 0.16 :border "0xC58BE8" :border-alpha 0.55}
+  "title" {:kind :title :text "GLR : Goldenpond"}
   "gap" {:kind :spacer}
   "playarea" {:kind :play-area}
   "patchbay" {:kind :patch-bay}

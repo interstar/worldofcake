@@ -1,5 +1,5 @@
 #pragma once
-#include "ControlRunnerBase.h"
+#include "HarnessControlRunner.h"
 #include "SpscRingBuffer.h"
 #include "WorldOfCakeBridgeTypes.h"
 #include <worldofcake/bridge/KDiagramHarness.h>
@@ -10,7 +10,7 @@
 
 namespace worldofcake::bridge
 {
-    class KDiagramControlRunner : public ControlRunnerBase
+    class KDiagramControlRunner : public HarnessControlRunner<KDiagramHarness_obj>
     {
       public:
         enum class DiagnosticStage : int
@@ -23,7 +23,6 @@ namespace worldofcake::bridge
             applyCommands,
             advanceTime,
             drainEvents,
-            controlSnapshot,
             graphSnapshot,
             cursorSnapshot,
             publishVisual,
@@ -34,7 +33,6 @@ namespace worldofcake::bridge
         ~KDiagramControlRunner();
         void pump(double delta) override;
         bool popPreparedEvent(PreparedEvent&) noexcept;
-        bool popControlSnapshot(KDiagramControlSnapshot&) noexcept;
         KDiagramVisualSnapshot latestVisualSnapshot() const;
         std::uint64_t droppedEvents() const noexcept
         {
@@ -75,13 +73,12 @@ namespace worldofcake::bridge
       private:
         void createModel() override;
         void destroyModel() override;
-        void applyCommand(const ControlCommand&) override;
+        void applyAppCommand(const ControlCommand&) override;
         void drainEvents();
         void publishSnapshots();
         void setDiagnosticStage(DiagnosticStage) noexcept;
         static std::uint64_t monotonicMilliseconds() noexcept;
         SpscRingBuffer<PreparedEvent, 256> events;
-        SpscRingBuffer<KDiagramControlSnapshot, 64> controls;
         std::atomic<std::uint64_t> eventDrops{0}, snapshotDrops{0};
         std::atomic<std::uint64_t> pumpStartCount{0}, pumpCompletionCount{0};
         std::atomic<std::uint64_t> lastCompletedPumpMs{0}, stageEnteredMs{0};
@@ -89,7 +86,6 @@ namespace worldofcake::bridge
         mutable std::mutex visualMutex;
         KDiagramVisualSnapshot visual;
         std::uint64_t nextGeneration = 1;
-        ::hx::ObjectPtr<KDiagramHarness_obj> harness;
         int modelSeed = 0;
         bool modelCreated = false;
     };

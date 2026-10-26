@@ -28,6 +28,8 @@ function Invoke-HaxeInterpreterTests {
         if ($LASTEXITCODE -ne 0) { throw "Zewp interpreter tests failed with exit code $LASTEXITCODE" }
         & haxe "hxml/tests/test-sequencer-core-status-headless.hxml"
         if ($LASTEXITCODE -ne 0) { throw "SequencerCore status tests failed with exit code $LASTEXITCODE" }
+        & haxe "hxml/tests/test-realtime-headless.hxml"
+        if ($LASTEXITCODE -ne 0) { throw "Real-time consistency tests failed with exit code $LASTEXITCODE" }
 
         $goldenpondRoot = if ($env:GOLDENPOND_ROOT) { $env:GOLDENPOND_ROOT } else { Join-Path (Split-Path $repoRoot -Parent) 'goldenpond\goldenpond' }
         $goldenpondSource = Join-Path $goldenpondRoot 'current\haxe\src\goldenpond'
@@ -51,7 +53,9 @@ function Invoke-HxcppNativeTests {
 
     Push-Location $repoRoot
     try {
-        & cmd.exe /d /c "build-headless-native.cmd"
+        # Use a full path: cmd does not search the current directory when
+        # NoDefaultCurrentDirectoryInExePath is set.
+        & cmd.exe /d /c "`"$(Join-Path $repoRoot 'build-headless-native.cmd')`""
         if ($LASTEXITCODE -ne 0) {
             throw "hxcpp native build failed with exit code $LASTEXITCODE"
         }

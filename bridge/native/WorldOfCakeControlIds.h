@@ -12,13 +12,17 @@ namespace worldofcake::control
     namespace gbloink
     {
         constexpr int kPlayArea = kPlayarea;
-        constexpr int kSpeedBase = kRedspeed;
-        constexpr int kSpeedCount = 3;
         constexpr int kScaleSelect = kScaleselect;
 
+        // Per-ball controls by ball index. Control IDs follow layout order, so they are listed, not computed.
         constexpr int speedUid(int index)
         {
-            return kSpeedBase + index;
+            return index == 0 ? kRedspeed : (index == 1 ? kGreenspeed : kBluespeed);
+        }
+
+        constexpr int noteVelocityUid(int index)
+        {
+            return index == 0 ? kRedvelocity : (index == 1 ? kGreenvelocity : kBluevelocity);
         }
     } // namespace gbloink
 
@@ -30,15 +34,13 @@ namespace worldofcake::control
     namespace kdiagram
     {
         constexpr int kPlayArea = kPlayarea;
-        constexpr int kSpeedBase = kRedspeed;
-        constexpr int kSpeedCount = 3;
-        constexpr int kChannelSlider = kChannel;
         constexpr int kCursorSelect = kSelectcursor;
         constexpr int kScaleSelect = kScaleselect;
 
+        // Speed controls by cursor. Control IDs follow layout order, so they are listed, not computed.
         constexpr int speedUid(int index)
         {
-            return kSpeedBase + index;
+            return index == 0 ? kRedspeed : (index == 1 ? kGreenspeed : kBluespeed);
         }
     } // namespace kdiagram
 

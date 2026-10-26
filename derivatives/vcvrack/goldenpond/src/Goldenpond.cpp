@@ -18,8 +18,6 @@ using namespace rack::widget;
 namespace GoldenpondLayout = worldofcake::rack::goldenpond;
 namespace {
 const int chordDurations[] = {1, 2, 3, 4, 6, 8, 12, 16};
-constexpr int kNoteOnEvent = 0;
-constexpr int kNoteOffEvent = 2;
 const char* defaultTextValues[] = {
     worldofcake::metadata::goldenpond::kChordinput.defaultText,
     worldofcake::metadata::goldenpond::kRhythm0.defaultText,
@@ -69,6 +67,10 @@ void GoldenpondPianoRoll::draw(const DrawArgs& args) {
     const double position = std::fmod(std::max(0.0, snapshot.positionTicks), loop);
     nvgBeginPath(vg); nvgRect(vg, static_cast<float>(position / loop * box.size.x), 0, 0.8f, box.size.y);
     nvgFillColor(vg, nvgRGB(240, 240, 240)); nvgFill(vg);
+    if (snapshot.compileError) {
+        nvgBeginPath(vg); nvgRect(vg, 0.75f, 0.75f, box.size.x - 1.5f, box.size.y - 1.5f);
+        nvgStrokeColor(vg, nvgRGBA(200, 82, 92, 190)); nvgStrokeWidth(vg, 1.5f); nvgStroke(vg);
+    }
     nvgRestore(vg);
 }
 Goldenpond::Goldenpond() {
@@ -99,7 +101,7 @@ Goldenpond::Goldenpond() {
     configOutput(CORRECT3_OUTPUT, "Corrected pitch 3");
     for (int i = 0; i < 5; ++i) textValues[i] = defaultTextValues[i];
     runner.reset(new worldofcake::bridge::GoldenpondControlRunner());
-    runner->start(worldofcake::rack::kControlPeriodSeconds, worldofcake::rack::kControlPeriodSeconds);
+    runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 Goldenpond::~Goldenpond() { if (runner) runner->stop(); }
 void Goldenpond::send(int id, double value) { worldofcake::bridge::ControlCommand c; c.kind = worldofcake::bridge::CommandKind::setValue; c.sequence = sequence++; c.controlId = id; c.value = value; runner->enqueueHostCommand(c); }
@@ -119,57 +121,40 @@ void Goldenpond::sendText(int id, const std::string& value) {
     runner->enqueueGuiCommand(c);
 }
 void Goldenpond::process(const ProcessArgs& a) {
-    const worldofcake::rack::TransportControlIds transportIds{worldofcake::control::goldenpond::kReset, worldofcake::control::goldenpond::kPause};
-    worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(), lastReset, transportIds, [this](int id, double v) {
-        if (id == worldofcake::control::goldenpond::kReset) {
-            scheduledEventCount = 0;
-            eventTimeOrigin = audioTime;
+    // The model releases sounding notes on pause, mute, and reset; nothing to flush here.
+    const auto enqueueLifecycle = [this](const worldofcake::bridge::ControlCommand& c) {
+        if (c.kind == worldofcake::bridge::CommandKind::reset) {
             transportTime = 0.0;
             ++transportEpoch;
-            for (int& activeNote : activeNotes) activeNote = 0;
         }
-        if (id == worldofcake::control::goldenpond::kPause && v > 0.5) {
-            // Events already handed to Rack must be discarded as well as the
-            // Haxe-side queue when pausing.
-            scheduledEventCount = 0;
-            for (int& activeNote : activeNotes) activeNote = 0;
-        }
-        send(id, v);
-    });
-    worldofcake::rack::syncPauseLatch(params[MUTE_PARAM].getValue(), lastMute, worldofcake::control::goldenpond::kMute,
-                                      [this](int id, double v) {
-                                          if (v > 0.5) {
-                                              scheduledEventCount = 0;
-                                              for (int& activeNote : activeNotes) activeNote = 0;
-                                          }
-                                          send(id, v);
-                                      });
+        runner->enqueueHostCommand(c);
+    };
+    worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(), lastReset,
+                                     enqueueLifecycle);
+    worldofcake::rack::syncLifecycleLatch(params[MUTE_PARAM].getValue(), lastMute, worldofcake::bridge::muteCommand,
+                                          enqueueLifecycle);
     worldofcake::bridge::PreparedEvent e;
     while (runner->popPreparedEvent(e)) {
-        if (scheduledEventCount < scheduledEvents.size())
-            scheduledEvents[scheduledEventCount++] = e, ++stagedEvents;
-        else
-            ++stagedDrops;
+        // The runner releases events when model time reaches them, so each one
+        // arrives within a control tick of being due. When an event maps far
+        // from now, the model clock jumped (first event after load, reset, state
+        // import): re-anchor so the model timeline continues from this moment.
+        if (std::fabs(e.timestamp + eventTimeOrigin - audioTime) > kMaxEventSkewSeconds)
+            eventTimeOrigin = audioTime - e.timestamp;
+        notes.schedule(e.timestamp + eventTimeOrigin, e);
+        ++stagedEvents;
     }
     const double blockEnd = audioTime + a.sampleTime;
-    for (std::size_t i = 0; i < scheduledEventCount;) {
-        const auto scheduled = scheduledEvents[i];
-        if (scheduled.timestamp + eventTimeOrigin > blockEnd) {
-            ++i;
-            continue;
+    notes.emitDue(blockEnd, [this](double, const worldofcake::bridge::PreparedEvent& ev) {
+        using worldofcake::bridge::NoteOutputScheduler;
+        if (ev.type == NoteOutputScheduler::kNoteOn) {
+            if (ev.channel >= 0 && ev.channel < 4)
+                pitch[ev.channel] = worldofcake::rack::midiNoteToOneVoltPerOctave(ev.data2);
+            ++consumedNoteOns;
+        } else if (ev.type == NoteOutputScheduler::kNoteOff) {
+            ++consumedNoteOffs;
         }
-        if (scheduled.channel >= 0 && scheduled.channel < 4) {
-            if (scheduled.type == kNoteOnEvent) {
-                pitch[scheduled.channel] = worldofcake::rack::midiNoteToOneVoltPerOctave(scheduled.data2);
-                ++activeNotes[scheduled.channel];
-                ++consumedNoteOns;
-            } else if (scheduled.type == kNoteOffEvent && activeNotes[scheduled.channel] > 0) {
-                --activeNotes[scheduled.channel];
-                ++consumedNoteOffs;
-            }
-        }
-        scheduledEvents[i] = scheduledEvents[--scheduledEventCount];
-    }
+    });
     for (int i = 0; i < 3; ++i) {
         if (!inputs[CORRECT1_INPUT + i].isConnected()) {
             correctedPitch[i] = 0.f;
@@ -221,35 +206,43 @@ void Goldenpond::process(const ProcessArgs& a) {
         }
     }
     for (int i = 0; i < 4; ++i) {
-        if (params[MUTE_PARAM].getValue() > 0.5f) {
-            outputs[GATE1_OUTPUT + i * 2].setVoltage(0.f);
-            outputs[PITCH1_OUTPUT + i * 2].setVoltage(0.f);
-            continue;
-        }
-        outputs[GATE1_OUTPUT + i * 2].setVoltage(activeNotes[i] > 0 ? 10.f : 0.f);
+        const bool gate = gates[i].process(notes.soundingNotes(i), notes.noteOnCount(i), a.sampleTime);
+        outputs[GATE1_OUTPUT + i * 2].setVoltage(gate ? 10.f : 0.f);
         outputs[PITCH1_OUTPUT + i * 2].setVoltage(pitch[i]);
     }
-    for (int i = 0; i < 3; ++i) outputs[CORRECT1_OUTPUT + i].setVoltage(params[MUTE_PARAM].getValue() > 0.5f ? 0.f : correctedPitch[i]);
+    // Corrected input pitch is not a model event, so it honours the model's mute here.
+    const bool muted = runner->isModelMuted();
+    for (int i = 0; i < 3; ++i) outputs[CORRECT1_OUTPUT + i].setVoltage(muted ? 0.f : correctedPitch[i]);
     // Rack has no universal musical transport clock.  Goldenpond therefore
     // runs from the runner's ordinary audio-time callback by default.  Keep
     // these transport accumulators for the future external-clock adapter, but
     // do not publish them here: publishing a host clock switches the runner
     // into DAW-style resynchronization mode and is not appropriate for a
     // free-running Rack module.
-    if (params[PAUSE_PARAM].getValue() <= 0.5f) transportTime += a.sampleTime;
+    if (!runner->isModelPaused()) transportTime += a.sampleTime;
     audioTime = blockEnd;
     diagnosticsTime += a.sampleTime;
     if (diagnosticsTime >= 1.0) {
-        INFO("WorldOfCake Goldenpond events: produced=%llu popped=%llu bridgeDrops=%llu staged=%llu stagedDrops=%llu noteOn=%llu noteOff=%llu pending=%zu",
-             static_cast<unsigned long long>(runner->producedEvents()),
-             static_cast<unsigned long long>(runner->poppedEvents()),
-             static_cast<unsigned long long>(runner->droppedEvents()),
-             static_cast<unsigned long long>(stagedEvents),
-             static_cast<unsigned long long>(stagedDrops),
-             static_cast<unsigned long long>(consumedNoteOns),
-             static_cast<unsigned long long>(consumedNoteOffs), scheduledEventCount);
+        diagStaged.store(stagedEvents, std::memory_order_relaxed);
+        diagDropped.store(notes.droppedEvents(), std::memory_order_relaxed);
+        diagNoteOns.store(consumedNoteOns, std::memory_order_relaxed);
+        diagNoteOffs.store(consumedNoteOffs, std::memory_order_relaxed);
+        diagPending.store(notes.pendingCount(), std::memory_order_relaxed);
+        diagnosticsReady.store(true, std::memory_order_release);
         diagnosticsTime = 0.0;
     }
+}
+void Goldenpond::logDiagnostics() {
+    if (!diagnosticsReady.exchange(false, std::memory_order_acquire)) return;
+    INFO("WorldOfCake Goldenpond events: produced=%llu popped=%llu bridgeDrops=%llu staged=%llu stagedDrops=%llu noteOn=%llu noteOff=%llu pending=%llu",
+         static_cast<unsigned long long>(runner->producedEvents()),
+         static_cast<unsigned long long>(runner->poppedEvents()),
+         static_cast<unsigned long long>(runner->droppedEvents()),
+         static_cast<unsigned long long>(diagStaged.load(std::memory_order_relaxed)),
+         static_cast<unsigned long long>(diagDropped.load(std::memory_order_relaxed)),
+         static_cast<unsigned long long>(diagNoteOns.load(std::memory_order_relaxed)),
+         static_cast<unsigned long long>(diagNoteOffs.load(std::memory_order_relaxed)),
+         static_cast<unsigned long long>(diagPending.load(std::memory_order_relaxed)));
 }
 json_t* Goldenpond::dataToJson() {
     json_t* root = worldofcake::rack::makeStateJson(runner->exportStateJson());
@@ -290,6 +283,13 @@ void Goldenpond::dataFromJson(json_t* j) {
     }
     params[RESET_PARAM].setValue(0.f);
     lastReset = 0.f;
+    if (!s.empty()) {
+        const auto snapshot = runner->latestVisualSnapshot();
+        params[PAUSE_PARAM].setValue(snapshot.paused ? 1.f : 0.f);
+        lastPause = snapshot.paused ? 1 : 0;
+        params[MUTE_PARAM].setValue(snapshot.muted ? 1.f : 0.f);
+        lastMute = snapshot.muted ? 1 : 0;
+    }
     restoreTextFields();
 }
 void Goldenpond::registerTextField(int index, GoldenpondTextField* field) {
@@ -298,6 +298,10 @@ void Goldenpond::registerTextField(int index, GoldenpondTextField* field) {
 void Goldenpond::restoreTextFields() {
     for (int i = 0; i < 5; ++i)
         if (textFields[i]) textFields[i]->setText(textValues[i]);
+}
+void GoldenpondWidget::step() {
+    ModuleWidget::step();
+    if (auto* m = dynamic_cast<Goldenpond*>(module)) m->logDiagnostics();
 }
 GoldenpondWidget::GoldenpondWidget(Goldenpond* m) {
     setModule(m); setPanel(createPanel(asset::plugin(pluginInstance, "generated/Goldenpond.svg")));

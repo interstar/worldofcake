@@ -1,10 +1,8 @@
 #include "GoldenpondControlRunner.h"
-#include "WorldOfCakeControlIds.h"
 #include <algorithm>
 #include <cmath>
 
 namespace worldofcake::bridge {
-namespace ControlIds = worldofcake::control::goldenpond;
 GoldenpondControlRunner::~GoldenpondControlRunner() { stop(); }
 void GoldenpondControlRunner::pump(double delta) {
     if (!modelCreated) createModel();
@@ -23,7 +21,7 @@ void GoldenpondControlRunner::pump(double delta) {
             hostClockBaseTime = hostTime;
             hostClockBaseLogicalTime = 0.0;
             logicalTime = 0.0;
-            harness->resetTransportPreservingState();
+            harness->resetTransport();
         }
         const double targetTime = hostClockBaseLogicalTime + std::max(0.0, hostTime - hostClockBaseTime);
         if (std::isfinite(targetTime) && targetTime > logicalTime) {
@@ -59,21 +57,20 @@ GoldenpondVisualSnapshot GoldenpondControlRunner::latestVisualSnapshot() const {
 }
 void GoldenpondControlRunner::createModel() { if (!modelCreated) { harness = GoldenpondHarness_obj::__new(); modelCreated = true; logicalTime = 0; drainEvents(); publishVisualSnapshot(); } }
 void GoldenpondControlRunner::destroyModel() { if (modelCreated) { harness->destroy(); harness = nullptr; modelCreated = false; } }
-void GoldenpondControlRunner::applyCommand(const ControlCommand& c) {
+void GoldenpondControlRunner::applyAppCommand(const ControlCommand& c) {
     if (c.kind == CommandKind::textSubmitted) {
         harness->textSubmitted(c.controlId, ::String(c.text));
         return;
     }
     if (c.kind != CommandKind::setValue) return;
-    if (c.controlId == ControlIds::kReset) { harness->reset(); logicalTime = 0.0; }
-    else if (c.controlId == ControlIds::kPause) harness->setPaused(c.value > .5);
-    else harness->setValue(c.controlId, c.value);
+    harness->setValue(c.controlId, c.value);
 }
 void GoldenpondControlRunner::publishVisualSnapshot() {
     GoldenpondVisualSnapshot next;
     next.generation = nextGeneration++;
     next.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
     next.modelReady = harness->modelReady();
+    next.compileError = harness->hasCompileError();
     next.logicalTime = logicalTime;
     next.positionTicks = harness->positionTicks();
     next.loopLengthTicks = harness->loopLengthTicks();
@@ -86,8 +83,9 @@ void GoldenpondControlRunner::publishVisualSnapshot() {
     next.muted = harness->muted();
     next.chordInput = harness->chordInput().utf8_str();
     for (int i = 0; i < 4; ++i) next.rhythmInputs[i] = harness->rhythmInput(i).utf8_str();
-    next.notes.reserve(static_cast<std::size_t>(harness->noteCount()));
-    for (int i = 0; i < harness->noteCount(); ++i) {
+    const int noteCount = harness->noteCount();
+    if (noteCount > 0) next.notes.reserve(static_cast<std::size_t>(noteCount));
+    for (int i = 0; i < noteCount; ++i) {
         GoldenpondNoteSnapshot note;
         note.partId = harness->notePart(i);
         note.pitch = harness->notePitch(i);

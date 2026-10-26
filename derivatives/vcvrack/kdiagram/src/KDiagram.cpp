@@ -18,7 +18,6 @@ using namespace rack::app;
 namespace
 {
     namespace ControlIds = worldofcake::control::kdiagram;
-    constexpr worldofcake::rack::TransportControlIds kTransportIds{ControlIds::kReset, ControlIds::kPause};
     constexpr int kRotateLeftControlId = ControlIds::kRotateLeft;
     constexpr int kRotateRightControlId = ControlIds::kRotateRight;
     float px(float x, float w)
@@ -120,11 +119,15 @@ KDiagram::KDiagram()
                  "Scale", scaleLabels);
     configButton(ROT_CCW_PARAM, "Rotate left");
     configButton(ROT_CW_PARAM, "Rotate right");
+    const auto& noteLength = worldofcake::metadata::kdiagram::kNote_length;
+    configParam(NOTE_LENGTH_PARAM, 0.f, 1.f,
+                static_cast<float>(worldofcake::metadata::kdiagram::normalize(noteLength, noteLength.defaultValue)),
+                noteLength.label);
     for (int i = 0; i < worldofcake::rack::kdiagram::kOutputCount; ++i)
         configOutput(i, worldofcake::rack::kdiagram::kOutputLabels[i]);
     int seed = (int)std::chrono::high_resolution_clock::now().time_since_epoch().count();
     runner.reset(new worldofcake::bridge::KDiagramControlRunner(seed));
-    runner->start(worldofcake::rack::kControlPeriodSeconds, worldofcake::rack::kLogicalDeltaSeconds);
+    runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 KDiagram::~KDiagram()
 {
@@ -151,18 +154,21 @@ void KDiagram::send(int id, double v)
 }
 void KDiagram::process(const ProcessArgs& a)
 {
-    worldofcake::rack::syncIndexedControlValues(
-        3, ControlIds::kSpeedBase, lastSpeed, 1e-5,
-        [this](int i) {
-            const auto* parameter = std::array<const worldofcake::metadata::kdiagram::Knob*, 3>{
-                &worldofcake::metadata::kdiagram::kRedspeed,
-                &worldofcake::metadata::kdiagram::kGreenspeed,
-                &worldofcake::metadata::kdiagram::kBluespeed}[static_cast<std::size_t>(i)];
-            return worldofcake::metadata::kdiagram::denormalize(*parameter, params[SPEED_CURSOR1_PARAM + i].getValue());
-        },
-        [this](int id, double value) { send(id, value); });
+    for (int i = 0; i < 3; i++) {
+        const auto* parameter = std::array<const worldofcake::metadata::kdiagram::Knob*, 3>{
+            &worldofcake::metadata::kdiagram::kRedspeed,
+            &worldofcake::metadata::kdiagram::kGreenspeed,
+            &worldofcake::metadata::kdiagram::kBluespeed}[static_cast<std::size_t>(i)];
+        worldofcake::rack::syncControlValue(
+            worldofcake::metadata::kdiagram::denormalize(*parameter, params[SPEED_CURSOR1_PARAM + i].getValue()),
+            lastSpeed[i], 1e-5, ControlIds::speedUid(i), [this](int id, double value) { send(id, value); });
+    }
+    worldofcake::rack::syncControlValue(
+        worldofcake::metadata::kdiagram::denormalize(worldofcake::metadata::kdiagram::kNote_length,
+                                                     params[NOTE_LENGTH_PARAM].getValue()),
+        lastNoteLength, 1e-6, ControlIds::kNoteLength, [this](int id, double value) { send(id, value); });
     int ch = (int)std::round(params[CHANNEL_BASE_PARAM].getValue());
-    worldofcake::rack::syncControlValueExact(ch, lastChannel, ControlIds::kChannelSlider,
+    worldofcake::rack::syncControlValueExact(ch, lastChannel, ControlIds::kChannel,
                                              [this](int id, double value) { send(id, value + 1); });
     int cur = (int)std::round(params[CURSOR_SELECT_PARAM].getValue());
     worldofcake::rack::syncControlValueExact(cur, lastCursor, ControlIds::kCursorSelect,
@@ -171,29 +177,30 @@ void KDiagram::process(const ProcessArgs& a)
     worldofcake::rack::syncBoundedControlValueExact(scaleIdx, 0, 5, lastScaleIdx, ControlIds::kScaleSelect,
                                                     [this](int id, double value) { send(id, value); });
     worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(),
-                                     lastReset, kTransportIds, [this](int id, double v) { send(id, v); });
+                                     lastReset, [this](const worldofcake::bridge::ControlCommand& c) { runner->enqueueHostCommand(c); });
     worldofcake::rack::sendButtonRisingEdge(params[ROT_CCW_PARAM].getValue(), lastL, kRotateLeftControlId,
                                             [this](int id, double v) { send(id, v); });
     worldofcake::rack::sendButtonRisingEdge(params[ROT_CW_PARAM].getValue(), lastR, kRotateRightControlId,
                                             [this](int id, double v) { send(id, v); });
-    worldofcake::bridge::KDiagramControlSnapshot s;
-    while (runner->popControlSnapshot(s))
-        for (int i = 0; i < 6; ++i)
-            xy[i] = worldofcake::rack::midi7ToUnipolar10V(s.values[i]);
+    // Events are due on arrival (the runner releases them at model time).
+    // Cursor i plays on MIDI channel base + i; its gate follows its sounding notes.
+    const int firstChannel = lastChannel + 1;
     worldofcake::bridge::PreparedEvent e;
     int n = 0;
-    while (n++ < 256 && runner->popPreparedEvent(e)) {
-        int i = e.channel - (lastChannel + 1);
-        if (e.type == 0 && i >= 0 && i < 3) {
-            pulse[i].trigger(.001);
-            pitchV[i] = worldofcake::rack::midiNoteToOneVoltPerOctave(e.data2);
-        }
-    }
+    while (n++ < 256 && runner->popPreparedEvent(e))
+        notes.schedule(0.0, e);
+    notes.emitDue(0.0, [this, firstChannel](double, const worldofcake::bridge::PreparedEvent& ev) {
+        const int i = ev.channel - firstChannel;
+        if (ev.type == worldofcake::bridge::NoteOutputScheduler::kNoteOn && i >= 0 && i < 3)
+            pitchV[i] = worldofcake::rack::midiNoteToOneVoltPerOctave(ev.data2);
+    });
     for (int i = 0; i < 3; ++i) {
         int o = GATE1_OUTPUT + 4 * i;
-        outputs[o].setVoltage(worldofcake::rack::gate10V(pulse[i].process(a.sampleTime)));
-        outputs[o + 1].setVoltage(xy[i * 2 + 1]);
-        outputs[o + 2].setVoltage(xy[i * 2]);
+        const bool gate = gates[i].process(notes.soundingNotes(firstChannel + i), notes.noteOnCount(firstChannel + i), a.sampleTime);
+        outputs[o].setVoltage(worldofcake::rack::gate10V(gate));
+        // Cursor i's X and Y are control outputs 2i and 2i+1 (0..1, decided in Haxe) as 0..10 V.
+        outputs[o + 1].setVoltage(10.0f * runner->controlOutputValue(i * 2 + 1));
+        outputs[o + 2].setVoltage(10.0f * runner->controlOutputValue(i * 2));
         outputs[o + 3].setVoltage(pitchV[i]);
     }
 }
@@ -212,6 +219,7 @@ KDiagramWidget::KDiagramWidget(KDiagram* m)
     addParam(createParamCentered<Rogan2PSRed>(mm2px({11, y[0]}), m, KDiagram::SPEED_CURSOR1_PARAM));
     addParam(createParamCentered<Rogan2PSGreen>(mm2px({11, y[1]}), m, KDiagram::SPEED_CURSOR2_PARAM));
     addParam(createParamCentered<Rogan2PSBlue>(mm2px({11, y[2]}), m, KDiagram::SPEED_CURSOR3_PARAM));
+    addParam(createParamCentered<RoundBlackKnob>(mm2px({30, 56}), m, KDiagram::NOTE_LENGTH_PARAM));
     addParam(createParamCentered<RoundBlackSnapKnob>(mm2px({11, 92}), m, KDiagram::CHANNEL_BASE_PARAM));
     addParam(createParamCentered<CKSSThree>(mm2px({28, 92}), m, KDiagram::CURSOR_SELECT_PARAM));
     addParam(createParamCentered<RoundBlackSnapKnob>(mm2px({44, 92}), m, KDiagram::SCALE_PARAM));

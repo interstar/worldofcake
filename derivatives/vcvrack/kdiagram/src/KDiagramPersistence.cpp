@@ -70,6 +70,9 @@ void KDiagram::dataFromJson(json_t* root)
     const int scale = static_cast<int>(clampRange(static_cast<float>(snapshot.scaleIndex), 0.f, 5.f));
     params[SCALE_PARAM].setValue(static_cast<float>(scale));
     lastScaleIdx = scale;
+    params[NOTE_LENGTH_PARAM].setValue(static_cast<float>(
+        worldofcake::metadata::kdiagram::normalize(worldofcake::metadata::kdiagram::kNote_length, snapshot.noteLength)));
+    lastNoteLength = static_cast<float>(snapshot.noteLength);
     params[PAUSE_PARAM].setValue(snapshot.paused ? 1.f : 0.f);
     lastPause = snapshot.paused ? 1 : 0;
     lastReset = 0.f;

@@ -32,7 +32,6 @@ struct TimeSlider : Module
     std::unique_ptr<worldofcake::bridge::TimeSliderControlRunner> runner;
     std::atomic<std::uint64_t> guiSequence{1};
     std::uint64_t hostSequence = 1;
-    float cvV[4] = {};
     float lastReset = 0.f;
     int lastPause = -1;
     TimeSlider();

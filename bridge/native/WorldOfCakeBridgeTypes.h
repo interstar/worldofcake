@@ -123,7 +123,11 @@ namespace worldofcake
             setValue,
             playAreaDrag,
             playAreaRelease,
-            textSubmitted
+            textSubmitted,
+            // Lifecycle commands every sequencer understands; no app control ID needed.
+            setPaused,
+            setMuted,
+            reset
         };
 
         struct ControlCommand
@@ -137,6 +141,26 @@ namespace worldofcake
             // Fixed-size so ControlCommand remains safe to pass through the SPSC queues.
             char text[256] = {};
         };
+
+        inline ControlCommand lifecycleCommand(CommandKind kind, bool value = true) noexcept
+        {
+            ControlCommand command;
+            command.kind = kind;
+            command.value = value ? 1.0 : 0.0;
+            return command;
+        }
+        inline ControlCommand pauseCommand(bool paused) noexcept
+        {
+            return lifecycleCommand(CommandKind::setPaused, paused);
+        }
+        inline ControlCommand muteCommand(bool muted) noexcept
+        {
+            return lifecycleCommand(CommandKind::setMuted, muted);
+        }
+        inline ControlCommand resetCommand() noexcept
+        {
+            return lifecycleCommand(CommandKind::reset);
+        }
 
         struct PreparedEvent
         {
@@ -161,6 +185,7 @@ namespace worldofcake
         {
             std::uint64_t generation = 0;
             bool modelReady = false;
+            bool compileError = false;
             std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             double positionTicks = 0.0;
@@ -200,11 +225,13 @@ namespace worldofcake
             double logicalTime = 0.0;
             std::array<BallSnapshot, 3> balls{};
             std::array<double, 3> ballSpeeds{};
+            std::array<int, 3> ballNoteVelocities{{100, 100, 100}};
             std::vector<GbloinkBlockSnapshot> blocks;
             bool paused = false;
             bool muted = false;
             bool edgeNotes = false;
             int scaleIndex = 0;
+            double noteLength = 0.05;
         };
 
         struct TimeSliderValueSnapshot
@@ -215,7 +242,7 @@ namespace worldofcake
             double height = 0.0;
             double current = 0.0;
             double destination = 0.0;
-            int midiValue = 0;
+            int channel = 1;
         };
 
         struct TimeSliderControlSnapshot
@@ -272,16 +299,6 @@ namespace worldofcake
             std::array<TileLandCursorSnapshot, 3> cursors{};
         };
 
-        struct KDiagramControlSnapshot
-        {
-            std::uint64_t generation = 0;
-            bool modelReady = false;
-            std::uint64_t stateRevision = 0;
-            double logicalTime = 0.0;
-            /** X/Y pairs for three cursors, normalized from -1..1 to 0..127. */
-            std::array<int, 6> values{};
-        };
-
         struct KDiagramNodeSnapshot
         {
             double x = 0.0;
@@ -309,6 +326,7 @@ namespace worldofcake
             double radius = 0.9;
             int selectedCursor = 0;
             int scaleIndex = 0;
+            double noteLength = 0.05;
             std::vector<KDiagramNodeSnapshot> nodes;
             std::vector<KDiagramArcSnapshot> arcs;
             std::array<KDiagramCursorSnapshot, 3> cursors{};

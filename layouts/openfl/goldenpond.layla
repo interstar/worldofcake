@@ -1,18 +1,18 @@
-[
-  title/title(40)
-  status/status(24)
-  <
-      playarea/pianoroll(38)
-      [
-        chordinput/textinput(44)
-        <keyselect/semanticselect modeselect/semanticselect>(28)
-        correctiontarget/semanticselect(28)
-      <rhythm0/textinput octave0/knob velocity0/knob>(38)
-      <rhythm1/textinput octave1/knob velocity1/knob>(38)
-      <rhythm2/textinput octave2/knob velocity2/knob>(38)
-      <rhythm3/textinput octave3/knob velocity3/knob>(38)
-      <bpm/knob chordduration/knob zoom/knob>(90)
-      <reset/button pause/toggle mute/toggle>(48)
-      ](34)
-    >(636)
-]
+<
+  playarea/pianoroll(962)
+  [
+    [%harmony
+      chordinput/textinput(30)
+      <keyselect/semanticselect(2) modeselect/semanticselect(4) correctiontarget/semanticselect(4)>(30)
+    ](76)
+    <rhythm-heading/text(3) octave-heading/text velocity-heading/text>(16)
+    <%part0 rhythm0/textinput(3) octave0/knob velocity0/knob>(62)
+    <%part1 rhythm1/textinput(3) octave1/knob velocity1/knob>(62)
+    <%part2 rhythm2/textinput(3) octave2/knob velocity2/knob>(62)
+    <%part3 rhythm3/textinput(3) octave3/knob velocity3/knob>(62)
+    [%controls
+      <bpm/knob chordduration/knob zoom/knob>(80)
+      <reset/button pause/toggle mute/toggle>(32)
+    ](132)
+  ](420)
+>

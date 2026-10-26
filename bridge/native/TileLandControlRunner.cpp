@@ -40,17 +40,13 @@ namespace worldofcake::bridge
         std::lock_guard<std::mutex> l(visualMutex);
         return visualSnapshot;
     }
-    void TileLandControlRunner::applyCommand(const ControlCommand& c)
+    void TileLandControlRunner::applyAppCommand(const ControlCommand& c)
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
         else if (c.kind == CommandKind::setValue && c.controlId >= ControlIds::kSpeedBase &&
                  c.controlId < ControlIds::kSpeedBase + ControlIds::kSpeedCount)
             harness->setSpeed(c.controlId - ControlIds::kSpeedBase, c.value);
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kReset)
-            harness->reset();
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kPause)
-            harness->setPaused(c.value > .5);
     }
     TileLandControlSnapshot TileLandControlRunner::captureControlSnapshot(std::uint64_t g)
     {
