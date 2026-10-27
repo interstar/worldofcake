@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         if (state.str().empty() || !runner.start(0.001)) return 4;
         runner.importStateJson(state.str());
     }
-    int lastSerial = 0, seen = 0;
+    int lastSerial = 0, seen = 0, blockHits = 0;
     for (int step = 0; step < (argc > 1 ? 400 : 1500); ++step) {
         if (argc > 1) std::this_thread::sleep_for(std::chrono::milliseconds(10));
         else runner.pump(0.01);
@@ -40,11 +40,17 @@ int main(int argc, char** argv) {
             ++seen;
             const double age = snapshot.collisionModelTime-cue.time;
             if (age < -0.000001 || age > 0.9 || cue.velocity < 1 || cue.velocity > 127) return 3;
+            if (cue.kind == 1) {
+                bool found = false;
+                for (const auto& block : snapshot.blocks) if (block.id == cue.blockId) found = true;
+                if (!found) return 5;
+                ++blockHits;
+            } else if (cue.blockId != -1) return 6;
             if (seen <= 4) std::cout << "cue serial=" << cue.serial << " kind=" << cue.kind
                 << " age=" << age << " velocity=" << cue.velocity << " x=" << cue.x << " y=" << cue.y << '\n';
         }
     }
-    std::cout << "native collision cues received=" << seen << '\n';
+    std::cout << "native collision cues received=" << seen << " matched block hits=" << blockHits << '\n';
     runner.stop();
     return seen > 0 ? 0 : 1;
 }

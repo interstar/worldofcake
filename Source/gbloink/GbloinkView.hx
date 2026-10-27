@@ -110,7 +110,7 @@ class GbloinkView extends ControlValueViewBase {
         #if woc_gpu_trails
         // History is presentation state: it must not depend on consumeDirty().
         updateTrails();
-        collisionRipples.update(sequencer.collisionCues, sequencer.collisionEpoch, sequencer.getLogicalTime());
+        collisionRipples.update(sequencer.collisionCues, sequencer.collisionEpoch, sequencer.getLogicalTime(), sequencer.blocks);
         #end
         if (needsRedraw(Gbloink.PLAY_AREA_UID)) {
             redraw(Gbloink.PLAY_AREA_UID);
