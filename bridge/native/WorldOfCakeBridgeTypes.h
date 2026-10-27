@@ -210,11 +210,20 @@ namespace worldofcake
 
         struct GbloinkBlockSnapshot
         {
+            int id = -1;
             double left = 0.0;
             double top = 0.0;
             double right = 0.0;
             double bottom = 0.0;
             int colour = 0x888888;
+        };
+
+        struct GbloinkCollisionCue
+        {
+            int serial = 0;
+            double time = 0.0, x = 0.0, y = 0.0;
+            int velocity = 0, colour = 0xffffff, kind = 0;
+            int blockId = -1;
         };
 
         struct GbloinkVisualSnapshot
@@ -227,6 +236,11 @@ namespace worldofcake
             std::array<double, 3> ballSpeeds{};
             std::array<int, 3> ballNoteVelocities{{100, 100, 100}};
             std::vector<GbloinkBlockSnapshot> blocks;
+            // Bounded cosmetic history. Readers do not consume the musical event queue.
+            std::array<GbloinkCollisionCue, 32> collisions{};
+            int collisionCount = 0;
+            int collisionEpoch = 0;
+            double collisionModelTime = 0.0;
             bool paused = false;
             bool muted = false;
             bool edgeNotes = false;
@@ -243,6 +257,8 @@ namespace worldofcake
             double current = 0.0;
             double destination = 0.0;
             int channel = 1;
+            int ccNumber = 0;
+            std::string label;
         };
 
         struct TimeSliderControlSnapshot

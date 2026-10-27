@@ -73,6 +73,11 @@ the same fixed-layout horizontal/vertical/responsive placement as the OpenFL
 generator. Grids and pages are rejected with diagnostics. The EDN component map
 is authoritative for widget kinds; Layla hints remain language-level hints.
 
+Semantic selects also accept WoC's `:choice-range` EDN shorthand, for example
+`{:from 1 :to 16 :format "Ch %d"}`. The editor expands it to explicit choices
+before validation and drawing, matching the production generator. This is WoC
+metadata processing rather than an extension or fork of the Layla language.
+
 ## Checks
 
 From this directory:

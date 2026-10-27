@@ -33,6 +33,22 @@
   (is (thrown? Exception (panel-edn/read-one "{:a 1} }")))
   (is (thrown? Exception (panel-edn/read-one "; empty"))))
 
+(deftest choice-range-support
+  (let [pair (server/read-panel "timeslider")
+        config (edn/read-string (:edn pair))
+        expanded (:config (model/panel (:layla pair) config))
+        channel (get-in expanded [:components "lane1channel"])
+        cc (get-in expanded [:components "lane1cc"])]
+    (is (= 16 (count (:choices channel))))
+    (is (= {:value 1 :label "Ch 1"} (first (:choices channel))))
+    (is (= {:value 16 :label "Ch 16"} (last (:choices channel))))
+    (is (= 128 (count (:choices cc))))
+    (is (= {:value 1 :label "CC 1"} (nth (:choices cc) (:default-index cc))))
+    (is (nil? (:choice-range channel)))
+    (when-let [production-expand (ns-resolve 'worldofcake.laylagen.core 'expand-specs)]
+      (is (= (production-expand config) expanded)))
+    (is (thrown? Exception (model/expand-specs {:components {"bad" {:choice-range {:from 16 :to 1}}}})))))
+
 (deftest save-roundtrip-and-conflict
   ;; Exercise the real save path only against a temporary repository, never user files.
   (let [temp (.toFile (java.nio.file.Files/createTempDirectory "woc-panel-editor-test" (make-array java.nio.file.attribute.FileAttribute 0)))
@@ -54,5 +70,6 @@
         (doseq [file (reverse (file-seq temp))] (.delete file))))))
 
 (defn -main [& _]
+  (println "Layla parser source:" (str (io/resource "layla/core.cljc")))
   (let [result (run-tests 'woc.editor.test-runner)]
     (System/exit (if (zero? (+ (:fail result) (:error result))) 0 1))))

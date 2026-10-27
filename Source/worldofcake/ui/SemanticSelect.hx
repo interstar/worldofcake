@@ -37,19 +37,53 @@ class SemanticSelect extends Sprite implements IComponent {
     }
     public function getSelectedIndex():Int return selectedIndex;
 
+    /** Compact: a click steps one choice (left half back, right half on); a vertical drag scrolls through them. */
+    private static inline var DRAG_PIXELS_PER_STEP:Float = 6;
+    private var pressed:Bool = false;
+    private var dragging:Bool = false;
+    private var pressX:Float = 0;
+    private var pressY:Float = 0;
+    private var pressIndex:Int = 0;
+
     public function handleMouseDown(point:WindowPoint):Bool {
         if (!common.inBounds(point)) return false;
         var local = windowToLocal(point);
         if (presentation == "compact") {
-            setSelectedIndex(selectedIndex + (local.x < common.getSize().x * 0.5 ? -1 : 1));
+            pressed = true;
+            dragging = false;
+            pressX = local.x;
+            pressY = point.y;
+            pressIndex = selectedIndex;
         } else {
-            setSelectedIndex(Std.int(Math.floor(local.x / (common.getSize().x / labels.length))));
+            choose(Std.int(Math.floor(local.x / (common.getSize().x / labels.length))));
         }
-        common.sequencer.newValue(getUID(), values[selectedIndex]);
         return true;
     }
-    public function handleMouseDragged(point:WindowPoint):Bool return false;
-    public function handleMouseUp(point:WindowPoint):Bool return true;
+
+    public function handleMouseDragged(point:WindowPoint):Bool {
+        if (!pressed) return false;
+        var rise = pressY - point.y;
+        if (!dragging && Math.abs(rise) < DRAG_PIXELS_PER_STEP) return true;
+        dragging = true;
+        var steps = Std.int(rise / DRAG_PIXELS_PER_STEP);
+        choose(Std.int(Math.max(0, Math.min(labels.length - 1, pressIndex + steps))));
+        return true;
+    }
+
+    public function handleMouseUp(point:WindowPoint):Bool {
+        if (pressed && !dragging) choose(selectedIndex + (pressX < common.getSize().x * 0.5 ? -1 : 1));
+        pressed = false;
+        dragging = false;
+        return true;
+    }
+
+    /** Select a choice and tell the model its value. */
+    private function choose(index:Int):Void {
+        var next = clampIndex(index);
+        if (next == selectedIndex) return;
+        setSelectedIndex(next);
+        common.sequencer.newValue(getUID(), values[selectedIndex]);
+    }
 
     public function redraw():Void {
         graphics.clear(); while (numChildren > 0) removeChildAt(0);

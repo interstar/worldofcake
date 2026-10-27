@@ -5,6 +5,7 @@ import openfl.display.Graphics;
 import worldofcake.IControlPanelView;
 import worldofcake.ui.Chrome;
 import worldofcake.ui.SemanticSelect;
+import worldofcake.ui.TextInput;
 
 /** Draws each CC lane: a dark lane in the track's colour, filled up to the current value, with the target marked. */
 class TimeSliderView extends Sprite implements IControlPanelView {
@@ -14,17 +15,35 @@ class TimeSliderView extends Sprite implements IControlPanelView {
 
     private var engine:TimeSliderSequencer;
     private var channelSelects:Array<SemanticSelect>;
+    private var ccSelects:Array<SemanticSelect>;
+    private var labelInputs:Array<TextInput>;
+    /** Label each field last showed from the model; a field is only refreshed when the model's label changes. */
+    private var shownLabels:Array<String>;
 
     public function new(engine:TimeSliderSequencer) {
         super();
         this.engine = engine;
         channelSelects = [];
+        ccSelects = [];
+        labelInputs = [];
+        shownLabels = [];
     }
 
-    /** View hook for each track's MIDI channel selector (in track order). */
+    /** View hooks for each track's MIDI channel selector, CC number selector and label field (in track order). */
     public function addChannelSelect(select:SemanticSelect):Void {
         channelSelects.push(select);
         addChild(select);
+    }
+
+    public function addCcSelect(select:SemanticSelect):Void {
+        ccSelects.push(select);
+        addChild(select);
+    }
+
+    public function addLabelInput(input:TextInput):Void {
+        labelInputs.push(input);
+        shownLabels.push(null);
+        addChild(input);
     }
 
     public function redrawDirty():Void {
@@ -63,7 +82,13 @@ class TimeSliderView extends Sprite implements IControlPanelView {
             }
             g.lineStyle();
 
+            // Selector choices are the numbers from their first value: channels from 1, CC numbers from 0.
             if (i < channelSelects.length) channelSelects[i].setSelectedIndex(engine.getChannel(i) - 1);
+            if (i < ccSelects.length) ccSelects[i].setSelectedIndex(engine.getCcNumber(i));
+            if (i < labelInputs.length && engine.getLabel(i) != shownLabels[i]) {
+                shownLabels[i] = engine.getLabel(i);
+                labelInputs[i].setText(shownLabels[i]);
+            }
         }
     }
 }

@@ -62,7 +62,7 @@ namespace worldofcake::control
 
         constexpr int trackUid(int index)
         {
-            return index == 0 ? kCc1track : index == 1 ? kCc2track : index == 2 ? kCc3track : kCc4track;
+            return index == 0 ? kLane1track : index == 1 ? kLane2track : index == 2 ? kLane3track : kLane4track;
         }
     } // namespace timeslider
 } // namespace worldofcake::control

@@ -48,6 +48,8 @@ namespace worldofcake::bridge
             harness->click(c.controlId, c.x, c.y);
         else if (c.kind == CommandKind::setValue)
             harness->setValue(c.controlId, c.value);
+        else if (c.kind == CommandKind::textSubmitted)
+            harness->submitText(c.controlId, ::String(c.text));
     }
     TimeSliderControlSnapshot TimeSliderControlRunner::captureSnapshot()
     {
@@ -66,6 +68,8 @@ namespace worldofcake::bridge
             s.current = harness->sliderCurrent(i);
             s.destination = harness->sliderDestination(i);
             s.channel = harness->sliderChannel(i);
+            s.ccNumber = harness->sliderCcNumber(i);
+            s.label = harness->sliderLabel(i).utf8_str();
         }
         return n;
     }

@@ -49,6 +49,14 @@ class ControlOutput {
         sentCc = -1;
     }
 
+    /** Send the value as a different CC number (0..127) from now on. */
+    public function setCcNumber(newCcNumber:Int):Void {
+        var clamped = Std.int(Math.max(0, Math.min(127, newCcNumber)));
+        if (clamped == ccNumber) return;
+        ccNumber = clamped;
+        sentCc = -1;
+    }
+
     /** After an output boundary the receiver may have missed values: resend on the next update. */
     public function forgetSent():Void {
         sentCc = -1;

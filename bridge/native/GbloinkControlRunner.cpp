@@ -1,5 +1,6 @@
 #include "GbloinkControlRunner.h"
 #include <cmath>
+#include <algorithm>
 namespace worldofcake::bridge
 {
     GbloinkControlRunner::GbloinkControlRunner(double w, double h, int seed)
@@ -114,6 +115,20 @@ namespace worldofcake::bridge
         n.modelReady = harness->modelReady();
         n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
+        n.collisionModelTime = harness->logicalTime();
+        n.collisionEpoch = harness->collisionEpoch();
+        n.collisionCount = std::min(32, harness->collisionCount());
+        for (int i = 0; i < n.collisionCount; ++i) {
+            auto& cue = n.collisions[i];
+            cue.serial = harness->collisionSerial(i);
+            cue.time = harness->collisionTime(i);
+            cue.x = harness->collisionX(i);
+            cue.y = harness->collisionY(i);
+            cue.velocity = harness->collisionVelocity(i);
+            cue.colour = harness->collisionColour(i);
+            cue.kind = harness->collisionKind(i);
+            cue.blockId = harness->collisionBlockId(i);
+        }
         for (int i = 0; i < 3; i++) {
             n.balls[i].x = harness->ballX(i);
             n.balls[i].y = harness->ballY(i);
@@ -126,6 +141,7 @@ namespace worldofcake::bridge
         n.blocks.reserve((size_t)count);
         for (int i = 0; i < count; i++) {
             GbloinkBlockSnapshot b;
+            b.id = harness->blockId(i);
             b.left = harness->blockLeft(i);
             b.top = harness->blockTop(i);
             b.right = harness->blockRight(i);

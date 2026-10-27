@@ -19,10 +19,10 @@ class TimeSliderLayout {
     public static var TRACK_COLOURS(get, never):Array<Int>;
     static inline function get_TRACK_COLOURS():Array<Int> return TimeSliderTracksGenerated.TRACK_COLOURS;
 
-    public static inline var CC1_TRACK_X:Float = TimeSliderLayoutGenerated.CC1TRACK_X;
-    public static inline var CC1_TRACK_Y:Float = TimeSliderLayoutGenerated.CC1TRACK_Y;
-    public static inline var CC1_TRACK_WIDTH:Float = TimeSliderLayoutGenerated.CC1TRACK_WIDTH;
-    public static inline var CC1_TRACK_HEIGHT:Float = TimeSliderLayoutGenerated.CC1TRACK_HEIGHT;
+    public static inline var LANE1_TRACK_X:Float = TimeSliderLayoutGenerated.LANE1TRACK_X;
+    public static inline var LANE1_TRACK_Y:Float = TimeSliderLayoutGenerated.LANE1TRACK_Y;
+    public static inline var LANE1_TRACK_WIDTH:Float = TimeSliderLayoutGenerated.LANE1TRACK_WIDTH;
+    public static inline var LANE1_TRACK_HEIGHT:Float = TimeSliderLayoutGenerated.LANE1TRACK_HEIGHT;
 
     public static function createSequencer():TimeSliderSequencer {
         return TimeSliderTracksGenerated.createSequencer();

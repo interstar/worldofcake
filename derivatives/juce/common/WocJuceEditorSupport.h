@@ -272,6 +272,27 @@ void paintText(juce::Graphics& g, juce::Rectangle<float> cell, const TextMetadat
     g.drawText(text.text, cell.toNearestInt(), juce::Justification::centred, false);
 }
 
+/** Where a single-line text field goes in its layout cell: vertically centred, no taller than one line (as OpenFL's TextInput). */
+inline juce::Rectangle<int> textFieldBounds(juce::Rectangle<float> cell)
+{
+    constexpr float lineHeight = 26.0f;
+    return cell.withSizeKeepingCentre(cell.getWidth(), juce::jmin(cell.getHeight(), lineHeight)).toNearestInt();
+}
+
+/** A single-line text field that also commits when it loses focus (as OpenFL's TextInput), not only on Return. */
+class CommitTextEditor final : public juce::TextEditor
+{
+  public:
+    std::function<void()> onFocusLostCallback;
+
+    void focusLost(juce::Component::FocusChangeType cause) override
+    {
+        juce::TextEditor::focusLost(cause);
+        if (onFocusLostCallback)
+            onFocusLostCallback();
+    }
+};
+
 /**
     A generated `:semantic-select` with the "segmented" presentation: one segment
     per choice in its colour, solid when selected (as OpenFL's SemanticSelect).

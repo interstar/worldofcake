@@ -9,6 +9,9 @@ class TimeSliderHarness extends SequencerHarness {
  public function click(uid:Int,x:Float,y:Float):Void if(instance!=null)instance.mouseDown(uid,new LocalPoint(x,y));
  public function setValue(uid:Int,value:Float):Void if(instance!=null)instance.newValue(uid,value);
  public function sliderChannel(i:Int):Int return valid(i)?instance.getChannel(i):1;
+ public function sliderCcNumber(i:Int):Int return valid(i)?instance.getCcNumber(i):0;
+ public function sliderLabel(i:Int):String return valid(i)?instance.getLabel(i):"";
+ public function submitText(uid:Int,text:String):Void if(instance!=null)instance.textSubmitted(uid,text);
  public function sliderCount():Int return instance==null?0:instance.getSliders().length;
  public function sliderX(i:Int):Float return valid(i)?instance.getSliders()[i].bounds.left:0;
  public function sliderY(i:Int):Float return valid(i)?instance.getSliders()[i].bounds.top:0;

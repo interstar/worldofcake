@@ -52,10 +52,14 @@ class Ball {
 }
 
 class Block {
+    private static var COUNTER:Int = 0;
+    /** Transient visual identity; reconstructed blocks get new IDs on patch load. */
+    public var id(default, null):Int;
     public var bounds:LocalRect;
     public var colour:Int;
 
     public function new(pos:LocalPoint, random:IRandomSource) {
+        id = COUNTER++;
         var size = 20 + random.nextFloat() * 50;
         this.bounds = LocalRect.fromCenter(pos, size, size);
 
@@ -122,6 +126,11 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     public var noteCalc:NoteCalculator;
     public var balls:Array<Ball>;
     public var blocks:Array<Block>;
+    public static inline var MAX_COLLISION_CUES:Int = 32;
+    public static inline var COLLISION_CUE_SECONDS:Float = 0.9;
+    public var collisionCues(default, null):Array<CollisionCue> = [];
+    public var collisionEpoch(default, null):Int = 0;
+    private var collisionSerial:Int = 0;
 
     public function new(size:LocalPoint, ?random:IRandomSource) {
         this.areaSize = size;
@@ -158,6 +167,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     }
 
     override function advanceModel(delta:Float):Bool {
+        while (collisionCues.length > 0 && collisionCues[0].time < currentTime - COLLISION_CUE_SECONDS)
+            collisionCues.shift();
         // Move each ball, check collisions
         for (ball in balls) {
             moveBall(ball, delta);
@@ -269,6 +280,9 @@ class Gbloink extends SequencerCore implements ISequencerControl {
             if (balls.length == 0) {
                 initBalls();
             }
+            collisionCues = [];
+            collisionEpoch++;
+            markStateReplaced();
             dirty = true;
         } catch (_:Dynamic) {}
     }
@@ -504,12 +518,14 @@ class Gbloink extends SequencerCore implements ISequencerControl {
 
         if (nextX < ball.rad) {
             nextX = ball.rad;
+            recordCollision(ball, 0, Math.max(0, Math.min(areaSize.y, nextY)), 0);
             ball.velocity.x = -ball.velocity.x;
             if (edgeNotesEnabled) {
                 playNote(ball, noteCalc.transform(nextY));
             }
         } else if (nextX > areaSize.x - ball.rad) {
             nextX = areaSize.x - ball.rad;
+            recordCollision(ball, areaSize.x, Math.max(0, Math.min(areaSize.y, nextY)), 0);
             ball.velocity.x = -ball.velocity.x;
             if (edgeNotesEnabled) {
                 playNote(ball, noteCalc.transform(nextY));
@@ -518,12 +534,14 @@ class Gbloink extends SequencerCore implements ISequencerControl {
 
         if (nextY < ball.rad) {
             nextY = ball.rad;
+            recordCollision(ball, nextX, 0, 0);
             ball.velocity.y = -ball.velocity.y;
             if (edgeNotesEnabled) {
                 playNote(ball, noteCalc.transform(nextY));
             }
         } else if (nextY > areaSize.y - ball.rad) {
             nextY = areaSize.y - ball.rad;
+            recordCollision(ball, nextX, areaSize.y, 0);
             ball.velocity.y = -ball.velocity.y;
             if (edgeNotesEnabled) {
                 playNote(ball, noteCalc.transform(nextY));
@@ -565,6 +583,16 @@ class Gbloink extends SequencerCore implements ISequencerControl {
                     (ball.velocity.x - other.velocity.x) * normalX +
                     (ball.velocity.y - other.velocity.y) * normalY;
                 if (relativeAlongNormal > 0) {
+                    // One physical contact, one coloured cue per participating ball.
+                    var contactX = nextX + normalX * ball.rad;
+                    var contactY = nextY + normalY * ball.rad;
+                    recordCollision(ball, contactX, contactY, 2);
+                    recordCollision(other, contactX, contactY, 2);
+                    // Both instruments sound at the contact's height, through the
+                    // normal note-lifetime and pause/mute/transport gates.
+                    var contactNote = noteCalc.transform(contactY);
+                    playNote(ball, contactNote);
+                    playNote(other, contactNote);
                     if (Math.abs(normalX) > Math.abs(normalY)) {
                         ball.velocity.x = -ball.velocity.x;
                         other.velocity.x = -other.velocity.x;
@@ -602,6 +630,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
                     nextX = block.bounds.right + ball.rad;
                     ball.velocity.x = -ball.velocity.x;
                 }
+                recordCollision(ball, nextX < block.bounds.left ? block.bounds.left : block.bounds.right,
+                    Math.max(block.bounds.top, Math.min(block.bounds.bottom, ball.pos.y)), 1, block.id);
             }
 
             if (block.hit(ball.pos.x, nextY, ball.rad)) {
@@ -623,6 +653,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
                     nextY = block.bounds.bottom + ball.rad;
                     ball.velocity.y = -ball.velocity.y;
                 }
+                recordCollision(ball, Math.max(block.bounds.left, Math.min(block.bounds.right, ball.pos.x)),
+                    nextY < block.bounds.top ? block.bounds.top : block.bounds.bottom, 1, block.id);
             }
         }
 
@@ -633,6 +665,24 @@ class Gbloink extends SequencerCore implements ISequencerControl {
 
     public function setDirty():Void {
         dirty = true;
+    }
+
+    private function recordCollision(ball:Ball, x:Float, y:Float, kind:Int, blockId:Int = -1):Void {
+        // Suppress cosmetic chatter from repeated contact resolution, not musical events.
+        var i = collisionCues.length - 1;
+        while (i >= 0 && currentTime - collisionCues[i].time < 0.025) {
+            var cue = collisionCues[i--];
+            if (cue.ballId == ball.id && cue.kind == kind && cue.blockId == blockId && Math.abs(cue.x-x) < 4 && Math.abs(cue.y-y) < 4) return;
+        }
+        if (collisionCues.length >= MAX_COLLISION_CUES) collisionCues.shift();
+        collisionCues.push({serial: ++collisionSerial, time: currentTime, x: x, y: y,
+            velocity: ball.noteVelocity, colour: ball.colour, kind: kind, ballId: ball.id, blockId: blockId});
+    }
+
+    override public function resetTransport():Void {
+        super.resetTransport();
+        collisionCues = [];
+        collisionEpoch++;
     }
 
 }

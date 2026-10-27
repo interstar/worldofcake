@@ -11,3 +11,14 @@ WOC_PANEL_TITLE := 1
 DISTRIBUTABLES += generated
 
 include ../common/plugin.mk
+
+# Direct GL drawing is local to this module; NanoVG-only modules need no change.
+ifdef ARCH_WIN
+LDFLAGS += -lopengl32
+endif
+ifdef ARCH_LIN
+LDFLAGS += -lGL
+endif
+ifdef ARCH_MAC
+LDFLAGS += -framework OpenGL
+endif

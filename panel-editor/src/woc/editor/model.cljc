@@ -2,7 +2,9 @@
   "WoC panel validation and fixed geometry. Mirrors laylagen's geometry pass;
    parity is tested against the bundled production generator. No Haxe involved."
   (:require [layla.core :as layla]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            #?(:cljs [goog.string :as gstring])
+            #?(:cljs [goog.string.format])))
 
 (def apps ["gbloink" "goldenpond" "kdiagram" "tileland" "timeslider" "zewp"])
 (def kinds #{:box :text :title :status :spacer :play-area :timeslider-track
@@ -12,6 +14,26 @@
 (defn nodes [root] (tree-seq #(= :layout (:node-type %)) :children root))
 (defn finite? [n] (and (number? n) #?(:clj (Double/isFinite (double n)) :cljs (js/Number.isFinite n))))
 (defn safe-symbol [s] (-> s str/lower-case (str/replace #"[^a-z0-9]+" "_")))
+(defn expand-specs
+  "Expand WoC's EDN choice shorthand before validation and rendering, as laylagen does."
+  [config]
+  (update config :components
+          (fn [specs]
+            (into {} (for [[id spec] specs]
+                       [id (if-let [{:keys [from to format]} (:choice-range spec)]
+                             (do
+                               (when-not (and (integer? from) (integer? to) (<= from to)
+                                              (<= (- to from) 16383)
+                                              (or (nil? format) (string? format)))
+                                 (fail (str id ": choice-range needs integer :from <= :to and an optional format string.")))
+                               (-> spec
+                                   (dissoc :choice-range)
+                                   (assoc :choices
+                                          (mapv (fn [n]
+                                                  {:value n :label (#?(:clj clojure.core/format :cljs gstring/format)
+                                                                   (or format "%d") n)})
+                                                (range from (inc to))))))
+                             spec)])))))
 (defn validate [document config]
   (when-not (= :layout (:document-type document)) (fail "WoC panels require one layout, not named pages."))
   (when-not (= 1 (:generator-version config)) (fail "EDN :generator-version must be 1."))
@@ -102,7 +124,8 @@
            (- (:panel-height geometry) top bottom) 0 geometry specs)))
 
 (defn panel [source config]
-  (let [parsed (layla/parse-intent source)]
+  (let [parsed (layla/parse-intent source)
+        config (expand-specs config)]
     (when-not (:success parsed) (fail (str "Layla: " (:error parsed))))
     (let [root (validate (:data parsed) config)]
       {:config config :placed (calculate-geometry root (:geometry config) (:components config))})))

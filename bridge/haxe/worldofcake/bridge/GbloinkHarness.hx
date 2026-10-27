@@ -32,9 +32,20 @@ class GbloinkHarness extends SequencerHarness {
     public function ballSpeed(i:Int):Float return instance == null ? 0.0 : instance.getBallSpeed(i);
     public function ballNoteVelocity(i:Int):Int return instance == null ? Gbloink.DEFAULT_NOTE_VELOCITY : instance.getNoteVelocity(i);
     public function blockCount():Int return instance == null ? 0 : instance.blocks.length;
+    public function blockId(i:Int):Int return instance.blocks[i].id;
     public function blockLeft(i:Int):Float return instance == null || i < 0 || i >= instance.blocks.length ? 0 : instance.blocks[i].bounds.left;
     public function blockTop(i:Int):Float return instance == null || i < 0 || i >= instance.blocks.length ? 0 : instance.blocks[i].bounds.top;
     public function blockRight(i:Int):Float return instance == null || i < 0 || i >= instance.blocks.length ? 0 : instance.blocks[i].bounds.right;
     public function blockBottom(i:Int):Float return instance == null || i < 0 || i >= instance.blocks.length ? 0 : instance.blocks[i].bounds.bottom;
     public function blockColour(i:Int):Int return instance == null || i < 0 || i >= instance.blocks.length ? 0x888888 : instance.blocks[i].colour;
+    public function collisionCount():Int return instance == null ? 0 : instance.collisionCues.length;
+    public function collisionEpoch():Int return instance == null ? 0 : instance.collisionEpoch;
+    public function collisionSerial(i:Int):Int return instance.collisionCues[i].serial;
+    public function collisionTime(i:Int):Float return instance.collisionCues[i].time;
+    public function collisionX(i:Int):Float return instance.collisionCues[i].x;
+    public function collisionY(i:Int):Float return instance.collisionCues[i].y;
+    public function collisionVelocity(i:Int):Int return instance.collisionCues[i].velocity;
+    public function collisionColour(i:Int):Int return instance.collisionCues[i].colour;
+    public function collisionKind(i:Int):Int return instance.collisionCues[i].kind;
+    public function collisionBlockId(i:Int):Int return instance.collisionCues[i].blockId;
 }

@@ -16,8 +16,8 @@ namespace
 {
     constexpr float W = 800.f, H = 600.f;
     namespace ControlIds = worldofcake::control::timeslider;
-    constexpr int kTrackControlIds[4] = {ControlIds::kCc1track, ControlIds::kCc2track, ControlIds::kCc3track,
-                                         ControlIds::kCc4track};
+    constexpr int kTrackControlIds[4] = {ControlIds::kLane1track, ControlIds::kLane2track, ControlIds::kLane3track,
+                                         ControlIds::kLane4track};
     struct Play : OpaqueWidget
     {
         TimeSlider* module = nullptr;

@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 #include "HaxeRuntimeBoot.h"
 #include "NoteOutputScheduler.h"
-#include "worldofcake/generated/timeslider/TimeSliderControlMetadataGenerated.h"
+#include "worldofcake/generated/timeslider/TimesliderControlMetadataGenerated.h"
 TimeSliderAudioProcessor::TimeSliderAudioProcessor():AudioProcessor(BusesProperties()) { worldofcake::bridge::bootHaxeRuntime(); runner=std::make_unique<worldofcake::bridge::TimeSliderControlRunner>(800,600,120,.5); runner->start(.001);
  outputParameters=std::make_unique<worldofcake::jucehost::ControlOutputParameters>(*this, worldofcake::metadata::timeslider::kControlOutputs, [this](int i){ return runner->controlOutputValue(i); }); }
 TimeSliderAudioProcessor::~TimeSliderAudioProcessor(){outputParameters.reset(); if(runner)runner->stop();}

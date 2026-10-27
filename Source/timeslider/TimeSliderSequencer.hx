@@ -113,8 +113,10 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public static inline var RESET_UID:Int = TimeSliderControlIdsGenerated.RESET;
     public static inline var PAUSE_UID:Int = TimeSliderControlIdsGenerated.PAUSE;
 
-    /** Control ID of a track's MIDI channel selector. */
+    /** Control IDs of a track's MIDI channel selector, CC number selector and label field. */
     public static inline function channelUid(track:Int):Int return TimeSliderTracksGenerated.CHANNEL_UIDS[track];
+    public static inline function ccUid(track:Int):Int return TimeSliderTracksGenerated.CC_UIDS[track];
+    public static inline function labelUid(track:Int):Int return TimeSliderTracksGenerated.LABEL_UIDS[track];
     /** Four parallel tracks (OpenFL + Rack). */
     public static inline var SLIDER_COUNT:Int = 4;
 
@@ -122,6 +124,8 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public var areaHeight:Int;
 
     private var sliders:Array<TimeSlider>;
+    /** User's name for what each track controls (saved with the state). */
+    private var labels:Array<String>;
     /** Travel time (seconds) when clicking the **left** edge of a track (slow). */
     private var minSpeed:Float;
     /** Travel time (seconds) when clicking the **right** edge (fast). */
@@ -135,6 +139,7 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
         this.maxSpeed = maxSpeed;
 
         sliders = buildSliders();
+        labels = [for (_ in sliders) ""];
         // One control output per track, in track order; each carries its CC number and MIDI channel.
         declareControlOutputs(TimeSliderControlIdsGenerated.controlOutputs());
         publishTrackValues();
@@ -145,7 +150,7 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
         return TimeSliderTracksGenerated.buildTracks(minSpeed, maxSpeed);
     }
 
-    /** Resets the tracks' positions and motion. Their MIDI channels are routing, so they are kept. */
+    /** Resets the tracks' positions and motion. Their labels, channels and CC numbers are kept. */
     public function reset():Void {
         resetTransport();
         sliders = buildSliders();
@@ -160,6 +165,28 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
     public function setChannel(index:Int, channel:Float):Void {
         if (index < 0 || index >= controlOutputs.length || !Math.isFinite(channel)) return;
         controlOutputs[index].setChannel(Math.round(channel));
+        dirty = true;
+    }
+
+    /** CC number (0..127) a track sends. */
+    public function getCcNumber(index:Int):Int {
+        return index < 0 || index >= controlOutputs.length ? 0 : controlOutputs[index].ccNumber;
+    }
+
+    public function setCcNumber(index:Int, ccNumber:Float):Void {
+        if (index < 0 || index >= controlOutputs.length || !Math.isFinite(ccNumber)) return;
+        controlOutputs[index].setCcNumber(Math.round(ccNumber));
+        dirty = true;
+    }
+
+    /** The user's name for what a track controls; empty when unnamed. */
+    public function getLabel(index:Int):String {
+        return index < 0 || index >= labels.length ? "" : labels[index];
+    }
+
+    public function setLabel(index:Int, label:String):Void {
+        if (index < 0 || index >= labels.length) return;
+        labels[index] = label == null ? "" : label;
         dirty = true;
     }
 
@@ -190,7 +217,8 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                 width: s.bounds.width(),
                 height: s.bounds.height(),
                 channel: getChannel(i),
-                ccNumber: controlOutputs[i].ccNumber,
+                ccNumber: getCcNumber(i),
+                label: getLabel(i),
                 minSpeed: s.minSpeed,
                 maxSpeed: s.maxSpeed,
                 current: s.current,
@@ -200,7 +228,7 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
             });
         }
         var out = new StringBuf(); out.add('{"v":4,"kind":"timeslider","currentTime":'); out.add(currentTime); out.add(',"paused":'); out.add(paused ? 'true' : 'false'); out.add(',"minSpeed":'); out.add(minSpeed); out.add(',"maxSpeed":'); out.add(maxSpeed); out.add(',"areaWidth":'); out.add(areaWidth); out.add(',"areaHeight":'); out.add(areaHeight); out.add(',"sliders":[');
-        for (i in 0...sliderParts.length) { if (i > 0) out.add(','); var s:Dynamic=sliderParts[i]; out.add('{"slot":'); out.add(s.slot); out.add(',"x":'); out.add(s.x); out.add(',"y":'); out.add(s.y); out.add(',"width":'); out.add(s.width); out.add(',"height":'); out.add(s.height); out.add(',"channel":'); out.add(s.channel); out.add(',"ccNumber":'); out.add(s.ccNumber); out.add(',"minSpeed":'); out.add(s.minSpeed); out.add(',"maxSpeed":'); out.add(s.maxSpeed); out.add(',"current":'); out.add(s.current); out.add(',"destination":'); out.add(s.destination); out.add(',"moving":'); out.add(s.moving ? 'true' : 'false'); out.add(',"speed":'); out.add(s.speed); out.add('}'); }
+        for (i in 0...sliderParts.length) { if (i > 0) out.add(','); var s:Dynamic=sliderParts[i]; out.add('{"slot":'); out.add(s.slot); out.add(',"x":'); out.add(s.x); out.add(',"y":'); out.add(s.y); out.add(',"width":'); out.add(s.width); out.add(',"height":'); out.add(s.height); out.add(',"channel":'); out.add(s.channel); out.add(',"ccNumber":'); out.add(s.ccNumber); out.add(',"label":'); out.add(Json.stringify(s.label)); out.add(',"minSpeed":'); out.add(s.minSpeed); out.add(',"maxSpeed":'); out.add(s.maxSpeed); out.add(',"current":'); out.add(s.current); out.add(',"destination":'); out.add(s.destination); out.add(',"moving":'); out.add(s.moving ? 'true' : 'false'); out.add(',"speed":'); out.add(s.speed); out.add('}'); }
         out.add(']}'); return out.toString();
     }
 
@@ -260,6 +288,8 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
                     ts.moving = Reflect.hasField(e, "moving") && Reflect.field(e, "moving") == true;
                     ts.speed = Reflect.hasField(e, "speed") ? Std.parseFloat(Std.string(Reflect.field(e, "speed"))) : 0;
                     if (Reflect.hasField(e, "channel")) setChannel(slot, Std.parseFloat(Std.string(Reflect.field(e, "channel"))));
+                    if (Reflect.hasField(e, "ccNumber")) setCcNumber(slot, Std.parseFloat(Std.string(Reflect.field(e, "ccNumber"))));
+                    if (Reflect.hasField(e, "label")) setLabel(slot, Std.string(Reflect.field(e, "label")));
                 }
             }
             for (s in sliders) {
@@ -283,12 +313,17 @@ class TimeSliderSequencer extends SequencerCore implements ISequencerControl {
 
     public function mouseDragged(uid:Int, point:LocalPoint):Void {}
     public function mouseUp(uid:Int, point:LocalPoint):Void {}
-    public function textSubmitted(uid:Int, text:String):Void {}
+    public function textSubmitted(uid:Int, text:String):Void {
+        var track = TimeSliderTracksGenerated.LABEL_UIDS.indexOf(uid);
+        if (track >= 0) setLabel(track, text);
+    }
     public function newValue(uid:Int, value:Float):Void {
         if (applyLifecycleValue(uid, value)) return;
-        // Channel selectors send the choice index: 0 is MIDI channel 1.
+        // Channel and CC selectors send the number itself.
         var track = TimeSliderTracksGenerated.CHANNEL_UIDS.indexOf(uid);
-        if (track >= 0) setChannel(track, value + 1);
+        if (track >= 0) setChannel(track, value);
+        track = TimeSliderTracksGenerated.CC_UIDS.indexOf(uid);
+        if (track >= 0) setCcNumber(track, value);
     }
     public function buttonPressed(uid:Int):Void {
         if (uid == RESET_UID) reset();

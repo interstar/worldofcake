@@ -63,7 +63,7 @@ class TestTimeSliderHeadless {
     static function testChannels():Void {
         var app = make();
         check("timeslider default channels", [for (i in 0...4) app.getChannel(i)].join(",") == "1,1,1,1");
-        app.newValue(TimeSliderSequencer.channelUid(1), 9);  // choice index 9 is channel 10
+        app.newValue(TimeSliderSequencer.channelUid(1), 10);
         app.newValue(TimeSliderSequencer.channelUid(2), 40);
         check("timeslider channel set", app.getChannel(1) == 10);
         check("timeslider channel clamped", app.getChannel(2) == 16);
@@ -81,6 +81,28 @@ class TestTimeSliderHeadless {
         check("timeslider channel restored", restored.getChannel(1) == 10 && restored.getChannel(2) == 16);
         app.reset();
         check("timeslider reset keeps channels", app.getChannel(1) == 10 && app.getChannel(2) == 16);
+    }
+
+    /** Each lane's CC number and label are the user's; both are saved and survive reset. */
+    static function testCcNumbersAndLabels():Void {
+        var app = make();
+        check("timeslider default CC numbers", [for (i in 0...4) app.getCcNumber(i)].join(",") == "1,2,3,4");
+        app.newValue(TimeSliderSequencer.ccUid(0), 74);
+        app.newValue(TimeSliderSequencer.ccUid(3), 300);
+        check("timeslider CC number set", app.getCcNumber(0) == 74);
+        check("timeslider CC number clamped", app.getCcNumber(3) == 127);
+        app.textSubmitted(TimeSliderSequencer.labelUid(2), 'Filter "cutoff"');
+        app.events = [];
+        clickFirst(app);
+        app.advanceTime(0.05);
+        check("timeslider sends the chosen CC number",
+            app.events.filter(e -> e.type == worldofcake.EventType.ControlChange && e.data2 == 74).length > 0);
+        var restored = make();
+        restored.importStateJson(app.exportStateJson());
+        check("timeslider CC number restored", restored.getCcNumber(0) == 74 && restored.getCcNumber(3) == 127);
+        check("timeslider label restored", restored.getLabel(2) == 'Filter "cutoff"' && restored.getLabel(0) == "");
+        app.reset();
+        check("timeslider reset keeps CC numbers and labels", app.getCcNumber(0) == 74 && app.getLabel(2) == 'Filter "cutoff"');
     }
 
     /** Muting holds the published value and sends nothing; unmuting resumes from the live value. */
@@ -105,6 +127,7 @@ class TestTimeSliderHeadless {
         testPauseAndInvalidDelta();
         testStateRoundTrip();
         testChannels();
+        testCcNumbersAndLabels();
         testMutedOutputs();
         if (failures > 0) {
             Sys.println('$failures TimeSlider headless test(s) failed');

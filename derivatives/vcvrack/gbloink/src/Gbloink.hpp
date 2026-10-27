@@ -91,8 +91,10 @@ struct Gbloink : Module
     void enqueueHostValue(int controlId, double value);
 };
 
+struct GbloinkTrailSettings;
 struct GbloinkWidget : ModuleWidget
 {
+    std::shared_ptr<GbloinkTrailSettings> trailSettings;
     explicit GbloinkWidget(Gbloink* module);
     void appendContextMenu(ui::Menu* menu) override;
 };

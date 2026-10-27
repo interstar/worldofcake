@@ -1,4 +1,5 @@
 #include "Gbloink.hpp"
+#include "GbloinkTrails.hpp"
 #include "plugin.hpp"
 #include <WocRackParamSync.hpp>
 #include <WocRackTiming.hpp>
@@ -59,6 +60,120 @@ namespace
     struct GbloinkPlayWidget : OpaqueWidget
     {
         Gbloink* module = NULL;
+        worldofcake::bridge::GbloinkVisualSnapshot visualSnapshot;
+        std::shared_ptr<GbloinkTrailSettings> settings;
+        GbloinkTrailWidget* trails;
+        struct Ripple {
+            worldofcake::bridge::GbloinkCollisionCue cue;
+            double born = 0;
+        };
+        std::array<Ripple, 32> ripples{};
+        int rippleCount = 0, lastCollisionSerial = 0;
+        std::uint64_t rippleRevision = 0;
+        double previousCollisionTime = -1;
+        int rippleEpoch = -1;
+        bool loggedFirstCue = false, loggedFirstRing = false;
+
+        static double wallSeconds() {
+            return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        }
+
+        void updateRipples() {
+            const double now = wallSeconds();
+            if (rippleEpoch != visualSnapshot.collisionEpoch || rippleRevision != visualSnapshot.stateRevision || visualSnapshot.collisionModelTime < previousCollisionTime) {
+                rippleCount = lastCollisionSerial = 0;
+            }
+            rippleEpoch = visualSnapshot.collisionEpoch;
+            rippleRevision = visualSnapshot.stateRevision;
+            previousCollisionTime = visualSnapshot.collisionModelTime;
+            int keep = 0;
+            for (int i = 0; i < rippleCount; ++i)
+                if (now-ripples[i].born < (ripples[i].cue.kind == 1 && settings->blockFlashes ? 1.8 : 0.7)) ripples[keep++] = ripples[i];
+            rippleCount = keep;
+            for (int i = 0; i < visualSnapshot.collisionCount; ++i) {
+                const auto& cue = visualSnapshot.collisions[i];
+                if (cue.serial <= lastCollisionSerial) continue;
+                lastCollisionSerial = cue.serial;
+                const double age = std::max(0.0, visualSnapshot.collisionModelTime-cue.time);
+                const bool flash = cue.kind == 1 && settings->blockFlashes;
+                if ((!settings->collisionRipples && !flash) || age >= (flash ? 1.8 : 0.7)) continue;
+                if (rippleCount == static_cast<int>(ripples.size())) {
+                    for (int j = 1; j < rippleCount; ++j) ripples[j-1] = ripples[j];
+                    --rippleCount;
+                }
+                auto& ripple = ripples[rippleCount++];
+                ripple.cue = cue;
+                ripple.born = now-age;
+                if (!loggedFirstCue) {
+                    INFO("Gbloink ripples: accepted cue serial=%d kind=%d velocity=%d age=%.4f", cue.serial, cue.kind, cue.velocity, age);
+                    loggedFirstCue = true;
+                }
+            }
+            if (!settings->collisionRipples && !settings->blockFlashes) rippleCount = 0;
+        }
+
+        int blockAlpha(int id) const {
+            if (!settings->blockFlashes) return 200;
+            const double now = wallSeconds();
+            double boost = 0;
+            for (int i = 0; i < rippleCount; ++i) {
+                if (ripples[i].cue.blockId != id) continue;
+                const double age = now-ripples[i].born;
+                boost = std::max(boost,std::min(1.0,std::max(0.0,(1.8-age)/0.3)));
+            }
+            return static_cast<int>(200+55*boost);
+        }
+
+        void drawRipples(NVGcontext* vg) {
+            if (!settings->collisionRipples) return;
+            const double now = wallSeconds();
+            float transform[6];
+            nvgCurrentTransform(vg, transform);
+            const float minimumStroke = 1.5f/std::max(0.01f,std::abs(transform[0]));
+            for (int i = 0; i < rippleCount; ++i) {
+                const auto& ripple = ripples[i];
+                const auto& cue = ripple.cue;
+                const float maxRadius = 96.f * cue.velocity / 127.f;
+                const bool pair = cue.kind == 2;
+                NVGcolor colour = nvgRgbPacked(cue.colour);
+                if (pair) {
+                    colour.r += (1.f-colour.r)*0.25f;
+                    colour.g += (1.f-colour.g)*0.25f;
+                    colour.b += (1.f-colour.b)*0.25f;
+                }
+                for (int ring = 0; ring < 3; ++ring) {
+                    const float phase = static_cast<float>((now-ripple.born-ring*0.064)/0.56);
+                    if (phase <= 0.f || phase >= 1.f) continue;
+                    const float radius = maxRadius * phase;
+                    // Remain visible while expanding, then fade over the last 40%.
+                    colour.a = (pair ? 0.9f : 0.65f)*std::min(1.f,(1.f-phase)*2.5f);
+                    nvgBeginPath(vg);
+                    nvgEllipse(vg, cue.x/kLocalW*box.size.x, cue.y/kLocalH*box.size.y,
+                        radius/kLocalW*box.size.x, radius/kLocalH*box.size.y);
+                    nvgStrokeWidth(vg, std::max(minimumStroke, (pair ? 2.4f : 2.f)*box.size.x/kLocalW));
+                    nvgStrokeColor(vg, colour);
+                    nvgStroke(vg);
+                    if (!loggedFirstRing) {
+                        INFO("Gbloink ripples: submitted ring radius=%.2f alpha=%.3f zoom=%.3f", radius, colour.a, transform[0]);
+                        loggedFirstRing = true;
+                    }
+                }
+            }
+        }
+
+        explicit GbloinkPlayWidget(std::shared_ptr<GbloinkTrailSettings> s) : settings(std::move(s)) {
+            trails = new GbloinkTrailWidget(settings);
+            trails->snapshot = &visualSnapshot;
+            addChild(trails);
+        }
+
+        void step() override {
+            if (module && module->runner) visualSnapshot = module->runner->latestVisualSnapshot();
+            updateRipples();
+            trails->box.size = box.size;
+            trails->visible = module && settings->enabled && !trails->failed();
+            OpaqueWidget::step();
+        }
 
         void onButton(const ButtonEvent& e) override
         {
@@ -87,7 +202,9 @@ namespace
                 return;
             }
 
-            const auto snapshot = module->runner->latestVisualSnapshot();
+            // Rack composites the history child before the sharp current scene.
+            OpaqueWidget::draw(args);
+            const auto& snapshot = visualSnapshot;
 
             nvgSave(vg);
             nvgScissor(vg, 0.f, 0.f, box.size.x, box.size.y);
@@ -114,13 +231,14 @@ namespace
                 const int b = col & 255;
                 nvgBeginPath(vg);
                 nvgRect(vg, L, T, R - L, B - T);
-                nvgFillColor(vg, nvgTransRGBA(nvgRGB(r, g, b), 200));
+                nvgFillColor(vg, nvgTransRGBA(nvgRGB(r, g, b), blockAlpha(block.id)));
                 nvgFill(vg);
             }
 
+            // Rings sit above obstacles so a block cannot hide its own impact.
+            drawRipples(vg);
             nvgRestore(vg);
 
-            OpaqueWidget::draw(args);
         }
     };
 
@@ -314,7 +432,8 @@ GbloinkWidget::GbloinkWidget(Gbloink* module)
     addChild(
         createWidget<ScrewSilver>(math::Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-    auto* play = new GbloinkPlayWidget;
+    trailSettings = std::make_shared<GbloinkTrailSettings>();
+    auto* play = new GbloinkPlayWidget(trailSettings);
     play->module = module;
     play->box.pos = mm2px(math::Vec(worldofcake::rack::gbloink::kPlayarea.x,
                                     worldofcake::rack::gbloink::kPlayarea.y));
@@ -370,6 +489,20 @@ void GbloinkWidget::appendContextMenu(ui::Menu* menu)
         return;
     }
     menu->addChild(new ui::MenuSeparator);
+    const auto visuals = trailSettings;
+    menu->addChild(createBoolMenuItem("Block impact flashes", "",
+        [visuals]() { return visuals->blockFlashes; }, [visuals](bool on) { visuals->blockFlashes = on; }));
+    menu->addChild(createBoolMenuItem("Collision ripples", "",
+        [visuals]() { return visuals->collisionRipples; }, [visuals](bool on) { visuals->collisionRipples = on; }));
+    menu->addChild(createBoolMenuItem("GPU ball trails (experimental)", "",
+        [visuals]() { return visuals->enabled; }, [visuals](bool on) { visuals->enabled = on; }));
+    menu->addChild(createBoolMenuItem("Trails: half resolution", "",
+        [visuals]() { return visuals->halfResolution; }, [visuals](bool on) { visuals->halfResolution = on; }));
+    menu->addChild(createBoolMenuItem("Trail timing in Rack log", "",
+        [visuals]() { return visuals->diagnostics; }, [visuals](bool on) { visuals->diagnostics = on; }));
+    menu->addChild(createMenuItem("Trails: short (0.1 s half-life)", "", [visuals]() { visuals->halfLife = 0.1f; }));
+    menu->addChild(createMenuItem("Trails: medium (0.22 s half-life)", "", [visuals]() { visuals->halfLife = 0.22f; }));
+    menu->addChild(createMenuItem("Trails: long (0.6 s half-life)", "", [visuals]() { visuals->halfLife = 0.6f; }));
     menu->addChild(createBoolMenuItem(
         "Wall notes (edge bounce)", "", [=]() { return m->params[Gbloink::EDGE_NOTES_PARAM].getValue() > 0.5f; },
         [=](bool on) { m->params[Gbloink::EDGE_NOTES_PARAM].setValue(on ? 1.f : 0.f); }));

@@ -14,45 +14,37 @@
  :sequencer {:minimum-travel-time 120.0
              :maximum-travel-time 0.5}
  ;; Continuous controls the model publishes, one per lane (0..1). Hosts present each as a MIDI CC,
- ;; a VST parameter and Rack CV. The lane's channel selector changes its MIDI channel at run time.
- :outputs [{:id "cc1" :label "CC 1" :channel 1 :cc 1}
-           {:id "cc2" :label "CC 2" :channel 1 :cc 2}
-           {:id "cc3" :label "CC 3" :channel 1 :cc 3}
-           {:id "cc4" :label "CC 4" :channel 1 :cc 4}]
+ ;; a VST parameter and Rack CV. Each lane's selectors change its MIDI channel and CC number at run time.
+ :outputs [{:id "lane1" :label "Lane 1" :channel 1 :cc 1}
+           {:id "lane2" :label "Lane 2" :channel 1 :cc 2}
+           {:id "lane3" :label "Lane 3" :channel 1 :cc 3}
+           {:id "lane4" :label "Lane 4" :channel 1 :cc 4}]
  :components
- {;; One lane per CC. Its heading, MIDI channel and colour are set here; the model starts from them.
-  "cc1label" {:kind :text :text "CC 1"}
-  "cc1channel" {:kind :semantic-select :label "CC 1 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
-                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
-                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
-                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
-                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
-                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
-  "cc1track" {:kind :timeslider-track :colour "0x55B7D9" :channel-control "cc1channel"}
-  "cc2label" {:kind :text :text "CC 2"}
-  "cc2channel" {:kind :semantic-select :label "CC 2 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
-                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
-                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
-                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
-                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
-                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
-  "cc2track" {:kind :timeslider-track :colour "0xE56B6F" :channel-control "cc2channel"}
-  "cc3label" {:kind :text :text "CC 3"}
-  "cc3channel" {:kind :semantic-select :label "CC 3 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
-                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
-                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
-                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
-                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
-                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
-  "cc3track" {:kind :timeslider-track :colour "0x76B947" :channel-control "cc3channel"}
-  "cc4label" {:kind :text :text "CC 4"}
-  "cc4channel" {:kind :semantic-select :label "CC 4 MIDI channel" :tooltip "MIDI channel for this lane's CC messages."
-                :default-index 0 :presentation "compact" :view-hook "addChannelSelect"
-                :choices [{:value 0 :label "Ch 1"} {:value 1 :label "Ch 2"} {:value 2 :label "Ch 3"} {:value 3 :label "Ch 4"}
-                          {:value 4 :label "Ch 5"} {:value 5 :label "Ch 6"} {:value 6 :label "Ch 7"} {:value 7 :label "Ch 8"}
-                          {:value 8 :label "Ch 9"} {:value 9 :label "Ch 10"} {:value 10 :label "Ch 11"} {:value 11 :label "Ch 12"}
-                          {:value 12 :label "Ch 13"} {:value 13 :label "Ch 14"} {:value 14 :label "Ch 15"} {:value 15 :label "Ch 16"}]}
-  "cc4track" {:kind :timeslider-track :colour "0xC58BE8" :channel-control "cc4channel"}
+ {;; One lane per output: a label field above it, its MIDI channel and CC number below.
+  "lane1label" {:kind :text-input :default "" :label "Lane 1 label" :tooltip "A name for what this lane controls; saved with the patch." :view-hook "addLabelInput"}
+  "lane1track" {:kind :timeslider-track :colour "0x55B7D9" :channel-control "lane1channel" :cc-control "lane1cc" :label-control "lane1label"}
+  "lane1channel" {:kind :semantic-select :label "Lane 1 MIDI channel" :tooltip "MIDI channel of this lane's CC messages."
+                   :default-index 0 :presentation "compact" :view-hook "addChannelSelect" :choice-range {:from 1 :to 16 :format "Ch %d"}}
+  "lane1cc" {:kind :semantic-select :label "Lane 1 CC number" :tooltip "CC number this lane sends. Click to step, or drag up and down."
+              :default-index 1 :presentation "compact" :view-hook "addCcSelect" :choice-range {:from 0 :to 127 :format "CC %d"}}
+  "lane2label" {:kind :text-input :default "" :label "Lane 2 label" :tooltip "A name for what this lane controls; saved with the patch." :view-hook "addLabelInput"}
+  "lane2track" {:kind :timeslider-track :colour "0xE56B6F" :channel-control "lane2channel" :cc-control "lane2cc" :label-control "lane2label"}
+  "lane2channel" {:kind :semantic-select :label "Lane 2 MIDI channel" :tooltip "MIDI channel of this lane's CC messages."
+                   :default-index 0 :presentation "compact" :view-hook "addChannelSelect" :choice-range {:from 1 :to 16 :format "Ch %d"}}
+  "lane2cc" {:kind :semantic-select :label "Lane 2 CC number" :tooltip "CC number this lane sends. Click to step, or drag up and down."
+              :default-index 2 :presentation "compact" :view-hook "addCcSelect" :choice-range {:from 0 :to 127 :format "CC %d"}}
+  "lane3label" {:kind :text-input :default "" :label "Lane 3 label" :tooltip "A name for what this lane controls; saved with the patch." :view-hook "addLabelInput"}
+  "lane3track" {:kind :timeslider-track :colour "0x76B947" :channel-control "lane3channel" :cc-control "lane3cc" :label-control "lane3label"}
+  "lane3channel" {:kind :semantic-select :label "Lane 3 MIDI channel" :tooltip "MIDI channel of this lane's CC messages."
+                   :default-index 0 :presentation "compact" :view-hook "addChannelSelect" :choice-range {:from 1 :to 16 :format "Ch %d"}}
+  "lane3cc" {:kind :semantic-select :label "Lane 3 CC number" :tooltip "CC number this lane sends. Click to step, or drag up and down."
+              :default-index 3 :presentation "compact" :view-hook "addCcSelect" :choice-range {:from 0 :to 127 :format "CC %d"}}
+  "lane4label" {:kind :text-input :default "" :label "Lane 4 label" :tooltip "A name for what this lane controls; saved with the patch." :view-hook "addLabelInput"}
+  "lane4track" {:kind :timeslider-track :colour "0xC58BE8" :channel-control "lane4channel" :cc-control "lane4cc" :label-control "lane4label"}
+  "lane4channel" {:kind :semantic-select :label "Lane 4 MIDI channel" :tooltip "MIDI channel of this lane's CC messages."
+                   :default-index 0 :presentation "compact" :view-hook "addChannelSelect" :choice-range {:from 1 :to 16 :format "Ch %d"}}
+  "lane4cc" {:kind :semantic-select :label "Lane 4 CC number" :tooltip "CC number this lane sends. Click to step, or drag up and down."
+              :default-index 4 :presentation "compact" :view-hook "addCcSelect" :choice-range {:from 0 :to 127 :format "CC %d"}}
 
   "controls-gap" {:kind :spacer}
   "reset" {:kind :button :label "Reset" :icon :reset :colour "0x3A3F48"}

@@ -266,6 +266,8 @@ Targets: OpenFL compositions add a `PanelBox` before any control (so it sits beh
 ### Text, optional knob labels, and icons
 
 - `:text` is a static piece of text in a cell, e.g. a column heading (`{:kind :text :text "Speed"}`).
+- A `:semantic-select` may give `:choice-range {:from 0 :to 127 :format "CC %d"}` instead of listing `:choices`: one choice per integer, valued by that integer (so the select sends the number itself). The compact presentation steps on click and scrolls on vertical drag.
+- A TimeSlider track names its per-lane controls with `:channel-control`, `:cc-control` and `:label-control`; the generator emits them as `CHANNEL_UIDS`, `CC_UIDS` and `LABEL_UIDS` in track order.
 - A knob's `:label` is its name (host parameter name, tooltip). `:show-label false` stops the panel drawing it under the knob; the default is to draw it.
 - Buttons and toggles may name an `:icon` (`:reset`, `:pause`, `:mute`, `:walls`). Icons are defined once, as a small op list, in `laylagen/src/worldofcake/laylagen/icons.clj`; the generator copies the op list into the Haxe composition and the C++ control metadata, and turns it into SVG paths for Rack panels. OpenFL draws it with `IconPainter`, JUCE with `jucehost::drawIcon`. A control with an icon shows the icon instead of its label.
 

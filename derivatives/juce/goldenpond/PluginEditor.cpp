@@ -39,7 +39,6 @@ const std::array<std::pair<const juce::Rectangle<double>*, const metadata::Text*
 // Part note colours, matching the part boxes and the OpenFL piano roll.
 const std::array<juce::Colour, 4> partColours{juce::Colour(0xff55b7d9), juce::Colour(0xffe56b6f),
                                               juce::Colour(0xff76b947), juce::Colour(0xffc58be8)};
-constexpr float kTextFieldHeight = 26.0f;
 }
 
 GoldenpondAudioProcessorEditor::GoldenpondAudioProcessorEditor(GoldenpondAudioProcessor& p)
@@ -165,11 +164,8 @@ void GoldenpondAudioProcessorEditor::resized() {
         knobs[i].setBounds(host::knobBounds(host::panelRegion(map, *knobRegions[i]), *knobMetadata[i]));
     for (std::size_t i = 0; i < selects.size(); ++i)
         selects[i].setBounds(host::panelRegion(map, *selectRegions[i]).toNearestInt());
-    // A single text line, vertically centred in its cell (as in OpenFL).
-    for (std::size_t i = 0; i < texts.size(); ++i) {
-        const auto cell = host::panelRegion(map, *textRegions[i]);
-        texts[i].setBounds(cell.withSizeKeepingCentre(cell.getWidth(), juce::jmin(cell.getHeight(), kTextFieldHeight)).toNearestInt());
-    }
+    for (std::size_t i = 0; i < texts.size(); ++i)
+        texts[i].setBounds(host::textFieldBounds(host::panelRegion(map, *textRegions[i])));
     reset.setBounds(host::panelRegion(map, layout::kReset).toNearestInt());
     pause.setBounds(host::panelRegion(map, layout::kPause).toNearestInt());
     mute.setBounds(host::panelRegion(map, layout::kMute).toNearestInt());

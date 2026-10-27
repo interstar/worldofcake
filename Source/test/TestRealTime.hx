@@ -81,7 +81,7 @@ class TestRealTime {
         sameAtEveryStep("timeslider", function() {
             var s = new TimeSliderSequencer(800, 600, 120, 0.5);
             var track = s.getSliders()[0];
-            s.mouseDown(TimeSliderControlIdsGenerated.CC1TRACK, new LocalPoint(track.bounds.width() * 0.8, track.bounds.height() * 0.2));
+            s.mouseDown(TimeSliderControlIdsGenerated.LANE1TRACK, new LocalPoint(track.bounds.width() * 0.8, track.bounds.height() * 0.2));
             return s;
         }, function(m) {
             var s:TimeSliderSequencer = cast m;
@@ -99,7 +99,7 @@ class TestRealTime {
         // Absolute time: a TimeSlider glide takes its travel time in real seconds.
         var slider = new TimeSliderSequencer(800, 600, 120, 0.5);
         var track = slider.getSliders()[0];
-        slider.mouseDown(TimeSliderControlIdsGenerated.CC1TRACK, new LocalPoint(track.bounds.width(), track.bounds.height() * 0.1));
+        slider.mouseDown(TimeSliderControlIdsGenerated.LANE1TRACK, new LocalPoint(track.bounds.width(), track.bounds.height() * 0.1));
         var arrived = -1.0;
         var t = 0.0;
         while (t < 10 && arrived < 0) {

@@ -181,6 +181,15 @@ LOCAL_DEPENDENCIES := $(patsubst %.cpp,$(WOC_RACK_BUILD)/%.cpp.d,$(LOCAL_SOURCES
 BRIDGE_DEPENDENCIES := $(patsubst $(BRIDGE_NATIVE)/%.cpp,$(WOC_RACK_BUILD)/bridge/native/%.cpp.d,$(BRIDGE_SOURCES))
 DEPENDENCIES := $(LOCAL_DEPENDENCIES) $(BRIDGE_DEPENDENCIES)
 
+ifeq ($(WOC_HOST_PLATFORM),windows)
+# MinGW emits G:/... targets, while MSYS make builds /g/... targets. Without
+# normalization they are distinct rules and header changes miss existing objects.
+# Remade include files also repair dependency files from earlier builds.
+$(WOC_RACK_BUILD)/%.d.posix: $(WOC_RACK_BUILD)/%.d
+	@sed -E 's@([A-Za-z]):/@/\L\1/@g' "$<" > "$@"
+DEPENDENCIES := $(addsuffix .posix,$(DEPENDENCIES))
+endif
+
 $(TARGET): $(OBJECTS) $(HXCPP_LINK_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
