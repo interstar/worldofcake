@@ -1,0 +1,51 @@
+{:geometry
+ {:panel-width 856.0,
+  :panel-height 640.0,
+  :outer-padding 6.0,
+  :root-gap 6.0,
+  :nested-gap 6.0},
+ :components
+ {"terminus" {:colour "0x3A3F48"}
+  "blue"
+  {:border-alpha 0.55,
+   :fill "0x3A74D0",
+   :fill-alpha 0.16,
+   :padding 6.0,
+   :border "0x3A74D0"},
+  "scaleselect" {:view-hook "setScaleSelect", :presentation "compact"},
+  "greenspeed"
+  {:view-hook "addValueControl",
+   :colour "0x2F9A48",
+   :show-label false},
+  "rotate-right" {:icon :rotate-cw, :colour "0x3A3F48"},
+  "redspeed"
+  {:view-hook "addValueControl",
+   :colour "0xD4473D",
+   :show-label false},
+  "note-length"
+  {:view-hook "addValueControl",
+   :colour "0x5A616D",
+   :show-label false},
+  "rotate-left" {:icon :rotate-ccw, :colour "0x3A3F48"},
+  "reset" {:icon :reset, :colour "0x3A3F48"},
+  "pause" {:icon :pause, :colour "0x3A3F48"},
+  "bluespeed"
+  {:view-hook "addValueControl",
+   :colour "0x3A74D0",
+   :show-label false},
+  "green"
+  {:border-alpha 0.55,
+   :fill "0x2F9A48",
+   :fill-alpha 0.16,
+   :padding 6.0,
+   :border "0x2F9A48"},
+  "red"
+  {:border-alpha 0.55,
+   :fill "0xD4473D",
+   :fill-alpha 0.16,
+   :padding 6.0,
+   :border "0xD4473D"},
+  "controls" {:fill "0xFFFFFF", :padding 8.0, :border "0xD9DCE1"},
+  "selectcursor"
+  {:view-hook "setCursorSelect", :presentation "segmented"},
+  "channel" {:view-hook "setChannelSelect", :presentation "compact"}}}

@@ -1,0 +1,21 @@
+[
+  title/title(10)
+  <
+    left-gap/spacer(5)
+    [play-top/spacer(3) playarea/playarea(112) play-bottom/spacer(7/2)](120)
+    control-gap/spacer(6)
+    [
+      control-top/spacer(14)
+      population-heading/text(5)
+      population/knob(14)
+      speed-heading/text(5)
+      speed/knob(14)
+      control-middle/spacer(10)
+      <reset/button pause/toggle>(12)
+      control-bottom/spacer(89/2)
+    ](22)
+    patch-gap/spacer(6)
+    patchbay/patchbay(61)
+    right-gap/spacer(596/25)
+  >(237/2)
+]

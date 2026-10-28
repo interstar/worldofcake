@@ -1,0 +1,12 @@
+[
+  title/title(30)
+  <
+    playarea/zewpplayarea(600)
+    [
+      controltop/spacer(170)
+      <population/knob speed/knob>(90)
+      controlmiddle/spacer(160)
+      <reset/button pause/toggle>(80)
+    ](140)
+  >(570)
+]

@@ -1,0 +1,33 @@
+{:generator-version 1
+ ;; TimeSlider: lanes the user sends gliding to a target value over a chosen time.
+ ;; What the app is, for every target. Targets adapt it in <target>.edn (see docs/APP_TARGETS.md).
+ :application {:id "timeslider"
+               :package "timeslider"
+               :generated-package "generated.timeslider"
+               :composition-kind :timeslider
+               :composition-class "TimeSliderCompositionGenerated"
+               :layout-class "TimeSliderLayoutGenerated"}
+ ;; Model shape. Each lane's value runs from 0 (bottom) to 1 (top); targets set the lane count.
+ :model {:lanes 4}
+ :sequencer {:minimum-travel-time 120.0
+             :maximum-travel-time 0.5}
+ ;; One continuous control per lane (0..1). Hosts present each as a MIDI CC, a VST parameter and
+ ;; Rack CV. Each lane's selectors change its MIDI channel and CC number at run time.
+ ;; Lane colours, in lane order: red, green, blue first, as every WoC app's three voices.
+ :palettes {:lanes ["0xD4473D" "0x2F9A48" "0x3A74D0" "0xD9A02B" "0x8E5CC4" "0x2FA3A0" "0xE07A3A" "0xC75B8E"]}
+ :outputs [{:repeat :lanes :id "lane{n}" :label "Lane {n}" :channel 1 :cc :n}]
+ :components
+ {;; One lane per output: a label field, its MIDI channel and its CC number.
+  "lane{n}label" {:repeat :lanes :kind :text-input :default "" :label "Lane {n} label"
+                  :tooltip "A name for what this lane controls; saved with the patch."}
+  "lane{n}track" {:repeat :lanes :kind :timeslider-track :colour [:palette :lanes]
+                  :channel-control "lane{n}channel" :cc-control "lane{n}cc" :label-control "lane{n}label"}
+  "lane{n}channel" {:repeat :lanes :kind :semantic-select :label "Lane {n} MIDI channel"
+                    :tooltip "MIDI channel of this lane's CC messages."
+                    :default-index 0 :choice-range {:from 1 :to 16 :format "Ch %d"}}
+  "lane{n}cc" {:repeat :lanes :kind :semantic-select :label "Lane {n} CC number"
+               :tooltip "CC number this lane sends. Click to step, or drag up and down."
+               :default-index :n :choice-range {:from 0 :to 127 :format "CC %d"}}
+
+  "reset" {:kind :button :label "Reset"}
+  "pause" {:kind :toggle :label "Pause" :default false}}}

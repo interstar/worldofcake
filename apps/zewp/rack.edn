@@ -1,0 +1,82 @@
+;; Rack: the model's code only (the panel below is Rack's schema, drawn by rack-layout-generate).
+;; Panel text (title, headings, captions, patch-bay labels) is outlined into the SVG at build time.
+{:generate-views false
+ :app :zewp
+ :target :vcvrack
+ :application {:slug "Zewp" :panel-svg "Zewp.svg" :title "GLR : Zewp!"}
+ :module {:slug "Zewp"
+          :plugin "WorldOfCake-Zewp"
+          :panel {:width-mm 243.84 :height-mm 128.5 :fill "#f1efea"}}
+ :geometry {:panel-width 243.84 :panel-height 128.5 :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+ :rack-components
+ {"title" {:kind :title :text "GLR : Zewp!" :anchor :middle}
+  "playarea" {:kind :play-area}
+  "patchbay" {:kind :patch-bay}
+  "population-heading" {:kind :text :text "Zewps" :font-size-mm 2.4}
+  "speed-heading" {:kind :text :text "Speed" :font-size-mm 2.4}
+  "population" {:kind :knob :show-label false}
+  "speed" {:kind :knob :show-label false}
+  "reset" {:kind :button :label "Reset" :caption-position :below :font-size-mm 2.1}
+  "pause" {:kind :toggle :label "Pause" :caption-position :below :font-size-mm 2.1}}
+ ;; One group per output zewp, coloured as that zewp (the :zewps palette in app.edn).
+ :patch-bay {:title "Outputs"
+             :header-y-mm 14.0
+             :bounds-mm {:x 159.0 :y 17.0 :width 61.0 :height 86.0}
+             :columns [{:key :x :label "X" :x-mm 171.5}
+                       {:key :y :label "Y" :x-mm 189.5}
+                       {:key :gate :label "Gate" :x-mm 207.5}]
+             :groups [
+            {:key :zewp-1
+             :label "Zewp 1"
+             :color "#D4473D"
+             :fill "#D4473D"
+             :bounds-mm {:x 159.0 :y 17.0 :width 61.0 :height 13.5}
+             :y-mm 22.0
+             :outputs [{:key :x :cpp-id "X1_OUTPUT" :svg-label "X1" :socket-mm {:x 171.5 :y 22.0} :config-label "Zewp 1 X" :config-label-fragments ["Zewp " " X"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "Y1_OUTPUT" :svg-label "Y1" :socket-mm {:x 189.5 :y 22.0} :config-label "Zewp 1 Y" :config-label-fragments ["Zewp " " Y"] :voltage-law :inverted-midi7-unipolar-10v}
+                       {:key :gate :cpp-id "GATE1_OUTPUT" :svg-label "GATE1" :socket-mm {:x 207.5 :y 22.0} :config-label "Zewp 1 In-front gate" :config-label-fragments ["Zewp " " In-front gate"] :voltage-law :gate-10v-level}]}
+            {:key :zewp-2
+             :label "Zewp 2"
+             :color "#2F9A48"
+             :fill "#2F9A48"
+             :bounds-mm {:x 159.0 :y 31.5 :width 61.0 :height 13.5}
+             :y-mm 36.5
+             :outputs [{:key :x :cpp-id "X2_OUTPUT" :svg-label "X2" :socket-mm {:x 171.5 :y 36.5} :config-label "Zewp 2 X" :config-label-fragments ["Zewp " " X"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "Y2_OUTPUT" :svg-label "Y2" :socket-mm {:x 189.5 :y 36.5} :config-label "Zewp 2 Y" :config-label-fragments ["Zewp " " Y"] :voltage-law :inverted-midi7-unipolar-10v}
+                       {:key :gate :cpp-id "GATE2_OUTPUT" :svg-label "GATE2" :socket-mm {:x 207.5 :y 36.5} :config-label "Zewp 2 In-front gate" :config-label-fragments ["Zewp " " In-front gate"] :voltage-law :gate-10v-level}]}
+            {:key :zewp-3
+             :label "Zewp 3"
+             :color "#3A74D0"
+             :fill "#3A74D0"
+             :bounds-mm {:x 159.0 :y 46.0 :width 61.0 :height 13.5}
+             :y-mm 51.0
+             :outputs [{:key :x :cpp-id "X3_OUTPUT" :svg-label "X3" :socket-mm {:x 171.5 :y 51.0} :config-label "Zewp 3 X" :config-label-fragments ["Zewp " " X"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "Y3_OUTPUT" :svg-label "Y3" :socket-mm {:x 189.5 :y 51.0} :config-label "Zewp 3 Y" :config-label-fragments ["Zewp " " Y"] :voltage-law :inverted-midi7-unipolar-10v}
+                       {:key :gate :cpp-id "GATE3_OUTPUT" :svg-label "GATE3" :socket-mm {:x 207.5 :y 51.0} :config-label "Zewp 3 In-front gate" :config-label-fragments ["Zewp " " In-front gate"] :voltage-law :gate-10v-level}]}
+            {:key :zewp-4
+             :label "Zewp 4"
+             :color "#D9A02B"
+             :fill "#D9A02B"
+             :bounds-mm {:x 159.0 :y 60.5 :width 61.0 :height 13.5}
+             :y-mm 65.5
+             :outputs [{:key :x :cpp-id "X4_OUTPUT" :svg-label "X4" :socket-mm {:x 171.5 :y 65.5} :config-label "Zewp 4 X" :config-label-fragments ["Zewp " " X"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "Y4_OUTPUT" :svg-label "Y4" :socket-mm {:x 189.5 :y 65.5} :config-label "Zewp 4 Y" :config-label-fragments ["Zewp " " Y"] :voltage-law :inverted-midi7-unipolar-10v}
+                       {:key :gate :cpp-id "GATE4_OUTPUT" :svg-label "GATE4" :socket-mm {:x 207.5 :y 65.5} :config-label "Zewp 4 In-front gate" :config-label-fragments ["Zewp " " In-front gate"] :voltage-law :gate-10v-level}]}
+            {:key :zewp-5
+             :label "Zewp 5"
+             :color "#8E5CC4"
+             :fill "#8E5CC4"
+             :bounds-mm {:x 159.0 :y 75.0 :width 61.0 :height 13.5}
+             :y-mm 80.0
+             :outputs [{:key :x :cpp-id "X5_OUTPUT" :svg-label "X5" :socket-mm {:x 171.5 :y 80.0} :config-label "Zewp 5 X" :config-label-fragments ["Zewp " " X"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "Y5_OUTPUT" :svg-label "Y5" :socket-mm {:x 189.5 :y 80.0} :config-label "Zewp 5 Y" :config-label-fragments ["Zewp " " Y"] :voltage-law :inverted-midi7-unipolar-10v}
+                       {:key :gate :cpp-id "GATE5_OUTPUT" :svg-label "GATE5" :socket-mm {:x 207.5 :y 80.0} :config-label "Zewp 5 In-front gate" :config-label-fragments ["Zewp " " In-front gate"] :voltage-law :gate-10v-level}]}
+            {:key :zewp-6
+             :label "Zewp 6"
+             :color "#2FA3A0"
+             :fill "#2FA3A0"
+             :bounds-mm {:x 159.0 :y 89.5 :width 61.0 :height 13.5}
+             :y-mm 94.5
+             :outputs [{:key :x :cpp-id "X6_OUTPUT" :svg-label "X6" :socket-mm {:x 171.5 :y 94.5} :config-label "Zewp 6 X" :config-label-fragments ["Zewp " " X"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "Y6_OUTPUT" :svg-label "Y6" :socket-mm {:x 189.5 :y 94.5} :config-label "Zewp 6 Y" :config-label-fragments ["Zewp " " Y"] :voltage-law :inverted-midi7-unipolar-10v}
+                       {:key :gate :cpp-id "GATE6_OUTPUT" :svg-label "GATE6" :socket-mm {:x 207.5 :y 94.5} :config-label "Zewp 6 In-front gate" :config-label-fragments ["Zewp " " In-front gate"] :voltage-law :gate-10v-level}]}]}}

@@ -1,0 +1,10 @@
+{;; OpenFL (and, through juce.edn, the generated JUCE tree): geometry and presentation.
+ :geometry {:panel-width 800.0 :panel-height 640.0
+            :padding-left 20.0 :padding-right 20.0 :padding-top 20.0 :padding-bottom 20.0
+            :root-gap 20.0 :nested-gap 0.0 :gaps-by-depth {0 20.0 1 0.0 2 10.0}}
+ :components
+ {"redspeed" {:view-hook "addValueControl"}
+  "greenspeed" {:view-hook "addValueControl"}
+  "bluespeed" {:view-hook "addValueControl"}
+  "controltop" {:kind :spacer} "controlmiddle" {:kind :spacer}
+  "controlbottom" {:kind :spacer} "speedend" {:kind :spacer}}}

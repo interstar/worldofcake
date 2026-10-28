@@ -1,0 +1,50 @@
+;; Rack: the model's code only (the panel below is Rack's schema, drawn by rack-layout-generate).
+;; Panel text (title, heading, captions, patch-bay labels) is outlined into the SVG at build time.
+{:generate-views false
+ :app :tileland
+ :target :vcvrack
+ :application {:panel-svg "TileLand.svg" :title "GLR : TileLand"}
+ :module {:slug "TileLand"
+          :plugin "WorldOfCake-TileLand"
+          :panel {:width-mm 243.84 :height-mm 128.5 :fill "#f1efea"}}
+ :geometry {:panel-width 243.84 :panel-height 128.5 :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+ :rack-components
+ {"title" {:kind :title :text "GLR : TileLand" :anchor :middle}
+  "playarea" {:kind :play-area}
+  "patchbay" {:kind :patch-bay}
+  "speed-heading" {:kind :text :text "Speed" :font-size-mm 2.4}
+  "redspeed" {:kind :knob :show-label false}
+  "greenspeed" {:kind :knob :show-label false}
+  "bluespeed" {:kind :knob :show-label false}
+  "reset" {:kind :button :label "Reset" :caption-position :below :font-size-mm 2.1}
+  "pause" {:kind :toggle :label "Pause" :caption-position :below :font-size-mm 2.1}}
+ ;; One group per cursor, in the cursor's colour (the :cursors palette in app.edn).
+ :patch-bay {:title "Outputs"
+             :bounds-mm {:x 180.5 :y 21.5 :width 37.0 :height 64.0}
+             :columns [{:key :x :label "X" :x-mm 190.0}
+                       {:key :y :label "Y" :x-mm 208.0}]
+             :groups [
+            {:key :cursor-1
+             :label "Red cursor"
+             :color "#D4473D"
+             :fill "#D4473D"
+             :bounds-mm {:x 180.5 :y 21.5 :width 37.0 :height 20.0}
+             :y-mm 30.0
+             :outputs [{:key :x :cpp-id "CV_CH1_X_OUTPUT" :svg-label "CV_CH1_X" :socket-mm {:x 190.0 :y 30.0} :config-label "Cursor 1 X CV" :config-label-fragments ["Cursor " "X CV"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "CV_CH1_Y_OUTPUT" :svg-label "CV_CH1_Y" :socket-mm {:x 208.0 :y 30.0} :config-label "Cursor 1 Y CV" :config-label-fragments ["Cursor " "Y CV"] :voltage-law :midi7-unipolar-10v}]}
+            {:key :cursor-2
+             :label "Green cursor"
+             :color "#2F9A48"
+             :fill "#2F9A48"
+             :bounds-mm {:x 180.5 :y 43.5 :width 37.0 :height 20.0}
+             :y-mm 52.0
+             :outputs [{:key :x :cpp-id "CV_CH2_X_OUTPUT" :svg-label "CV_CH2_X" :socket-mm {:x 190.0 :y 52.0} :config-label "Cursor 2 X CV" :config-label-fragments ["Cursor " "X CV"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "CV_CH2_Y_OUTPUT" :svg-label "CV_CH2_Y" :socket-mm {:x 208.0 :y 52.0} :config-label "Cursor 2 Y CV" :config-label-fragments ["Cursor " "Y CV"] :voltage-law :midi7-unipolar-10v}]}
+            {:key :cursor-3
+             :label "Blue cursor"
+             :color "#3A74D0"
+             :fill "#3A74D0"
+             :bounds-mm {:x 180.5 :y 65.5 :width 37.0 :height 20.0}
+             :y-mm 74.0
+             :outputs [{:key :x :cpp-id "CV_CH3_X_OUTPUT" :svg-label "CV_CH3_X" :socket-mm {:x 190.0 :y 74.0} :config-label "Cursor 3 X CV" :config-label-fragments ["Cursor " "X CV"] :voltage-law :midi7-unipolar-10v}
+                       {:key :y :cpp-id "CV_CH3_Y_OUTPUT" :svg-label "CV_CH3_Y" :socket-mm {:x 208.0 :y 74.0} :config-label "Cursor 3 Y CV" :config-label-fragments ["Cursor " "Y CV"] :voltage-law :midi7-unipolar-10v}]}]}}

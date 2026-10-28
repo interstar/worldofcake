@@ -1,0 +1,3 @@
+{:extends :openfl
+ :geometry {:panel-width 900.0}
+ :components {"terminus" {:icon :lozenge}}}

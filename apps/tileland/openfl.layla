@@ -1,0 +1,10 @@
+<
+  playarea/tilelandplayarea(600)
+  [
+    controltop/spacer(30)
+    <redspeed/knob(3) greenspeed/knob(3) bluespeed/knob(3) speedend/spacer(2)>(90)
+    controlmiddle/spacer(110)
+    <reset/button pause/toggle>(50)
+    controlbottom/spacer(310)
+  ](140)
+>

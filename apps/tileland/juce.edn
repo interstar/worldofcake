@@ -1,0 +1,2 @@
+;; TileLand has no VST yet; its generated JUCE tree is the OpenFL panel.
+{:extends :openfl}

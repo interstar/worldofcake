@@ -1,0 +1,111 @@
+{:generator-version 1,
+ :application
+ {:id "gbloink",
+  :package "gbloink",
+  :generated-package "generated.gbloink",
+  :composition-kind :gbloink-world,
+  :sequencer-class "Gbloink",
+  :view-class "GbloinkView",
+  :composition-class "GbloinkCompositionGenerated",
+  :layout-class "GbloinkLayoutGenerated"},
+ :components
+ {"bluespeed"
+  {:unit :units-per-second,
+   :default 120.0,
+   :maximum 1000.0,
+   :mapping :logarithmic,
+   :output :midi-note,
+   :label "Blue speed",
+   :kind :knob,
+   :minimum 10.0,
+   :colour "0x3A74D0"},
+  "bluevelocity"
+  {:unit :midi-velocity,
+   :default 100.0,
+   :maximum 127.0,
+   :output :midi-note,
+   :label "Blue velocity",
+   :kind :knob,
+   :minimum 1.0,
+   :colour "0x3A74D0",
+   :tooltip "MIDI velocity of the blue ball's notes."},
+  "edge-notes"
+  {:kind :toggle,
+   :label "Wall notes",
+   :tooltip "Play a note when a ball hits the edge.",
+   :default false,
+   :colour "0x3A3F48"},
+  "greenspeed"
+  {:unit :units-per-second,
+   :default 120.0,
+   :maximum 1000.0,
+   :mapping :logarithmic,
+   :output :midi-note,
+   :label "Green speed",
+   :kind :knob,
+   :minimum 10.0,
+   :colour "0x2F9A48"},
+  "greenvelocity"
+  {:unit :midi-velocity,
+   :default 100.0,
+   :maximum 127.0,
+   :output :midi-note,
+   :label "Green velocity",
+   :kind :knob,
+   :minimum 1.0,
+   :colour "0x2F9A48",
+   :tooltip "MIDI velocity of the green ball's notes."},
+  "mute"
+  {:kind :toggle,
+   :label "Mute output",
+   :tooltip "Keep the balls moving but suppress MIDI output.",
+   :default false,
+   :colour "0x3A3F48"},
+  "note-length"
+  {:unit :seconds,
+   :default 0.05,
+   :maximum 2.0,
+   :mapping :logarithmic,
+   :output :midi-note,
+   :short-label "Len",
+   :label "Note length",
+   :kind :knob,
+   :minimum 0.005,
+   :colour "0x5A616D",
+   :tooltip "Time from each note-on to its note-off."},
+  "pause"
+  {:kind :toggle, :label "Pause", :default false, :colour "0x3A3F48"},
+  "playarea"
+  {:kind :play-area, :local-width 700.0, :local-height 500.0},
+  "redspeed"
+  {:unit :units-per-second,
+   :default 120.0,
+   :maximum 1000.0,
+   :mapping :logarithmic,
+   :output :midi-note,
+   :label "Red speed",
+   :kind :knob,
+   :minimum 10.0,
+   :colour "0xD4473D"},
+  "redvelocity"
+  {:unit :midi-velocity,
+   :default 100.0,
+   :maximum 127.0,
+   :output :midi-note,
+   :label "Red velocity",
+   :kind :knob,
+   :minimum 1.0,
+   :colour "0xD4473D",
+   :tooltip "MIDI velocity of the red ball's notes."},
+  "reset" {:kind :button, :label "Reset", :colour "0x3A3F48"},
+  "scaleselect"
+  {:kind :semantic-select,
+   :default-index 0,
+   :label "Scale",
+   :choices
+   [{:value 0, :label "Chromatic", :colour "0x606874"}
+    {:value 1, :label "Major", :colour "0x606874"}
+    {:value 2, :label "Minor", :colour "0x606874"}
+    {:value 3, :label "Harm minor", :colour "0x606874"}
+    {:value 4, :label "Mel minor", :colour "0x606874"}
+    {:value 5, :label "Min blues", :colour "0x606874"}]}}}

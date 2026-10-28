@@ -1,0 +1,13 @@
+[
+  <
+    [lane1label/textinput(28) lane1track/timeslidertrack(454) lane1channel/semanticselect(26) lane1cc/semanticselect(26)]
+    [lane2label/textinput(28) lane2track/timeslidertrack(454) lane2channel/semanticselect(26) lane2cc/semanticselect(26)]
+    [lane3label/textinput(28) lane3track/timeslidertrack(454) lane3channel/semanticselect(26) lane3cc/semanticselect(26)]
+    [lane4label/textinput(28) lane4track/timeslidertrack(454) lane4channel/semanticselect(26) lane4cc/semanticselect(26)]
+    [lane5label/textinput(28) lane5track/timeslidertrack(454) lane5channel/semanticselect(26) lane5cc/semanticselect(26)]
+    [lane6label/textinput(28) lane6track/timeslidertrack(454) lane6channel/semanticselect(26) lane6cc/semanticselect(26)]
+    [lane7label/textinput(28) lane7track/timeslidertrack(454) lane7channel/semanticselect(26) lane7cc/semanticselect(26)]
+    [lane8label/textinput(28) lane8track/timeslidertrack(454) lane8channel/semanticselect(26) lane8cc/semanticselect(26)]
+  >(544)
+  <controls-gap/spacer(10) reset/button pause/toggle>(32)
+]

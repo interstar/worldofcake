@@ -1,0 +1,24 @@
+[
+  title/title(8)
+  <
+    [play-top/spacer(31/4) playarea/playarea(95) play-bottom/spacer(31/4)](133)
+    control-gap/spacer(6)
+    [
+      <speed-heading/text volume-heading/text>(6)
+      <%red redspeed/knob redvelocity/knob>(20)
+      red-green-gap/spacer(2)
+      <%green greenspeed/knob greenvelocity/knob>(20)
+      green-blue-gap/spacer(2)
+      <%blue bluespeed/knob bluevelocity/knob>(20)
+      controls-gap/spacer(2)
+      [%controls
+        <scale-heading/text scaleselect/knob>(12)
+        <note-length-heading/text note-length/knob>(12)
+        <reset/button pause/toggle mute/toggle edge-notes/toggle>(12)
+      ](77/2)
+    ](42)
+    patch-gap/spacer(11/2)
+    patchbay/patchbay(37)
+    right-gap/spacer(617/50)
+  >(221/2)
+]

@@ -1,0 +1,80 @@
+{;; Rack: 4 lanes, one CV output each. Rack draws its own panel (rack.layla, Rack's schema, below),
+ ;; so this generator writes only the app's model code for this target.
+ :model {:lanes 4}
+ :generate-views false
+ ;; Rack lanes are CV, not MIDI: no channel or CC selectors. Each lane keeps its label.
+ :components {"lane{n}channel" nil
+              "lane{n}cc" nil
+              "lane{n}track" {:channel-control nil :cc-control nil}}
+ :app :timeslider
+ :target :vcvrack
+ :application {:panel-svg "TimeSlider.svg"
+               :title "GLR : Time Sliders"}
+ :module {:slug "TimeSlider"
+          :plugin "WorldOfCake-TimeSlider"
+          :panel {:width-mm 132.08
+                  :height-mm 128.5 :fill "#f1efea"}}
+ :geometry {:panel-width 132.08 :panel-height 128.5
+            :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+ ;; Panel text (title, captions, patch-bay labels) is outlined into the SVG by the generator.
+ :rack-components {"title" {:kind :title :text "GLR : Time Sliders" :anchor :middle}
+                   "playarea" {:kind :play-area}
+                   "patchbay" {:kind :patch-bay}
+                   "reset" {:kind :button :label "Reset" :caption-position :below :font-size-mm 2.1}
+                   "pause" {:kind :toggle :label "Pause" :caption-position :below :font-size-mm 2.1}}
+ :patch-bay {:title "Outputs"
+             :header-y-mm 15.0
+             :bounds-mm {:x 112.0 :y 18.0 :width 17.0 :height 78.0}
+             :columns [{:key :cv :label "CV" :x-mm 120.5}]
+             :groups [{:key :track-1
+                       :label "Lane 1"
+                       :color "#D4473D"
+                       :fill "#D4473D"
+                       :bounds-mm {:x 112.0 :y 18.0 :width 17.0 :height 16.0}
+                       :y-mm 26.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER1_OUTPUT"
+                                  :svg-label "CV_SLIDER1"
+                                  :socket-mm {:x 120.5 :y 26.0}
+                                  :config-label "Slider 1 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}
+                      {:key :track-2
+                       :label "Lane 2"
+                       :color "#2F9A48"
+                       :fill "#2F9A48"
+                       :bounds-mm {:x 112.0 :y 38.0 :width 17.0 :height 16.0}
+                       :y-mm 46.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER2_OUTPUT"
+                                  :svg-label "CV_SLIDER2"
+                                  :socket-mm {:x 120.5 :y 46.0}
+                                  :config-label "Slider 2 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}
+                      {:key :track-3
+                       :label "Lane 3"
+                       :color "#3A74D0"
+                       :fill "#3A74D0"
+                       :bounds-mm {:x 112.0 :y 58.0 :width 17.0 :height 16.0}
+                       :y-mm 66.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER3_OUTPUT"
+                                  :svg-label "CV_SLIDER3"
+                                  :socket-mm {:x 120.5 :y 66.0}
+                                  :config-label "Slider 3 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}
+                      {:key :track-4
+                       :label "Lane 4"
+                       :color "#D9A02B"
+                       :fill "#D9A02B"
+                       :bounds-mm {:x 112.0 :y 78.0 :width 17.0 :height 16.0}
+                       :y-mm 86.0
+                       :outputs [{:key :cv
+                                  :cpp-id "CV_SLIDER4_OUTPUT"
+                                  :svg-label "CV_SLIDER4"
+                                  :socket-mm {:x 120.5 :y 86.0}
+                                  :config-label "Slider 4 CV"
+                                  :config-label-fragments ["Slider " " CV"]
+                                  :voltage-law :midi7-unipolar-10v}]}]}}

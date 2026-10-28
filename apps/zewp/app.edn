@@ -1,0 +1,23 @@
+{:generator-version 1
+ ;; Zewp: line-shaped creatures that wander a world of blocks you can drag about.
+ ;; What the app is, for every target. Targets adapt it in <target>.edn (see docs/APP_TARGETS.md).
+ :application {:id "zewp"
+               :package "zewp"
+               :generated-package "generated.zewp"
+               :composition-kind :worldofcake-components
+               :sequencer-class "ZewpSequencer"
+               :view-class "ZewpView"
+               :composition-class "ZewpCompositionGenerated"
+               :layout-class "ZewpLayoutGenerated"}
+ ;; The model's world, in its own units on every target (ZewpModelGenerated / metadata::zewp::model).
+ :model {:world-width 600 :world-height 560}
+ ;; Zewp colours in creation order: red, green, blue first, as every WoC app's three voices.
+ :palettes {:zewps ["0xD4473D" "0x2F9A48" "0x3A74D0" "0xD9A02B" "0x8E5CC4" "0x2FA3A0" "0xE07A3A" "0xC75B8E" "0x9AA0A8" "0xF0F0F0"]}
+ :components
+ {"playarea" {:kind :play-area :local-width [:model :world-width] :local-height [:model :world-height]}
+  "population" {:kind :knob :minimum 0.0 :maximum 40.0 :default 10.0
+                :label "Zewps" :colour "0xB0B0B0" :tooltip "How many zewps are in the world."}
+  "speed" {:kind :knob :minimum 0.1 :maximum 4.0 :default 1.0 :mapping :logarithmic :unit :speed-multiplier
+           :label "Speed" :colour "0x40C0FF" :tooltip "How fast the zewps move."}
+  "reset" {:kind :button :label "Reset" :colour "0x606874"}
+  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}}

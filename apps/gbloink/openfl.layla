@@ -1,0 +1,14 @@
+<
+  playarea/gbloinkplayarea(823)
+  [
+    <speed-heading/text velocity-heading/text>(18)
+    <%red redspeed/knob redvelocity/knob>(125)
+    <%green greenspeed/knob greenvelocity/knob>(125)
+    <%blue bluespeed/knob bluevelocity/knob>(125)
+    [%controls
+      scaleselect/semanticselect(32)
+      <note-length-heading/text note-length/knob>(72)
+      <reset/button pause/toggle mute/toggle edge-notes/toggle>(36)
+    ](171)
+  ](209)
+>

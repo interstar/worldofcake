@@ -1,0 +1,2 @@
+;; The VST is the OpenFL panel.
+{:extends :openfl}

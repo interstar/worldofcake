@@ -1,0 +1,35 @@
+[
+  title/title(8)
+  <
+    [play-top/spacer(29/4) playarea/playarea(96) play-bottom/spacer(29/4)](96)
+    control-gap/spacer(6)
+    [
+      speed-heading/text(5)
+      <%red redspeed/knob>(16)
+      red-green-gap/spacer(1)
+      <%green greenspeed/knob>(16)
+      green-blue-gap/spacer(1)
+      <%blue bluespeed/knob>(16)
+      controls-gap/spacer(2)
+      [%controls
+        <cursor-heading/text(24) [cursor-choices/text(4) selectcursor/knob(6)](12)>(10)
+        <scale-heading/text(24) scaleselect/knob(12)>(10)
+        <terminus-heading/text(24) terminus/toggle(12)>(8)
+        <note-length-heading/text(24) note-length/knob(12)>(10)
+        <reset/button pause/toggle rotate-left/button rotate-right/button>(23/2)
+      ](107/2)
+    ](40)
+    patch-gap/spacer(6)
+    [
+      patch-top/spacer(15/2)
+      patchbay/patchbay(64)
+      patch-title-space/spacer(10)
+      legend-heading/text(5)
+      circle-info/text(6)
+      triangle-info/text(6)
+      square-info/text(6)
+      terminus-info/text(6)
+    ](58)
+    right-gap/spacer(238/25)
+  >(221/2)
+]

@@ -1,0 +1,16 @@
+<
+  playarea/kdiagramplayarea(628)
+  [
+    speed-heading/text(18)
+    <%red redspeed/knob>(110)
+    <%green greenspeed/knob>(110)
+    <%blue bluespeed/knob>(110)
+    [%controls
+      selectcursor/semanticselect(30)
+      scaleselect/semanticselect(30)
+      channel/semanticselect(30)
+      <note-length-heading/text note-length/knob>(64)
+      <reset/button pause/toggle terminus/toggle rotate-left/button rotate-right/button>(34)
+    ](216)
+  ](254)
+>

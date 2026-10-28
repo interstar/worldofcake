@@ -1,0 +1,19 @@
+[
+  title/title(10)
+  <
+    [
+      control-top/spacer(8)
+      speed-heading/text(5)
+      redspeed/knob(17)
+      greenspeed/knob(17)
+      bluespeed/knob(17)
+      control-middle/spacer(8)
+      <reset/button pause/toggle>(12)
+      control-bottom/spacer(69/2)
+    ](34)
+    [play-top/spacer(3) playarea/playarea(108) play-bottom/spacer(15/2)](108)
+    patch-gap/spacer(77/2)
+    patchbay/patchbay(37)
+    right-gap/spacer(1317/50)
+  >(237/2)
+]

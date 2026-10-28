@@ -1,0 +1,26 @@
+{:generator-version 1
+ ;; TileLand: three cursors running over a grid of curved tiles that steer them; click a tile to turn it.
+ ;; What the app is, for every target. Targets adapt it in <target>.edn (see docs/APP_TARGETS.md).
+ :application {:id "tileland"
+               :package "tileland"
+               :generated-package "generated.tileland"
+               :composition-kind :worldofcake-components
+               :sequencer-class "TileLandSequencer"
+               :view-class "TileLandView"
+               :composition-class "TileLandCompositionGenerated"
+               :layout-class "TileLandLayoutGenerated"}
+ ;; The model's world, in its own units on every target (TileLandModelGenerated / metadata::tileland::model):
+ ;; a square of world-width / tile-size tiles a side.
+ :model {:world-width 600 :world-height 600 :tile-size 50}
+ ;; Cursor colours: red, green, blue, as every WoC app's three voices.
+ :palettes {:cursors ["0xD4473D" "0x2F9A48" "0x3A74D0"]}
+ :components
+ {"playarea" {:kind :play-area :local-width [:model :world-width] :local-height [:model :world-height]}
+  "redspeed" {:kind :knob :minimum 0.25 :maximum 40.0 :default 2.0 :mapping :logarithmic :unit :tiles-per-second
+              :label "Red speed" :short-label "R" :colour "0xD4473D" :tooltip "Tiles per second of the red cursor."}
+  "greenspeed" {:kind :knob :minimum 0.25 :maximum 40.0 :default 2.0 :mapping :logarithmic :unit :tiles-per-second
+                :label "Green speed" :short-label "G" :colour "0x2F9A48" :tooltip "Tiles per second of the green cursor."}
+  "bluespeed" {:kind :knob :minimum 0.25 :maximum 40.0 :default 2.0 :mapping :logarithmic :unit :tiles-per-second
+               :label "Blue speed" :short-label "B" :colour "0x3A74D0" :tooltip "Tiles per second of the blue cursor."}
+  "reset" {:kind :button :label "Reset" :colour "0x606874"}
+  "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}}
