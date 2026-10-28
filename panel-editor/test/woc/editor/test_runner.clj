@@ -12,10 +12,10 @@
   (doseq [app model/apps]
     (testing app
       (let [pair (server/read-panel app)
-            config (edn/read-string (:edn pair))
-            expected (generator/calculate-geometry (:root (:data (layla/parse-intent (:layla pair))))
+            {:keys [config layla]} (server/resolve-sources pair pair)
+            expected (generator/calculate-geometry (:root (:data (layla/parse-intent layla)))
                                                   (:geometry config) (:components config))
-            actual (:placed (model/panel (:layla pair) config))]
+            actual (:placed (model/panel layla config))]
         (is (= expected actual) "Every container and leaf rectangle matches production")))))
 
 (deftest invalid-edits
@@ -35,7 +35,7 @@
 
 (deftest choice-range-support
   (let [pair (server/read-panel "timeslider")
-        config (edn/read-string (:edn pair))
+        config (:config (server/resolve-sources pair pair))
         expanded (:config (model/panel (:layla pair) config))
         channel (get-in expanded [:components "lane1channel"])
         cc (get-in expanded [:components "lane1cc"])]
@@ -69,7 +69,66 @@
       (finally
         (doseq [file (reverse (file-seq temp))] (.delete file))))))
 
+(deftest migrated-sources-workflow
+  (let [temp (.toFile (java.nio.file.Files/createTempDirectory "woc-apps-test" (make-array java.nio.file.attribute.FileAttribute 0)))
+        app-dir (io/file temp "apps/timeslider") legacy-dir (io/file temp "layouts/openfl")
+        originals (server/read-panel "timeslider")]
+    (.mkdirs app-dir) (.mkdirs legacy-dir)
+    (doseq [[name content] (:dependencies originals)] (spit (io/file app-dir name) content :encoding "UTF-8"))
+    (spit (io/file legacy-dir "timeslider.layla") "NEVER WRITE THIS")
+    (spit (io/file legacy-dir "timeslider.edn") "NEVER WRITE THIS")
+    (try
+      (with-redefs [server/root temp]
+        (let [before (server/read-panel "timeslider")
+              draft (-> before (update :layla str "\n") (update :edn str "\n;; visual ✓\n") (update :app-edn str "\n;; shared ✓\n"))
+              preview (server/preview-panel "timeslider" draft)]
+          (is (= :migrated (:kind before)))
+          (is (= #{:layla :edn :app-edn} (set (keys (:paths before)))))
+          (is (= [:openfl] (:chain preview)))
+          (is (map? (model/panel (:layla preview) (:config preview))))
+          (is (= before (server/read-panel "timeslider")) "Preview never writes real sources")
+          (is (thrown? Exception (server/save-panel! "timeslider" (assoc draft :edn "{} trailing"))))
+          (is (= before (server/read-panel "timeslider")) "Invalid merged draft writes nothing")
+          (let [saved (server/save-panel! "timeslider" draft)]
+            (doseq [key [:layla :edn :app-edn]] (is (= (get draft key) (get saved key))))
+            (doseq [key [:layla :edn :app-edn]]
+              (let [f (io/file temp (get-in saved [:paths key]))]
+                (spit f (str (get saved key) "\n") :encoding "UTF-8")
+                (is (= 409 (:status (ex-data (try (server/save-panel! "timeslider" saved) (catch Exception e e))))))
+                (spit f (get saved key) :encoding "UTF-8")))
+            (is (= "NEVER WRITE THIS" (slurp (io/file legacy-dir "timeslider.edn"))))
+            (is (= "NEVER WRITE THIS" (slurp (io/file legacy-dir "timeslider.layla"))))))
+        (let [before (server/read-panel "timeslider")
+              draft (-> before (update :layla str "\n") (update :edn str "\n;; rollback\n") (update :app-edn str "\n;; rollback\n"))
+              write-fn spit failed? (atom false)
+              target (.getCanonicalPath (io/file app-dir "openfl.edn"))]
+          (with-redefs [clojure.core/spit
+                        (fn [file & args]
+                          (if (and (= target (.getCanonicalPath (io/file file))) (compare-and-set! failed? false true))
+                            (throw (java.io.IOException. "Injected write failure"))
+                            (apply write-fn file args)))]
+            (is (thrown? java.io.IOException (server/save-panel! "timeslider" draft))))
+          (is @failed?)
+          (is (= before (server/read-panel "timeslider")) "A partial save restores all three files"))
+        ;; An actual inherited overlay is resolved by the generator, not editor merging.
+        (let [before (server/read-panel "timeslider")
+              overlay (panel-edn/read-one (:edn before))
+              geometry (:geometry overlay)]
+          (spit (io/file app-dir "desktop.edn") (pr-str {:geometry geometry :probe {:keep 1 :drop 2} :items [1 2]}))
+          (spit (io/file app-dir "openfl.edn")
+                (pr-str (assoc (dissoc overlay :geometry) :extends :desktop :probe {:drop nil} :items [3])))
+          (let [inherited (server/read-panel "timeslider")
+                preview (server/preview-panel "timeslider" inherited)]
+            (is (= [:openfl :desktop] (:chain preview)))
+            (is (= geometry (get-in preview [:config :geometry])))
+            (is (= {:keep 1} (get-in preview [:config :probe])))
+            (is (= [3] (get-in preview [:config :items])))
+            (spit (io/file app-dir "desktop.edn") "{}")
+            (is (= 409 (:status (ex-data (try (server/save-panel! "timeslider" inherited) (catch Exception e e)))))))))
+      (finally (doseq [f (reverse (file-seq temp))] (.delete f))))))
+
 (defn -main [& _]
   (println "Layla parser source:" (str (io/resource "layla/core.cljc")))
+  (println "Target resolver source:" (str (io/resource "worldofcake/laylagen/targets.clj")))
   (let [result (run-tests 'woc.editor.test-runner)]
     (System/exit (if (zero? (+ (:fail result) (:error result))) 0 1))))

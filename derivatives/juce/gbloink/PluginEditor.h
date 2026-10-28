@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "GbloinkPlayfield.h"
 #include "WocJuceEditorSupport.h"
 #include "worldofcake/generated/gbloink/GbloinkControlMetadataGenerated.h"
 
@@ -30,6 +31,8 @@ class GbloinkAudioProcessorEditor final : public juce::AudioProcessorEditor,
     juce::TooltipWindow tooltips{this};
     worldofcake::bridge::GbloinkVisualSnapshot snapshot;
     juce::Rectangle<int> playArea;
+    GbloinkPlayfield playfield;
+    juce::ToggleButton visualEffects;
     std::array<juce::Slider, 3> speedSliders;
     std::array<juce::Slider, 3> velocitySliders;
     juce::Slider noteLength;

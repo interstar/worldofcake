@@ -179,3 +179,60 @@ audible/visible alignment. Gbloink headless regression tests passed after adding
 the initial view-only effect. Rack/JUCE portability, collision cues, bloom,
 context-loss resilience and GPU execution timing remain separate verification
 work. Do not promote this path to the default on the basis of the browser demo.
+
+## Collision tuning and block flashes (27 October 2026)
+
+Following visual feedback in Rack, ring maximum radius is now 96 logical pixels
+at velocity 127 (80% of the previous diameter). Each ring expands and fades in
+0.56 seconds, staggered by 0.064 seconds, finishing within 0.688 seconds.
+Ball-to-ball impacts retain their brighter colour and stroke.
+
+A block hit now raises that block's colour to full opacity for 1.5 seconds,
+then returns to its usual opacity over 0.3 seconds. Repeated hits refresh the
+flash. Transient block identities travel with collision cues through the native
+snapshot, so replacing a block cannot transfer an old flash to its replacement.
+Rack's independent “Block impact flashes” menu switch defaults to enabled.
+Both effects use elapsed presentation time and finish fading while paused.
+The experimental OpenFL preview uses the same sizing and timing.
+
+## JUCE/VST3 visual port (27 October 2026)
+
+Gbloink's JUCE editor now owns a dedicated OpenGL playfield. Two fixed-size
+350x250 framebuffer textures retain and fade ball marks using the
+same shared GLSL decay function as Rack. The sharp foreground is composited by
+JUCE after the trail pass. Snapshot balls and appearance settings cross to the
+GL thread in a small mutex-protected packet; audio processing never enters GL.
+Marks require model time to advance, so host stop and manual pause let history
+fade without repainting stationary marks. Reset/import clears visual history,
+and context teardown releases framebuffer, shader and vertex-buffer resources.
+
+The foreground matches the tuned Rack rings (96-pixel maximum radius scaled by
+MIDI velocity, 0.56-second expansion with 0.064-second staggering), brighter
+ball-to-ball contacts, and targeted block opacity flashes. A visible Visual effects toggle in the VST control panel switches all three effects together. Trails use a fixed 0.22-second half-life and half-resolution textures. There is no VST appearance menu. The toggle is editor-local. A failed GL setup leaves the ordinary foreground drawing
+available. DAW visual behaviour and performance still require manual checking;
+build success alone does not establish either.
+
+## Note-linked impact feedback (27 October 2026)
+
+Collision cues now use the same output gate as note emission. Disabled wall
+notes produce no wall ripples; muted wall, block and ball-pair collisions produce
+no impact cues. Each presentation clears existing ripples and block flashes on
+mute, without disabling ball trails. The collision regression suite covers these
+silent contacts and matching unmuted note/cue cases. The Speed/Volume column
+headings use Volume as the user-facing term; MIDI velocity values and mappings
+remain unchanged.
+
+## App/target build migration (27 October 2026)
+
+Gbloink now generates all three target contracts from `apps/gbloink/`, through
+`generate.ps1`/`generate.sh`. Shared musical semantics live in `app.edn`; the
+JUCE overlay extends OpenFL and adds its editor-local Visual effects toggle.
+Rack generates model/control metadata directly, without desktop view classes.
+The old OpenFL/Rack/JUCE layout pairs, one-off VST layout helper and local header,
+and unused legacy Rack panel SVG have been removed.
+
+The working JUCE and Rack geometry and OpenFL control metadata were compared
+byte-for-byte with the pre-migration versions and remained identical. Collision
+and headless model tests pass against each target's own generated control IDs.
+The shared GLSL file, GPU lifecycle and snapshot collision protocol are unchanged;
+GPU resources remain host-owned and the logical playfield remains 700x500.

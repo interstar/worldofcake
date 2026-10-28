@@ -1,5 +1,6 @@
 /build/
-Source/generated/
+# Generated code, one tree per target (see docs/APP_TARGETS.md).
+/generated/
 
 # WoC generator source is maintained by the project owner outside this repo.
 /laylagen/
@@ -25,7 +26,6 @@ Source/generated/
 /out.txt
 /derivatives/vcvrack/diagnostics/
 /derivatives/vcvrack/postmortem/
-bridge/native/worldofcake/generated/
 
 # AI-assistant caches and local build logs.
 .codestory/

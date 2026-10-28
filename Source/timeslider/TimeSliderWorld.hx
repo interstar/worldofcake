@@ -14,21 +14,22 @@ class TimeSliderWorld extends ComponentWorldBase {
             TimeSliderLayout.PANEL_WIDTH,
             TimeSliderLayout.PANEL_HEIGHT
         );
-        sequencer = TimeSliderLayout.createSequencer();
+        sequencer = new TimeSliderSequencer();
         var view = new TimeSliderView(sequencer);
         setView(view);
         setComponents(buildComponents(view));
     }
 
+    /** One component per lane, over that lane's rectangle in the generated layout. */
     private function buildComponents(view:TimeSliderView):Array<IComponent> {
         var components:Array<IComponent> = [];
-        var sliders = sequencer.getSliders();
-        for (i in 0...sliders.length) {
-            var bounds = sliders[i].bounds;
+        var rects = TimeSliderLayout.TRACK_RECTS;
+        for (i in 0...sequencer.laneCount()) {
+            var r = rects[i];
             components.push(new TimeSliderTrackComponent(
-                sliders[i].uid,
-                new PanelPoint(bounds.left, bounds.top),
-                new PanelPoint(bounds.width(), bounds.height()),
+                TimeSliderSequencer.trackUid(i),
+                new PanelPoint(r[0], r[1]),
+                new PanelPoint(r[2], r[3]),
                 getWindowToPanelMapper(),
                 sequencer
             ));

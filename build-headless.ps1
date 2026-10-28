@@ -34,7 +34,7 @@ function Invoke-HaxeInterpreterTests {
         $goldenpondRoot = if ($env:GOLDENPOND_ROOT) { $env:GOLDENPOND_ROOT } else { Join-Path (Split-Path $repoRoot -Parent) 'goldenpond\goldenpond' }
         $goldenpondSource = Join-Path $goldenpondRoot 'current\haxe\src\goldenpond'
         if (Test-Path -LiteralPath $goldenpondSource) {
-            & haxe --interp -cp (Join-Path $repoRoot 'Source') -cp $goldenpondSource --main test.TestGoldenpondScoreCompiler
+            & haxe --interp -cp (Join-Path $repoRoot 'Source') -cp (Join-Path $repoRoot 'generated\openfl\haxe') -cp $goldenpondSource --main test.TestGoldenpondScoreCompiler
             if ($LASTEXITCODE -ne 0) { throw "Goldenpond compiler test failed with exit code $LASTEXITCODE" }
         } else {
             Write-Warning "Goldenpond source not found at $goldenpondSource; skipping Goldenpond app/test."

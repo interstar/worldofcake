@@ -2,10 +2,7 @@
 #include <cmath>
 namespace worldofcake::bridge
 {
-    TimeSliderControlRunner::TimeSliderControlRunner(int w, int h, double slow, double fast)
-        : modelWidth(w), modelHeight(h), modelSlow(slow), modelFast(fast)
-    {
-    }
+    TimeSliderControlRunner::TimeSliderControlRunner() = default;
     TimeSliderControlRunner::~TimeSliderControlRunner()
     {
         stop();
@@ -28,10 +25,6 @@ namespace worldofcake::bridge
             drainEvents();
         }
         publishSnapshot();
-    }
-    bool TimeSliderControlRunner::popControlSnapshot(TimeSliderControlSnapshot& v) noexcept
-    {
-        return controlSnapshots.pop(v);
     }
     bool TimeSliderControlRunner::popPreparedEvent(PreparedEvent& v) noexcept
     {
@@ -59,14 +52,13 @@ namespace worldofcake::bridge
         n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
         n.paused = harness->paused();
-        for (int i = 0; i < 4; i++) {
-            auto& s = n.sliders[i];
-            s.x = harness->sliderX(i);
-            s.y = harness->sliderY(i);
-            s.width = harness->sliderWidth(i);
-            s.height = harness->sliderHeight(i);
-            s.current = harness->sliderCurrent(i);
-            s.destination = harness->sliderDestination(i);
+        const int lanes = harness->sliderCount();
+        n.sliders.resize(static_cast<std::size_t>(lanes));
+        for (int i = 0; i < lanes; i++) {
+            auto& s = n.sliders[static_cast<std::size_t>(i)];
+            s.value = harness->sliderValue(i);
+            s.target = harness->sliderTarget(i);
+            s.moving = harness->sliderMoving(i);
             s.channel = harness->sliderChannel(i);
             s.ccNumber = harness->sliderCcNumber(i);
             s.label = harness->sliderLabel(i).utf8_str();
@@ -76,10 +68,8 @@ namespace worldofcake::bridge
     void TimeSliderControlRunner::publishSnapshot()
     {
         auto n = captureSnapshot();
-        if (!controlSnapshots.push(n))
-            snapshotDrops++;
         std::lock_guard<std::mutex> l(visualMutex);
-        visualSnapshot = n;
+        visualSnapshot = std::move(n);
     }
     void TimeSliderControlRunner::drainEvents()
     {
@@ -100,7 +90,7 @@ namespace worldofcake::bridge
     {
         if (modelCreated)
             return;
-        harness = TimeSliderHarness_obj::__new(modelWidth, modelHeight, modelSlow, modelFast);
+        harness = TimeSliderHarness_obj::__new();
         modelCreated = true;
         logicalTime = 0;
         publishSnapshot();

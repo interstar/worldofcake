@@ -1,5 +1,7 @@
 # WorldOfCake Architecture
 
+> How to write an app (model, EDN, Layla, generators, targets, Rack panels and their text) is in [`WRITING_WOC_APPS.md`](WRITING_WOC_APPS.md). This document describes the architecture behind it.
+
 Updated: 2026-10-24
 
 ## 1. Purpose and Design Direction
@@ -22,13 +24,13 @@ Important source areas:
 
 - `Source/worldofcake/`: core Haxe framework primitives and interfaces.
 - `Source/worldofcake/ui/`: OpenFL-oriented UI components and shell bases (`ComponentWorldBase`, `OpenFLAppBase`, `PlayArea`, `Slider`, component plumbing).
-- `Source/generated/<app>/`: generated Haxe layout, composition, and control-ID constants from Layla/EDN. These files should not be hand-edited.
+- `apps/<app>/`: each app's definition (`app.edn`) and per-target overlays and layouts (`<target>.edn`, `<target>.layla`); see `APP_TARGETS.md`. Apps not yet migrated still live in `layouts/`.
+- `generated/<target>/`: generated code, one tree per target (`openfl`, `juce`, `rack`): Haxe under `haxe/generated/<app>/`, C++ under `native/worldofcake/generated/`. Each target's build sees only its own tree. Not hand-edited.
 - `Source/<app>/`: app-specific Haxe code for the six current sequencers (`gbloink`, `zewp`, `kdiagram`, `tileland`, `timeslider`, `goldenpond`).
 - `Source/platform/`: simple instrumentation adapters such as `MonitorInstrument`.
 - `bridge/haxe/`: Haxe harness classes used by native runners.
-- `bridge/native/`: hand-written shared C++ native bridge code, including `ControlThread`, `ControlRunnerBase`, `SpscRingBuffer`, `StatePersistence`, bridge POD types (`WorldOfCakeBridgeTypes.h`), `HaxeRuntimeBoot`, `WorldOfCakeOutputMapping`, and the per-app `*ControlRunner` shells. The `worldofcake/generated/` subtree is generated output (§6), not hand-written bridge code.
-- `layouts/openfl/`: canonical OpenFL Layla/EDN sources.
-- `layouts/rack/`: authored Rack-specific Layla/EDN variants. These are source-of-truth inputs and must be versioned.
+- `bridge/native/`: hand-written shared C++ native bridge code, including `ControlThread`, `ControlRunnerBase`, `SpscRingBuffer`, `StatePersistence`, bridge POD types (`WorldOfCakeBridgeTypes.h`), `HaxeRuntimeBoot`, `WorldOfCakeOutputMapping`, and the per-app `*ControlRunner` shells. Generated C++ is not here but in `generated/<target>/native/` (§6).
+- `layouts/openfl/`, `layouts/rack/`: the Layla/EDN sources of apps not yet moved to `apps/`.
 - `derivatives/vcvrack/`: VCV Rack module shells, Rack-specific panels/widgets, shared Rack build helpers, and install scripts.
 - `derivatives/juce/`: JUCE/VST3 module shells, shared JUCE helpers (`common/`), and the Windows JUCE build script.
 - `derivatives/openfl/`: OpenFL target shell — per-app `project-*.xml` Lime build descriptors and the OpenFL `Assets/` directory.
@@ -237,11 +239,11 @@ Responsibilities:
 
 ## 6. Layout Sources
 
-Layout is moving toward one source of truth per target:
+Each app is defined once in `apps/<app>/app.edn` and adapted per target by an overlay and a layout (`<target>.edn`, `<target>.layla`); `APP_TARGETS.md` gives the design, the merge rules and the migration status. Within that:
 
 - Layla owns spatial panel composition.
 - companion EDN owns component metadata such as ranges, labels, colors, widget hints, target bindings, and behavior-facing labels/defaults. The EDN map key is the semantic identity source; the generator assigns app-local numeric control UIDs in layout order. Essential app controls such as reset, pause, toggles, and rotate buttons are spatial Layla components in the canonical OpenFL layout.
-- generated Haxe code lives under `Source/generated/<app>/` (composition, layout constants, and control IDs such as `<App>ControlIdsGenerated.hx`; each directory also carries a copy of its source EDN as `geometry.edn`).
+- generated Haxe code lives under `generated/<target>/haxe/generated/<app>/` (composition, layout constants, and control IDs such as `<App>ControlIdsGenerated.hx`; each directory also carries a copy of its placed geometry as `geometry.edn`). The package is `generated.<app>` in every target's tree; the build chooses the tree.
 - app-local `*Layout.hx` files wrap generated layout constants and provide a stable app-facing layout API.
 - maintained app code should not import `*LayoutGenerated` directly. The intentional exception is the app-local `*Layout.hx` facade. Maintained behavior code may use generated control-ID classes directly or through temporary app-local aliases during migration.
 - app `World` classes may import generated `*CompositionGenerated` builders, because worlds are the OpenFL composition boundary.
@@ -273,21 +275,21 @@ Targets: OpenFL compositions add a `PanelBox` before any control (so it sits beh
 
 Examples:
 
-- `Source/zewp/ZewpLayout.hx` wraps `Source/generated/zewp/ZewpLayoutGenerated.hx`.
-- `Source/timeslider/TimeSliderLayout.hx` wraps `Source/generated/timeslider/TimeSliderLayoutGenerated.hx` and generated TimeSlider track metadata. TimeSlider track objects store generated UIDs, while persisted state stores stable slot indexes.
+- `Source/zewp/ZewpLayout.hx` wraps `generated.zewp.ZewpLayoutGenerated`.
+- `Source/timeslider/TimeSliderLayout.hx` wraps `generated.timeslider.TimeSliderLayoutGenerated` and generated TimeSlider track metadata. TimeSlider track objects store generated UIDs, while persisted state stores stable slot indexes.
 
 Rack uses target-specific Layla/EDN layout variants because Rack panels need different proportions, output sockets, and control idioms. The Rack pair is a second layout source of truth for the Rack panel: the Rack generator emits the panel SVG and native `ModuleWidget` layout from the same geometry. Rack EDN may define output jacks and other Rack-only metadata that has no OpenFL counterpart.
 
-All six current Rack modules now have Rack Layla/EDN pairs. `generate_rack_layout.sh` consumes each pair and writes the generated SVG under `derivatives/vcvrack/<app>/generated/` plus a native layout header under `bridge/native/worldofcake/generated/rack/`. The generated SVG includes Rack title/branding and panel-level visual regions; the native header supplies generated geometry consumed by Rack C++ where that module has completed the migration. Rack-only output sockets remain in Rack EDN. Native controls and custom playfield drawing are being migrated incrementally, so the Rack pair is the intended source of truth even where a C++ shell still has legacy handwritten placement.
+All six current Rack modules have Rack Layla/EDN pairs (`apps/<app>/rack.*`, or `layouts/rack/` until migrated). Generation (`generate.ps1`/`generate.sh`, target `rack`) writes the panel SVG under `derivatives/vcvrack/<app>/generated/` and native layout and output headers under `generated/rack/native/worldofcake/generated/rack/`. Rack draws its own panel, so for a migrated app `rack.edn` sets `:generate-views false` and the generator renders only the app's model code (control IDs, metadata, and model data such as TimeSlider's lane count) from the resolved config; apps not yet migrated take theirs from their OpenFL pair. The generated SVG includes Rack title/branding and panel-level visual regions; the native header supplies generated geometry consumed by Rack C++ where that module has completed the migration. Rack-only output sockets remain in Rack EDN. Native controls and custom playfield drawing are being migrated incrementally, so the Rack pair is the intended source of truth even where a C++ shell still has legacy handwritten placement.
 
-All native control/layout C++ is generated from the Layla/EDN sources, never from the Haxe codebase. The generator emits, under `bridge/native/worldofcake/generated/`:
+All native control/layout C++ is generated from the Layla/EDN sources, never from the Haxe codebase. The generator emits, under each target's `generated/<target>/native/worldofcake/generated/`:
 
-- `<app>/<App>ControlIdsGenerated.h`: numeric control UIDs from Layla (mirrors the Haxe `Source/generated/<app>/` IDs).
+- `<app>/<App>ControlIdsGenerated.h`: numeric control UIDs from Layla (mirrors the same target's Haxe IDs).
 - `<app>/<App>ControlMetadataGenerated.h`: semantic ranges, choices, labels, defaults, units, and normalize/denormalize helpers from the EDN.
-- `juce/<app>/LayoutGenerated.h`: JUCE panel widget geometry from the canonical OpenFL Layla/EDN layout.
+- `juce/<app>/LayoutGenerated.h`: JUCE panel widget geometry from the app's `juce` target (which extends `openfl`).
 - `rack/<app>/<App>RackLayoutGenerated.h` and `<App>RackOutputsGenerated.h`: Rack panel geometry and output socket labels from the Rack Layla/EDN variant.
 
-The `bridge/native/worldofcake/generated/` tree is generated output (gitignored alongside `Source/generated/` and `derivatives/vcvrack/*/generated/`) and is not hand-edited or treated as source. Only the surrounding hand-written files directly under `bridge/native/` (runners, queues, thread, persistence, POD types, mapping helpers) are maintained C++.
+The `generated/` trees are generated output (gitignored, as are `derivatives/vcvrack/*/generated/`) and are not hand-edited or treated as source. Only the surrounding hand-written files directly under `bridge/native/` (runners, queues, thread, persistence, POD types, mapping helpers) are maintained C++.
 
 ---
 
@@ -399,7 +401,7 @@ Key pieces:
 - `bridge/native/HaxeRuntimeBoot.h`: boots the hxcpp library exactly once and releases the loader thread's top-of-stack registration (required for Rack's plugin-loading thread).
 - `bridge/native/WorldOfCakeOutputMapping.h`: shared normalized↔MIDI↔CV conversion helpers used by native hosts.
 
-The generated C++ under `bridge/native/worldofcake/generated/` (control IDs, control metadata, Rack layout/outputs, and JUCE layout) is produced from the Layla/EDN sources, not from the Haxe codebase; see §6. The maintained C++ lives directly under `bridge/native/` plus the C++ unit tests in `bridge/native/tests/`.
+The generated C++ under `generated/<target>/native/worldofcake/generated/` (control IDs, control metadata, Rack layout/outputs, and JUCE layout) is produced from the Layla/EDN sources, not from the Haxe codebase; see §6. The maintained C++ lives directly under `bridge/native/` plus the C++ unit tests in `bridge/native/tests/`.
 
 The real-time host/audio side must not call into Haxe, allocate through Haxe, render, or take a Haxe/UI mutex. Native runners advance Haxe on the control side and publish prepared native events/snapshots for host consumption.
 
@@ -447,10 +449,12 @@ Current shape:
 - `derivatives/vcvrack/common/WocRackParamSync.hpp` owns repeated Rack-param-to-WoC-control mirroring helpers.
 - `derivatives/vcvrack/common/WocRackStateJson.hpp` owns Rack↔JSON persistence wrapping for the app-owned state JSON.
 - `derivatives/vcvrack/common/WocRackVoltage.hpp` owns MIDI↔CV/gate conversion on top of `WorldOfCakeOutputMapping.h`.
-- `Source/generated/<app>/<App>ControlIdsGenerated.hx` contains generated Haxe control IDs and generated OpenFL redraw-control UID lists for redrawable controls such as sliders, semantic selects, and knobs. Views use those lists, while app-specific draw dispatch remains handwritten.
-- `bridge/native/worldofcake/generated/<app>/<App>ControlIdsGenerated.h` contains generated C++ control IDs for Layla/EDN components, including buttons, toggles, knobs, sliders, selectors, play areas, and TimeSlider tracks. `bridge/native/WorldOfCakeControlIds.h` is now a compatibility/helper header that aliases generated names and provides grouping helpers such as `speedUid()` / `trackUid()`.
+- `generated/<target>/haxe/generated/<app>/<App>ControlIdsGenerated.hx` contains generated Haxe control IDs and generated OpenFL redraw-control UID lists for redrawable controls such as sliders, semantic selects, and knobs. Views use those lists, while app-specific draw dispatch remains handwritten.
+- `generated/<target>/native/worldofcake/generated/<app>/<App>ControlIdsGenerated.h` contains generated C++ control IDs for Layla/EDN components, including buttons, toggles, knobs, sliders, selectors, play areas, and TimeSlider tracks. `bridge/native/WorldOfCakeControlIds.h` is now a compatibility/helper header that aliases generated names and provides grouping helpers such as `speedUid()` / `trackUid()`.
 - generated hxcpp output, Rack object files, module binaries, and package output are written under `build/vcvrack/<module>/<platform>/`.
 - `derivatives/vcvrack/install_linux_local.sh` builds and installs Linux modules into the local Rack plugin folder.
+
+- panel artwork is the generated `derivatives/vcvrack/<module>/generated/<Slug>.svg`; module C++ takes positions from `<App>RackLayoutGenerated.h`. Static panel text is flattened to SVG paths by the generator (decided; see `WRITING_WOC_APPS.md` §9.3), never drawn in module C++.
 
 Rack uses the native runner boundary, not the obsolete direct-Haxe `*RackApi` approach. Audio processing consumes native snapshots/events produced by the control runner.
 
@@ -468,7 +472,7 @@ The JUCE target lives in `derivatives/juce/` and currently produces Gbloink, Tim
 - JUCE processors consume native events in `processBlock`, while JUCE editors render generated layout metadata and use host-native widgets only as the platform presentation layer;
 - generated control metadata supplies semantic ranges, choices, labels, units, and defaults; JUCE must not maintain a second hand-written semantic table;
 - coordinate conversion uses the shared WorldOfCake/native coordinate mapper, with only JUCE component/window conversion at the edge;
-- generated JUCE panel geometry lives in `bridge/native/worldofcake/generated/juce/<app>/LayoutGenerated.h` (Layla/EDN-derived, not Haxe-derived); shared JUCE helpers (`WocJuceCoordinateMapper.h`, `WocJuceEditorSupport.h`) live in `derivatives/juce/common/`; note output uses the host-neutral `NoteOutputScheduler` (§11).
+- generated JUCE panel geometry lives in `generated/juce/native/worldofcake/generated/juce/<app>/LayoutGenerated.h` (Layla/EDN-derived, not Haxe-derived); shared JUCE helpers (`WocJuceCoordinateMapper.h`, `WocJuceEditorSupport.h`) live in `derivatives/juce/common/`; note output uses the host-neutral `NoteOutputScheduler` (§11).
 
 VST transport policy is adapter-owned. Gbloink and K-Diagram are free-running models gated by DAW play/stop; Goldenpond follows DAW transport position/BPM; TimeSliders remain gesture-driven unless a future policy explicitly opts them into transport. Mute suppresses emitted musical events; pause stops model advancement; transport stop is a separate host gate.
 
@@ -504,7 +508,7 @@ Current constraints:
 - Resize currently replaces world mappers, but existing component instances may retain the mapper they were constructed with. This deserves a focused pass before relying heavily on dynamic resize behavior.
 - Output semantics differ by host: MIDI/MIDI-CC are the base assumption, while Rack exposes gates/CV whose musical meaning is user-patched.
 - OpenFL component UIDs are generated from Layla/EDN for the full canonical app UI. Rack control IDs for Rack-visible components are generated from the Rack Layla/EDN variant; Rack output/socket IDs remain Rack-local because sockets are physical host connection points.
-- The Layla/EDN generator (the `laylagen` tool, distributed as `vendor/layla/worldofcake-laylagen.jar`) is an offline build-time generator maintained outside this repository. A complete rebuild regenerates OpenFL Haxe composition/ID files, native C++ control-ID and metadata headers (from Layla/EDN, not from Haxe), JUCE layout headers, Rack metadata/layout headers, and Rack SVGs before compiling targets. Generated files are not hand-edited or treated as source; the generated native C++ under `bridge/native/worldofcake/generated/` is gitignored.
+- The Layla/EDN generator (the `laylagen` tool, distributed as `vendor/layla/worldofcake-laylagen.jar`) is an offline build-time generator maintained outside this repository. A complete rebuild regenerates OpenFL Haxe composition/ID files, native C++ control-ID and metadata headers (from Layla/EDN, not from Haxe), JUCE layout headers, Rack metadata/layout headers, and Rack SVGs before compiling targets. Generated files are not hand-edited or treated as source; the per-target `generated/` trees are gitignored.
 - The generation pass also emits target-neutral native control metadata (`*ControlMetadataGenerated.h`) from the EDN component semantics. This is the common contract consumed by Rack and JUCE/VST adapters for ranges, choices, labels, defaults, and text values. Host adapters may translate that contract into Rack parameters or JUCE widgets, but must not duplicate the semantic tables. Host-only concerns (Rack sockets/panel geometry, JUCE widget classes and host I/O) remain outside this common metadata layer.
 - Generated knob metadata also provides shared `normalize` and `denormalize` helpers. These define the adapter boundary explicitly: the WorldOfCake value remains in its semantic range, while a host such as Rack may expose a normalized `0..1` parameter and convert at the edge. Persistence, parameter synchronization, and host automation should use these helpers rather than repeating range arithmetic.
 - Control metadata also carries semantic `unit` and `output` tags (for example `speed`/`midi-note`, `midi-velocity`/`midi-note`, or `bpm`/`transport`). These tags describe the WorldOfCake meaning and intended musical destination; they are not Rack or JUCE parameter IDs and do not replace host-specific output wiring.

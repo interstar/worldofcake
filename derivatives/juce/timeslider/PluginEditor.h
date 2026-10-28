@@ -19,7 +19,8 @@ class TimeSliderAudioProcessorEditor final : public juce::AudioProcessorEditor, 
     void mouseDown(const juce::MouseEvent&) override;
 
   private:
-    static constexpr std::size_t kLanes = 4;
+    /** The JUCE target's lane count (`:model :lanes` in apps/timeslider, via openfl.edn). */
+    static constexpr std::size_t kLanes = worldofcake::metadata::timeslider::kLaneCount;
 
     void timerCallback() override;
     void sendValue(int controlId, double value);

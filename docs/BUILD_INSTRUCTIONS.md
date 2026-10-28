@@ -1,6 +1,29 @@
 # WorldOfCake Build Instructions
 
-This document describes how to build, package, install, and verify the WorldOfCake VCV Rack 2 modules on Windows and Linux.
+This document describes how to build, package, install, and verify the WorldOfCake apps for each target: VCV Rack 2 modules (Windows and Linux), JUCE/VST3 plugins (Windows), the OpenFL standalone previews, and the headless tests.
+
+## Build shape
+
+Every app is defined once under `apps/<app>/` (`app.edn`) and adapted per target by an overlay and a layout (`<target>.edn`, `<target>.layla`). Targets are `openfl`, `juce` and `rack`; they may differ in model shape (e.g. TimeSlider lanes), presentation and host specifics. `APP_TARGETS.md` explains the design.
+
+Every build therefore has two stages:
+
+1. **Generate** each app's code for the target into `generated/<target>/`:
+
+   ```powershell
+   .\generate.ps1 -App all -Target all
+   ```
+
+2. **Compile** the target. Each target's build puts only its own generated tree on its Haxe classpath and C++ include path:
+
+   | Target | Generated tree used | Build entry point |
+   | --- | --- | --- |
+   | OpenFL previews | `generated/openfl/haxe` | `run-openfl-preview.ps1` |
+   | Headless tests | `generated/openfl/haxe`, `generated/openfl/native` | `build-headless.ps1` |
+   | JUCE/VST3 | `generated/juce/haxe`, `generated/juce/native` | `derivatives/juce/build-windows.ps1` |
+   | VCV Rack | `generated/rack/haxe`, `generated/rack/native` | `derivatives/vcvrack/build-rack-windows.ps1`, `build_module.sh` |
+
+Generate before compiling whenever `apps/` changes, after pulling, or when in doubt; it is deterministic and quick. A target's build never reads another target's generated tree. Saved state (Rack patches, VST/DAW projects) belongs to the target that wrote it and is not portable between targets with different model shapes.
 
 ## Supported Rack modules
 
@@ -41,27 +64,74 @@ build/vcvrack/<module>/linux/
 
 This allows Windows and Linux outputs to coexist without either build deleting or linking the other platform's objects.
 
-## Source-generation policy
+## Source generation
 
-Rack panels and native layout metadata are generated from the canonical Rack Layla/EDN sources under `layouts/rack/`. Generated sources and SVG files are gitignored build output and must not be edited manually.
+Sources live under `apps/<app>/`:
 
-The same Layla/EDN generation pass also emits target-neutral native control metadata for every app under `bridge/native/worldofcake/generated/<app>/*ControlMetadataGenerated.h`. This is the common semantic layer for Rack and JUCE/VST adapters: ranges, choices, labels, defaults, and text defaults belong there. Host wrappers should bind their own widgets/parameters to these generated IDs and metadata; they should not recreate those values by hand. Regenerate all apps before a native build with the bundled generator JAR (requires Java 11+; no Layla or Clojure checkout is needed). From the repository root, run one app at a time, for example:
-
-```powershell
-java -jar vendor\layla\worldofcake-laylagen.jar --input layouts\openfl\gbloink.layla --config layouts\openfl\gbloink.edn --output Source --native-output bridge\native
+```text
+apps/<app>/app.edn          what the app is: controls, ranges, labels, outputs, model parameters
+apps/<app>/<target>.edn     the target's overlay (deep-merged over app.edn; may :extends another target)
+apps/<app>/<target>.layla   the target's layout (optional for a target that :extends one)
 ```
 
-Repeat for each app (`gbloink`, `goldenpond`, `kdiagram`, `tileland`, `timeslider`, `zewp`).
+The generator renders each app/target pair into that target's tree:
 
-Layout generation is separate from ordinary native compilation. A routine Rack rebuild should not modify generated source files.
+```text
+generated/<target>/haxe/generated/<app>/                 Haxe layout, composition, control IDs (and app-specific model data)
+generated/<target>/native/worldofcake/generated/<app>/   C++ control IDs and control metadata
+generated/juce/native/worldofcake/generated/juce/<app>/  JUCE panel geometry (LayoutGenerated.h)
+generated/rack/native/worldofcake/generated/rack/<app>/  Rack layout and output-socket headers
+derivatives/vcvrack/<module>/generated/<Slug>.svg        Rack panel SVG
+```
+
+The generated control metadata is the common semantic layer for host adapters: ranges, choices, labels, tooltips, defaults and control outputs belong there. Host wrappers bind their widgets and parameters to the generated IDs and metadata; they do not recreate those values by hand.
+
+Generate with the bundled generator JAR (requires Java 11+; no Layla or Clojure checkout is needed). From the repository root:
+
+```powershell
+.\generate.ps1 -App all -Target all          # everything
+.\generate.ps1 -App timeslider -Target juce  # one app for one target
+.\generate.ps1 -App all -Target rack -Check  # verify the tree is current; write nothing
+```
+
+```bash
+./generate.sh all all
+./generate.sh timeslider juce
+./generate.sh all rack --check
+```
+
+Each call runs `java -jar vendor/layla/worldofcake-laylagen.jar --app apps/<app> --target <target> ...`. `run-laylagen.ps1` takes the same `-App`/`-Target` arguments but runs the generator from its Clojure source (for generator development), and `-Task test` runs the generator's own tests.
+
+Generation is separate from compilation. A routine native rebuild does not modify generated files, and generated files are gitignored build output that must not be edited by hand.
 
 ## Native metadata regression test
 
-Compile and run the target-neutral parameter conversion test on Windows:
+Compile and run the parameter conversion test on Windows (against the Rack tree, which it was written for):
 
 ```powershell
-& 'C:\msys64\mingw64\bin\g++.exe' -std=c++11 -I bridge/native bridge/native/tests/WorldOfCakeControlMetadata_test.cpp -o "$env:TEMP\woc-control-metadata-test.exe"
+& 'C:\msys64\mingw64\bin\g++.exe' -std=c++11 -I bridge/native -I generated/rack/native bridge/native/tests/WorldOfCakeControlMetadata_test.cpp -o "$env:TEMP\woc-control-metadata-test.exe"
 & "$env:TEMP\woc-control-metadata-test.exe"
+```
+
+## OpenFL previews and headless tests
+
+Both compile against `generated/openfl/`. Generate first, then:
+
+```powershell
+.\generate.ps1 -App all -Target openfl
+.\run-openfl-preview.ps1 -App timeslider              # build and run one app
+.\run-openfl-preview.ps1 -App timeslider -BuildOnly   # build only
+.\build-headless.ps1 -Target interp                   # Haxe model tests (interpreter)
+```
+
+`derivatives/openfl/project-<app>.xml` puts `Source` and `generated/openfl/haxe` on the classpath. All OpenFL apps share `derivatives/openfl/Export/windows/bin`; close a running preview before rebuilding, or the build fails copying `lime.ndll`.
+
+## VCV Rack
+
+The rest of this section and the Linux section describe the Rack modules. Each module compiles against `generated/rack/`: its Haxe build file puts `generated/rack/haxe` on the classpath and the shared Makefile adds `generated/rack/native` to the include path. Generate the Rack tree before building:
+
+```powershell
+.\generate.ps1 -App all -Target rack
 ```
 
 ## Windows
@@ -332,17 +402,16 @@ The shared Makefile provides:
 
 ## Generated layout checks
 
-Layout generation is not required for every C++ rebuild. When Layla or EDN sources change, regenerate and validate them before compiling modules. On Linux, the Rack generator entry points are:
+Generation is not required for every C++ rebuild. When anything under `apps/` changes, regenerate and verify before compiling:
 
 ```bash
-./derivatives/vcvrack/generate_rack_layout.sh
-./derivatives/vcvrack/generate_rack_metadata.sh
-./derivatives/vcvrack/check_rack_metadata.sh
+./generate.sh all all
+./generate.sh all all --check
 ```
 
-On Windows, drive the same bundled JAR with `java` (requires Java 11+); the Linux scripts above are the canonical argument reference for each generator task.
+For Rack, the check also verifies the module sources against the generated socket metadata (output IDs and order in `OutputIds`, `configOutput` labels, socket coordinates in the C++ and the panel SVG).
 
-Do not hand-edit files under `Source/generated/`, `bridge/native/worldofcake/generated/`, or module `generated/` directories.
+Do not hand-edit files under `generated/` or module `generated/` directories.
 
 ## Troubleshooting
 
@@ -385,9 +454,10 @@ The current machine has been verified with:
 
 The JUCE checkout is supplied as a build parameter rather than copied into or hard-coded by CMake. The wrapper's default points at the verified checkout above; override `-JuceDir` when moving the project or using another JUCE checkout.
 
-From the WorldOfCake root in PowerShell:
+The plugins compile against `generated/juce/`. The `juce` target `:extends` `openfl`, so a VST is the OpenFL panel unless `apps/<app>/juce.edn` says otherwise. From the WorldOfCake root in PowerShell:
 
 ```powershell
+.\generate.ps1 -App all -Target juce
 .\derivatives\juce\build-windows.ps1 -Config Release
 ```
 
@@ -412,8 +482,8 @@ The wrapper:
 
 1. locates hxcpp through `haxelib`;
 2. enters the Visual Studio x64 developer environment;
-3. compiles the Gbloink Haxe bridge and hxcpp runtime with MSVC;
-4. configures the JUCE CMake project; and
+3. compiles the plugin's Haxe bridge (`derivatives/juce/<plugin>/haxe/<app>.hxml`, with `generated/juce/haxe` on the classpath) and the hxcpp runtime with MSVC;
+4. configures the JUCE CMake project, with `generated/juce/native` on the include path; and
 5. builds both VST3 and standalone products.
 
 `-D NO_AUTO_MSVC` is intentional. hxcpp 4.3.2's automatic Visual Studio setup loses the usable compiler environment on this machine. The wrapper establishes that environment explicitly. It also normalizes duplicate `Path`/`PATH` entries because MSBuild otherwise fails before compiler identification.
@@ -444,14 +514,15 @@ VST adapters must reuse the WorldOfCake native bridge rather than reimplementing
 
 - `bridge/native/ControlRunnerBase.h` owns runner lifecycle, queues, persistence requests, and host transport publication.
 - `bridge/native/WorldOfCakeBridgeTypes.h` owns native `PanelPoint`, `LocalPoint`, `ScreenPoint`, `CoordinateMapper`, commands, snapshots, and prepared events.
-- generated `bridge/native/worldofcake/generated/juce/<app>/LayoutGenerated.h` and control-ID headers come from the canonical OpenFL Layla/EDN layout.
+- generated `generated/juce/native/worldofcake/generated/juce/<app>/LayoutGenerated.h`, control IDs and control metadata come from the app's `juce` target (`apps/<app>/juce.edn`, which normally extends `openfl`).
+- Host parameters are declared from the generated `kControlOutputs` table (see "Control outputs" in `architecture.md`); their count and names are fixed per target at build time.
 - JUCE code supplies host widgets, drawing, and audio/MIDI block integration only.
 - Coordinate conversion must go through the shared native mapper. Do not add per-plugin scaling formulas.
 - VST widget bounds should be mapped from generated layout rectangles; hand-authored JUCE geometry is deprecated.
 - Transport behavior is an explicit host-adapter policy: Gbloink and K-Diagram are free-running generators that pause/resume with DAW play/stop without seeking to host position; Goldenpond and other clocked sequencers follow DAW play/stop and host transport position; TimeSliders may remain independent because its motion is gesture-driven. Keep these policies out of shared Haxe sequencer code.
 - EDN component metadata is also the source for labels, short labels, and tooltips. JUCE and Rack choose the host-specific font/widget presentation, but must not duplicate semantic text in C++.
 
-When layouts change, regenerate with the bundled generator JAR (`java -jar vendor\layla\worldofcake-laylagen.jar …`) before rebuilding. Generated files are not hand-edited.
+When `apps/` changes, regenerate the JUCE tree (`.\generate.ps1 -App all -Target juce`) before rebuilding. Generated files are not hand-edited.
 
 The Gbloink runner uses a host-clock mailbox and simulates 20 ms ahead in 1 ms host-neutral physics steps. Prepared events carry a transport epoch and absolute logical timestamp. The Haxe model emits complete notes: each note-on is followed by a note-off after the user's **Note length** (default 50 ms), and pause/mute/reset release sounding notes. The shared `bridge/native/NoteOutputScheduler.h` converts timestamps to offsets within the current audio block, retains future events, delivers late note-offs instead of dropping them, and releases sounding notes on stop, seek, and other host discontinuities.
 
@@ -469,6 +540,8 @@ The build currently emits many warnings from hxcpp 4.3.2 headers under JUCE's re
 
 ## Related documentation
 
+- `WRITING_WOC_APPS.md` (the definitive guide to writing apps: model, EDN, Layla, generators, Rack panels and panel text)
+- `APP_TARGETS.md` (apps, targets, overlays and the generated trees)
 - `architecture.md`
 - `../VST3_IMPLEMENTATION_PLAN.md`
 - `WINDOWS_DEVELOPMENT-rack.md`

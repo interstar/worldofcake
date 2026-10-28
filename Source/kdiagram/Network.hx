@@ -31,9 +31,31 @@ class Network {
         }
 
         for (i in 0...nodeCount) {
-            var angle = this.random.nextFloat() * Math.PI * 2;
-            var nodeRadius = (0.2 + 0.6 * this.random.nextFloat()) * radius;
-            nodes.push(new Node(angle, nodeRadius));
+            // Best-candidate sampling: keep the random point furthest from its
+            // nearest neighbour. sqrt distributes candidates uniformly by area.
+            // Leave room for the symbols inside the enclosing circle.
+            var bestAngle = 0.0;
+            var bestRadius = 0.0;
+            var bestDistanceSquared = -1.0;
+            var candidates = i == 0 ? 1 : 100;
+            for (_ in 0...candidates) {
+                var angle = this.random.nextFloat() * Math.PI * 2;
+                var nodeRadius = radius * 0.92 * Math.sqrt(this.random.nextFloat());
+                var x = Math.cos(angle) * nodeRadius;
+                var y = Math.sin(angle) * nodeRadius;
+                var nearest = Math.POSITIVE_INFINITY;
+                for (node in nodes) {
+                    var dx = x - node.pos.x;
+                    var dy = y - node.pos.y;
+                    nearest = Math.min(nearest, dx * dx + dy * dy);
+                }
+                if (nearest > bestDistanceSquared) {
+                    bestDistanceSquared = nearest;
+                    bestAngle = angle;
+                    bestRadius = nodeRadius;
+                }
+            }
+            nodes.push(new Node(bestAngle, bestRadius));
         }
 
         var r = deadEndRatio;
@@ -83,6 +105,48 @@ class Network {
                 }
             }
         }
+        for (node in nodes) node.type = NodeType.fromInt(Math.floor(this.random.nextFloat() * 3));
+        prepareTerminus(targetDead > 0);
+    }
+
+    public function getTerminusIndex():Int {
+        for (i in 0...nodes.length) if (nodes[i].type == NodeType.Terminus) return i;
+        return -1;
+    }
+
+    /** One-time designation/migration. Prefer an existing sink in older patches. */
+    public function prepareTerminus(enabled:Bool):Void {
+        if (nodes.length == 0) return;
+        var index = getTerminusIndex();
+        if (index < 0) {
+            for (i in 0...nodes.length) if (nodes[i].arcs.length == 0) { index = i; break; }
+            if (index < 0) index = 0;
+        }
+        for (i in 0...nodes.length) {
+            if (i == index) nodes[i].type = NodeType.Terminus;
+            else {
+                if (nodes[i].type == NodeType.Terminus) nodes[i].type = NodeType.Circle;
+                if (nodes[i].arcs.length == 0 && nodes.length > 1)
+                    nodes[i].addArc(i == 0 ? 1 : 0, 1, 1);
+            }
+        }
+        setTerminusEnabled(enabled);
+    }
+
+    /** Toggle only the designated node's deterministic exit. Never choose a new node. */
+    public function setTerminusEnabled(enabled:Bool):Int {
+        var index = getTerminusIndex();
+        if (index < 0) return -1;
+        var node = nodes[index];
+        if (enabled || nodes.length < 2) node.arcs = [];
+        else {
+            var destination = index == 0 ? 1 : 0;
+            if (node.arcs.length != 1 || node.arcs[0].destination != destination) {
+                node.arcs = [];
+                node.addArc(destination, 1, 1);
+            }
+        }
+        return enabled ? index : -1;
     }
 
     function randomOutgoingDest(nodeCount:Int, exclude:Int):Int {
@@ -134,7 +198,8 @@ class Network {
         for (e in nodeEntries) {
             var ang = Std.parseFloat(Std.string(Reflect.field(e, "angle")));
             var d = Std.parseFloat(Std.string(Reflect.field(e, "d")));
-            var node = new Node(ang, d);
+            var type = Reflect.hasField(e, "type") ? NodeType.fromInt(Std.int(Reflect.field(e, "type"))) : NodeType.Circle;
+            var node = new Node(ang, d, type);
             var arcs:Array<Dynamic> = Reflect.field(e, "arcs");
             if (arcs != null) {
                 for (a in arcs) {

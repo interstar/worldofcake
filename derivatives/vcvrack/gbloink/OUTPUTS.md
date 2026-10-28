@@ -2,7 +2,7 @@
 
 Gbloink exposes one Rack output row per ball. Each row has a gate (high while the ball's notes sound), a held pitch CV, and a held velocity CV.
 
-The current Rack socket metadata pilot is `layouts/rack/gbloink.edn`. It records the same output IDs, labels, voltage laws, and patch-bay geometry so the C++ code, SVG panel, and docs can be checked against one explicit Rack-specific source.
+The current Rack socket metadata pilot is `apps/gbloink/rack.edn`. It records the same output IDs, labels, voltage laws, and patch-bay geometry so the C++ code, SVG panel, and docs can be checked against one explicit Rack-specific source.
 
 | Row | Ball | Gate output | Note CV output | Velocity CV output | Socket position |
 | ---: | --- | --- | --- | --- | --- |
@@ -23,7 +23,7 @@ Gbloink produces note-style WoC events. Rack drains those events, routes each ev
 
 This file should stay in sync with:
 
-- `layouts/rack/gbloink.edn`
+- `apps/gbloink/rack.edn`
 - `derivatives/vcvrack/gbloink/src/Gbloink.hpp` `OutputIds`
 - `derivatives/vcvrack/gbloink/src/Gbloink.cpp` `configOutput()` and socket placement
-- `derivatives/vcvrack/gbloink/res/Gbloink.svg` patch-bay labels and placeholder circles
+- `derivatives/vcvrack/gbloink/generated/Gbloink.svg` generated panel and patch-bay artwork

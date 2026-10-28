@@ -1,9 +1,0 @@
-[
-  <
-    [lane1label/textinput(28) lane1track/timeslidertrack(454) lane1channel/semanticselect(26) lane1cc/semanticselect(26)]
-    [lane2label/textinput(28) lane2track/timeslidertrack(454) lane2channel/semanticselect(26) lane2cc/semanticselect(26)]
-    [lane3label/textinput(28) lane3track/timeslidertrack(454) lane3channel/semanticselect(26) lane3cc/semanticselect(26)]
-    [lane4label/textinput(28) lane4track/timeslidertrack(454) lane4channel/semanticselect(26) lane4cc/semanticselect(26)]
-  >(544)
-  <controls-gap/spacer(6) reset/button pause/toggle>(32)
-]

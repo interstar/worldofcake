@@ -56,11 +56,14 @@ class TimeSliderView extends Sprite implements IControlPanelView {
         var g:Graphics = this.graphics;
         g.clear();
         var sliders = engine.getSliders();
+        var rects = TimeSliderLayout.TRACK_RECTS;
         for (i in 0...sliders.length) {
             var slider = sliders[i];
             var colour = TimeSliderLayout.TRACK_COLOURS[i];
-            var left = slider.bounds.left, top = slider.bounds.top;
-            var width = slider.bounds.width(), height = slider.bounds.height();
+            // The lane's place comes from the generated layout; its value (0 bottom .. 1 top) from the model.
+            var left = rects[i][0], top = rects[i][1], width = rects[i][2], height = rects[i][3];
+            var valueY = top + (1 - slider.value) * height;
+            var targetY = top + (1 - slider.target) * height;
 
             g.beginFill(LANE_COLOUR);
             g.drawRoundRect(left, top, width, height, Chrome.CORNER * 1.5, Chrome.CORNER * 1.5);
@@ -68,17 +71,17 @@ class TimeSliderView extends Sprite implements IControlPanelView {
 
             // Value: filled from the bottom of the lane up to the current position.
             g.beginFill(colour, FILL_ALPHA);
-            g.drawRect(left, top + slider.current, width, height - slider.current);
+            g.drawRect(left, valueY, width, top + height - valueY);
             g.endFill();
             g.lineStyle(2, colour);
-            g.moveTo(left, top + slider.current);
-            g.lineTo(left + width, top + slider.current);
+            g.moveTo(left, valueY);
+            g.lineTo(left + width, valueY);
 
             // Target the lane is travelling to.
             if (slider.moving) {
                 g.lineStyle(1, TARGET_COLOUR, 0.7);
-                g.moveTo(left, top + slider.destination);
-                g.lineTo(left + width, top + slider.destination);
+                g.moveTo(left, targetY);
+                g.lineTo(left + width, targetY);
             }
             g.lineStyle();
 

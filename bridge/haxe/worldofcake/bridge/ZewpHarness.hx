@@ -6,8 +6,8 @@ import worldofcake.SeededRandomSource;
 /** One Zewp model owned by one native runner. */
 class ZewpHarness extends SequencerHarness {
     var inst:ZewpSequencer;
-    public function new(width:Int, height:Int, seed:Int) {
-        var model = new ZewpSequencer(width, height, new SeededRandomSource(seed));
+    public function new(seed:Int) {
+        var model = new ZewpSequencer(new SeededRandomSource(seed));
         super(model);
         inst = model;
     }

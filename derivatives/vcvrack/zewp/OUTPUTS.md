@@ -1,6 +1,6 @@
 # Zewp (VCV Rack) — outputs
 
-The Rack socket metadata for this module is `layouts/rack/zewp.edn`. It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
+The Rack socket metadata for this module is `apps/zewp/rack.edn` (with `apps/zewp/app.edn`). It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
 
 
 Zewp has a dynamically adjustable population, but Rack ports are fixed. The

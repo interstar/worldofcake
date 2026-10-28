@@ -11,18 +11,19 @@ struct KDiagram : Module
 {
     enum ParamIds
     {
-        SIM_RATE_PARAM,
+        RESERVED_DISPLAY_RATE_PARAM, // Legacy slot; never reuse in saved Rack patches.
         RESET_PARAM,
         PAUSE_PARAM,
         SPEED_CURSOR1_PARAM,
         SPEED_CURSOR2_PARAM,
         SPEED_CURSOR3_PARAM,
-        CHANNEL_BASE_PARAM,
+        RESERVED_MIDI_CHANNEL_PARAM, // Routing is model state, not a Rack panel control.
         CURSOR_SELECT_PARAM,
         SCALE_PARAM,
         ROT_CCW_PARAM,
         ROT_CW_PARAM,
         NOTE_LENGTH_PARAM,
+        TERMINUS_PARAM,
         NUM_PARAMS
     };
     enum InputIds
@@ -53,12 +54,17 @@ struct KDiagram : Module
     std::atomic<std::uint64_t> guiSequence{1};
     std::uint64_t reportedPersistenceTimeouts = 0;
     std::uint64_t hostSequence = 1;
-    float pitchV[3] = {}, lastSpeed[3] = {-1, -1, -1}, lastReset = 0, lastL = 0, lastR = 0;
+    static constexpr std::size_t kCursorCount = std::tuple_size<decltype(worldofcake::bridge::KDiagramVisualSnapshot::cursors)>::value;
+    std::array<float, kCursorCount> pitchV{};
+    std::array<float, kCursorCount> lastSpeed = [] { std::array<float, kCursorCount> values{}; values.fill(-1.f); return values; }();
+    float lastReset = 0, lastL = 0, lastR = 0;
     float lastNoteLength = -1;
-    int lastPause = -1, lastChannel = -1, lastCursor = -1, lastScaleIdx = -1;
+    int lastTerminus = -1;
+    int lastPause = -1, lastCursor = -1, lastScaleIdx = -1;
+    int baseMidiChannel = 1; // Internal event routing, restored from the Haxe snapshot.
     /** Model note-ons/offs; a cursor's gate is high while any of its notes sound. */
     worldofcake::bridge::NoteOutputScheduler notes;
-    worldofcake::rack::RetriggerGate gates[3];
+    worldofcake::rack::RetriggerGate gates[kCursorCount];
     KDiagram();
     ~KDiagram() override;
     json_t* dataToJson() override;

@@ -12,5 +12,6 @@ fi
 
 haxe --interp \
     -cp "$ROOT/Source" \
+    -cp "$ROOT/generated/openfl/haxe" \
     -cp "$GOLDENPOND_SRC" \
     --main test.TestGoldenpondScoreCompiler

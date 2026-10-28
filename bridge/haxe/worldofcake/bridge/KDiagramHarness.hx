@@ -9,6 +9,7 @@ class KDiagramHarness extends SequencerHarness {
  public function click(x:Float,y:Float):Void if(inst!=null)inst.playAreaMouseDown(x,y);
  public function setValue(i:Int,v:Float):Void if(inst!=null)inst.newValue(i,v);
  public function setSelected(i:Int):Void if(inst!=null)inst.setSelectedCursorIndex(i);
+ public function buttonPressed(uid:Int):Void if(inst!=null)inst.buttonPressed(uid);
  public function rotate(d:Float):Void if(inst!=null)inst.rotateNetwork(d);
  public function hasEventBefore(t:Float):Bool return inst!=null&&inst.hasEventBefore(t);
  public function eventType():Int return inst==null?-1:inst.peekNextEventType();
@@ -18,10 +19,12 @@ class KDiagramHarness extends SequencerHarness {
  public function eventData3():Int return inst==null?0:inst.peekNextEventData3();
  public function popEvent():Void if(inst!=null)inst.popNextEvent();
  public function radius():Float return inst==null?0.9:inst.getNetworkRadius();
+ public function terminusEnabled():Bool return inst==null?true:inst.isTerminusEnabled();
  public function selected():Int return inst==null?0:inst.getSelectedCursorIndex();
  public function scaleIndex():Int return inst==null?0:inst.getScaleIndex();
  public function noteLength():Float return inst==null?KDiagramSequencer.DEFAULT_NOTE_LENGTH:inst.getNoteLength();
  public function nodeCount():Int return inst==null?0:inst.getNodeCount();
+ public function nodeType(i:Int):Int return inst==null?0:inst.getNodeType(i);
  public function nodeX(i:Int):Float return inst==null?0:inst.getNodePosX(i);
  public function nodeY(i:Int):Float return inst==null?0:inst.getNodePosY(i);
  public function nodeArcCount(i:Int):Int return inst==null?0:inst.getNodeArcCount(i);

@@ -1,0 +1,7 @@
+-cp ../../../bridge/haxe
+-cp ../../../Source
+-cp ../../../generated/juce/haxe
+-cp ../../../../goldenpond/goldenpond/current/haxe/src/goldenpond
+-D HXCPP_M64
+-D HXCPP_LINK_STATIC
+worldofcake.bridge.GoldenpondHarness

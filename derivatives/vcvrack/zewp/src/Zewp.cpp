@@ -16,11 +16,13 @@
 #include <WorldOfCakeControlIds.h>
 #include <worldofcake/generated/rack/zewp/ZewpRackOutputsGenerated.h>
 #include <worldofcake/generated/rack/zewp/ZewpRackLayoutGenerated.h>
+#include <worldofcake/generated/zewp/ZewpControlMetadataGenerated.h>
 using namespace rack::widget;
 using namespace rack::app;
 namespace
 {
-    constexpr float W = 600, H = 560;
+    // The model's world (apps/zewp/app.edn :model); the play area shows all of it.
+    constexpr float W = worldofcake::metadata::zewp::model::kWorldWidth, H = worldofcake::metadata::zewp::model::kWorldHeight;
     namespace ControlIds = worldofcake::control::zewp;
     worldofcake::LocalPoint toLocal(worldofcake::PanelPoint p, float w, float h)
     {
@@ -82,7 +84,8 @@ namespace
         {
             dragging = false;
             if (m) {
-                m->release(hoverPos.x, hoverPos.y);
+                auto p = toLocal(worldofcake::PanelPoint(hoverPos.x, hoverPos.y), box.size.x, box.size.y);
+                m->release(p.x, p.y);
                 e.consume(this);
             }
         }
@@ -133,7 +136,7 @@ ZewpModule::ZewpModule()
     for (int i = 0; i < worldofcake::rack::zewp::kOutputCount; ++i)
         configOutput(i, worldofcake::rack::zewp::kOutputLabels[i]);
     int seed = (int)std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    runner.reset(new worldofcake::bridge::ZewpControlRunner((int)W, (int)H, seed));
+    runner.reset(new worldofcake::bridge::ZewpControlRunner(seed));
     runner->start(worldofcake::rack::kControlPeriodSeconds);
 }
 ZewpModule::~ZewpModule()

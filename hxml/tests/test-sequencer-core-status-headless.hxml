@@ -1,3 +1,4 @@
 -cp Source
+-cp generated/openfl/haxe
 -main test.TestSequencerCoreStatus
 --interp

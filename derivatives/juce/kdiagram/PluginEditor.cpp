@@ -16,9 +16,9 @@ namespace
     const std::array<const metadata::Knob*, 3> speedMetadata{&metadata::kRedspeed, &metadata::kGreenspeed, &metadata::kBluespeed};
     const std::array<const juce::Rectangle<double>*, 3> speedRegions{&layout::kRedspeed, &layout::kGreenspeed, &layout::kBluespeed};
     // Network colours, as the OpenFL view and Rack.
-    const juce::Colour networkColour{0xffc8c864};
-    const juce::Colour arcColour{0xffffc864};
-    const juce::Colour nodeColour{0xff787878};
+    const juce::Colour networkColour{0xffa7a298};
+    const juce::Colour arcColour{0xff35332e};
+    const juce::Colour nodeColour{0xff292722};
     constexpr float nodeRadius = 0.04f; // Node.HIT_RADIUS, in network units
 
     juce::Colour snapshotColour(int rgb)
@@ -65,6 +65,8 @@ KDiagramAudioProcessorEditor::KDiagramAudioProcessorEditor(KDiagramAudioProcesso
 
     // Pause displays the model's flag and asks the model to flip it; it holds no state of its own.
     reset.onClick = [this] { processor.enqueueGuiCommand(worldofcake::bridge::resetCommand()); };
+    terminus.onClick = [this] { sendValue(ids::kTerminus, snapshot.terminusEnabled ? 0.0 : 1.0); };
+    addAndMakeVisible(terminus);
     pause.onClick = [this] { processor.enqueueGuiCommand(worldofcake::bridge::pauseCommand(!snapshot.paused)); };
     rotateLeft.onClick = [this] { sendValue(ids::kRotateLeft, 1.0); };
     rotateRight.onClick = [this] { sendValue(ids::kRotateRight, 1.0); };
@@ -121,6 +123,7 @@ void KDiagramAudioProcessorEditor::timerCallback()
     shownScale.update(snapshot.scaleIndex, [this](int v) { scaleSelect.setSelectedItemIndex(v, juce::dontSendNotification); });
     shownChannel.update(snapshot.cursors[0].channel, [this](int base) { channelSelect.setSelectedItemIndex(base - 1, juce::dontSendNotification); });
     shownPaused.update(snapshot.paused, [this](bool v) { pause.setToggleState(v, juce::dontSendNotification); });
+    terminus.setToggleState(snapshot.terminusEnabled, juce::dontSendNotification);
     cursorSelect.setSelectedIndex(snapshot.selectedCursor);
     repaint(playArea.getSmallestIntegerContainer());
 }
@@ -140,6 +143,7 @@ void KDiagramAudioProcessorEditor::resized()
     place(channelSelect, layout::kChannel);
     place(reset, layout::kReset);
     place(pause, layout::kPause);
+    place(terminus, layout::kTerminus);
     place(rotateLeft, layout::kRotate_left);
     place(rotateRight, layout::kRotate_right);
 }
@@ -156,7 +160,7 @@ void KDiagramAudioProcessorEditor::paint(juce::Graphics& g)
 
 void KDiagramAudioProcessorEditor::paintNetwork(juce::Graphics& g)
 {
-    g.setColour(host::chrome::playArea);
+    g.setColour(juce::Colour(0xfff6f3ea));
     g.fillRoundedRectangle(playArea, host::chrome::corner * 1.5f);
     juce::Graphics::ScopedSaveState clip(g);
     g.reduceClipRegion(playArea.toNearestInt());
@@ -180,7 +184,23 @@ void KDiagramAudioProcessorEditor::paintNetwork(juce::Graphics& g)
     const float nodeSize = nodeRadius * scale;
     for (const auto& node : snapshot.nodes) {
         const auto at = toView(node.x, node.y);
-        g.fillEllipse(at.x - nodeSize, at.y - nodeSize, nodeSize * 2.0f, nodeSize * 2.0f);
+        juce::Path symbol;
+        if (node.type == 3) {
+            symbol.startNewSubPath(at.x-nodeSize*1.35f, at.y);
+            symbol.lineTo(at.x, at.y-nodeSize*0.65f);
+            symbol.lineTo(at.x+nodeSize*1.35f, at.y);
+            symbol.lineTo(at.x, at.y+nodeSize*0.65f);
+            symbol.closeSubPath();
+        } else if (node.type == 2)
+            symbol.addRectangle(at.x-nodeSize, at.y-nodeSize, nodeSize*2, nodeSize*2);
+        else if (node.type == 1)
+            symbol.addTriangle(at.x, at.y-nodeSize, at.x+nodeSize, at.y+nodeSize, at.x-nodeSize, at.y+nodeSize);
+        else
+            symbol.addEllipse(at.x-nodeSize, at.y-nodeSize, nodeSize*2, nodeSize*2);
+        g.setColour(juce::Colour(0xfff6f3ea));
+        g.fillPath(symbol);
+        g.setColour(nodeColour);
+        g.strokePath(symbol, juce::PathStrokeType(1.3f));
     }
 
     for (std::size_t i = 0; i < snapshot.cursors.size(); ++i) {
@@ -192,11 +212,11 @@ void KDiagramAudioProcessorEditor::paintNetwork(juce::Graphics& g)
             g.drawLine(juce::Line<float>(at, toView(cursor.targetX, cursor.targetY)), 1.0f);
         }
         const bool selected = static_cast<int>(i) == snapshot.selectedCursor;
-        const float size = selected ? 8.0f : 6.0f;
+        const float size = selected ? 5.0f : 4.0f;
         g.setColour(colour);
         g.fillEllipse(at.x - size, at.y - size, size * 2.0f, size * 2.0f);
         if (selected) {
-            g.setColour(juce::Colours::white);
+            g.setColour(nodeColour);
             g.drawEllipse(at.x - size - 3.0f, at.y - size - 3.0f, (size + 3.0f) * 2.0f, (size + 3.0f) * 2.0f, 2.0f);
         }
     }

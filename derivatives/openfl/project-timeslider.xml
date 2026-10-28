@@ -3,9 +3,10 @@
 	
 	<meta title="TimeSlider" package="net.synaesmedia.timeslider" version="1.0.0" company="Gilbert Lister Research" />
 	<app main="timeslider.TimeSliderMain" path="Export" file="TimeSlider" />
-	<window width="800" height="600" resizable="true" background="0xF1EFEA" />
+	<window width="1200" height="600" resizable="true" background="0xF1EFEA" />
 	
 	<source path="../../Source" />
+	<source path="../../generated/openfl/haxe" />
 	
 	<haxelib name="openfl" />
 	

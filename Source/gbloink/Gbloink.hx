@@ -668,6 +668,8 @@ class Gbloink extends SequencerCore implements ISequencerControl {
     }
 
     private function recordCollision(ball:Ball, x:Float, y:Float, kind:Int, blockId:Int = -1):Void {
+        // Impact visuals describe sounding notes, through the same output gate.
+        if (!canEmit() || (kind == 0 && !edgeNotesEnabled)) return;
         // Suppress cosmetic chatter from repeated contact resolution, not musical events.
         var i = collisionCues.length - 1;
         while (i >= 0 && currentTime - collisionCues[i].time < 0.025) {

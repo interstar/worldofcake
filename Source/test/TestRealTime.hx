@@ -63,7 +63,7 @@ class TestRealTime {
             return [for (b in g.balls) for (v in [b.pos.x, b.pos.y]) v];
         }, 0.5);
 
-        sameAtEveryStep("zewp", function() return new ZewpSequencer(600, 560, new SeededRandomSource(7)), function(m) {
+        sameAtEveryStep("zewp", function() return new ZewpSequencer(new SeededRandomSource(7)), function(m) {
             var z:ZewpSequencer = cast m;
             return [for (a in z.getZewps()) for (v in [a.position.x, a.position.y]) v];
         }, 2.0);
@@ -79,13 +79,12 @@ class TestRealTime {
         }, 1e-6);
 
         sameAtEveryStep("timeslider", function() {
-            var s = new TimeSliderSequencer(800, 600, 120, 0.5);
-            var track = s.getSliders()[0];
-            s.mouseDown(TimeSliderControlIdsGenerated.LANE1TRACK, new LocalPoint(track.bounds.width() * 0.8, track.bounds.height() * 0.2));
+            var s = new TimeSliderSequencer(120, 0.5);
+            s.mouseDown(TimeSliderControlIdsGenerated.LANE1TRACK, new LocalPoint(0.8, 0.8));
             return s;
         }, function(m) {
             var s:TimeSliderSequencer = cast m;
-            return [for (t in s.getSliders()) t.current];
+            return [for (t in s.getSliders()) t.value];
         }, 1e-6);
 
         // Absolute speed: a ball at the default knob setting covers its speed in one second.
@@ -97,9 +96,9 @@ class TestRealTime {
         check(Math.abs(travelled - Gbloink.DEFAULT_BALL_SPEED) < 1.0, "gbloink default ball travels its speed per second, got " + travelled);
 
         // Absolute time: a TimeSlider glide takes its travel time in real seconds.
-        var slider = new TimeSliderSequencer(800, 600, 120, 0.5);
+        var slider = new TimeSliderSequencer(120, 0.5);
         var track = slider.getSliders()[0];
-        slider.mouseDown(TimeSliderControlIdsGenerated.LANE1TRACK, new LocalPoint(track.bounds.width(), track.bounds.height() * 0.1));
+        slider.mouseDown(TimeSliderControlIdsGenerated.LANE1TRACK, new LocalPoint(1.0, 0.9));
         var arrived = -1.0;
         var t = 0.0;
         while (t < 10 && arrived < 0) {

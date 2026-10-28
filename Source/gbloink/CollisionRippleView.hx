@@ -14,7 +14,7 @@ class CollisionRippleView extends Sprite {
         mouseEnabled = mouseChildren = false;
     }
 
-    public function update(cues:Array<CollisionCue>, nextEpoch:Int, modelTime:Float, blocks:Array<Block>):Void {
+    public function update(cues:Array<CollisionCue>, nextEpoch:Int, modelTime:Float, blocks:Array<Block>, muted:Bool):Void {
         var now = haxe.Timer.stamp();
         var hadRings = active.length > 0;
         if (epoch != nextEpoch) {
@@ -25,9 +25,11 @@ class CollisionRippleView extends Sprite {
         var keep = 0;
         for (i in 0...active.length) if (now-active[i].born < (active[i].cue.kind == 1 ? 1.8 : 0.7)) active[keep++] = active[i];
         while (active.length > keep) active.pop();
+        if (muted) active = [];
         for (cue in cues) {
             if (cue.serial <= lastSerial) continue;
             lastSerial = cue.serial;
+            if (muted) continue;
             var age = Math.max(0, modelTime-cue.time);
             if (age >= (cue.kind == 1 ? 1.8 : 0.7)) continue;
             if (active.length >= Gbloink.MAX_COLLISION_CUES) active.shift();

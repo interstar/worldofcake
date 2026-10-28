@@ -62,10 +62,9 @@ namespace worldofcake::bridge
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kRotateLeft)
-            harness->rotate(-.12);
-        else if (c.kind == CommandKind::setValue && c.controlId == ControlIds::kRotateRight)
-            harness->rotate(.12);
+        else if (c.kind == CommandKind::setValue &&
+                 (c.controlId == ControlIds::kRotateLeft || c.controlId == ControlIds::kRotateRight))
+            harness->buttonPressed(c.controlId);
         else if (c.kind == CommandKind::setValue)
             harness->setValue(c.controlId, c.value);
     }
@@ -94,6 +93,7 @@ namespace worldofcake::bridge
         n.logicalTime = logicalTime;
         n.paused = harness->paused();
         n.radius = harness->radius();
+        n.terminusEnabled = harness->terminusEnabled();
         n.selectedCursor = harness->selected();
         n.scaleIndex = harness->scaleIndex();
         n.noteLength = harness->noteLength();
@@ -102,6 +102,7 @@ namespace worldofcake::bridge
         n.nodes.reserve((size_t)nc);
         for (int i = 0; i < nc; i++) {
             KDiagramNodeSnapshot q;
+            q.type = harness->nodeType(i);
             q.x = harness->nodeX(i);
             q.y = harness->nodeY(i);
             n.nodes.push_back(q);

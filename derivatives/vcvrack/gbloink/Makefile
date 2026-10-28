@@ -7,7 +7,8 @@ WOC_MODULE := gbloink
 WOC_HXML := haxe/gbloink.hxml
 WOC_RUNNER_CPP := GbloinkControlRunner.cpp
 WOC_PANEL_SVG := generated/Gbloink.svg
-WOC_PANEL_TITLE := 1
+# The generator already bakes the title and labels into the panel SVG as paths.
+WOC_PANEL_TITLE := 0
 DISTRIBUTABLES += generated
 
 include ../common/plugin.mk

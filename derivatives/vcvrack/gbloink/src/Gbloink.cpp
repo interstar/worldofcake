@@ -90,10 +90,12 @@ namespace
             for (int i = 0; i < rippleCount; ++i)
                 if (now-ripples[i].born < (ripples[i].cue.kind == 1 && settings->blockFlashes ? 1.8 : 0.7)) ripples[keep++] = ripples[i];
             rippleCount = keep;
+            if (visualSnapshot.muted) rippleCount = 0;
             for (int i = 0; i < visualSnapshot.collisionCount; ++i) {
                 const auto& cue = visualSnapshot.collisions[i];
                 if (cue.serial <= lastCollisionSerial) continue;
                 lastCollisionSerial = cue.serial;
+                if (visualSnapshot.muted) continue;
                 const double age = std::max(0.0, visualSnapshot.collisionModelTime-cue.time);
                 const bool flash = cue.kind == 1 && settings->blockFlashes;
                 if ((!settings->collisionRipples && !flash) || age >= (flash ? 1.8 : 0.7)) continue;

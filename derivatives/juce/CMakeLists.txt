@@ -18,6 +18,8 @@ set(WOC_GOLDENPOND_HXCPP_DIR "" CACHE PATH "Goldenpond hxcpp output directory")
 set(WOC_GOLDENPOND_HXCPP_OBJECT_DIR "" CACHE PATH "Directory containing compiled Goldenpond hxcpp .obj files")
 set(WOC_KDIAGRAM_HXCPP_DIR "" CACHE PATH "K-Diagram hxcpp output directory")
 set(WOC_KDIAGRAM_HXCPP_OBJECT_DIR "" CACHE PATH "Directory containing compiled K-Diagram hxcpp .obj files")
+set(WOC_ZEWP_HXCPP_DIR "" CACHE PATH "Zewp hxcpp output directory")
+set(WOC_ZEWP_HXCPP_OBJECT_DIR "" CACHE PATH "Directory containing compiled Zewp hxcpp .obj files")
 
 foreach(required WOC_JUCE_DIR WOC_HXCPP_ROOT WOC_GBLOINK_HXCPP_DIR WOC_GBLOINK_HXCPP_OBJECT_DIR)
     if(NOT ${required})
@@ -42,6 +44,8 @@ file(GLOB_RECURSE WOC_GOLDENPOND_HXCPP_OBJECTS CONFIGURE_DEPENDS "${WOC_GOLDENPO
 set_source_files_properties(${WOC_GOLDENPOND_HXCPP_OBJECTS} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
 file(GLOB_RECURSE WOC_KDIAGRAM_HXCPP_OBJECTS CONFIGURE_DEPENDS "${WOC_KDIAGRAM_HXCPP_OBJECT_DIR}/*.obj")
 set_source_files_properties(${WOC_KDIAGRAM_HXCPP_OBJECTS} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+file(GLOB_RECURSE WOC_ZEWP_HXCPP_OBJECTS CONFIGURE_DEPENDS "${WOC_ZEWP_HXCPP_OBJECT_DIR}/*.obj")
+set_source_files_properties(${WOC_ZEWP_HXCPP_OBJECTS} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
 
 add_subdirectory("${WOC_JUCE_DIR}" "${CMAKE_BINARY_DIR}/JUCE")
 
@@ -68,6 +72,8 @@ target_sources(WorldOfCakeGbloink PRIVATE
     gbloink/PluginProcessor.h
     gbloink/PluginEditor.cpp
     gbloink/PluginEditor.h
+    gbloink/GbloinkPlayfield.cpp
+    gbloink/GbloinkPlayfield.h
     "${WOC_ROOT}/bridge/native/ControlThread.cpp"
     "${WOC_ROOT}/bridge/native/GbloinkControlRunner.cpp"
     ${WOC_GBLOINK_HXCPP_OBJECTS})
@@ -76,6 +82,7 @@ target_include_directories(WorldOfCakeGbloink PRIVATE
     common
     gbloink
     "${WOC_ROOT}/bridge/native"
+    "${WOC_ROOT}/generated/juce/native"
     "${WOC_GBLOINK_HXCPP_DIR}/include"
     "${WOC_HXCPP_ROOT}/include")
 
@@ -92,6 +99,7 @@ target_compile_definitions(WorldOfCakeGbloink PUBLIC
 
 target_link_libraries(WorldOfCakeGbloink PRIVATE
     juce::juce_audio_utils
+    juce::juce_opengl
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
@@ -103,7 +111,7 @@ endif()
 
 juce_add_plugin(WorldOfCakeTimeSliders COMPANY_NAME "GLR" BUNDLE_ID "net.glr.worldofcake.timesliders" PLUGIN_MANUFACTURER_CODE GlrW PLUGIN_CODE TmSl FORMATS VST3 Standalone PRODUCT_NAME "WorldOfCake TimeSliders" DESCRIPTION "Experimental MIDI CC sequencer" IS_SYNTH TRUE NEEDS_MIDI_OUTPUT TRUE IS_MIDI_EFFECT TRUE EDITOR_WANTS_KEYBOARD_FOCUS TRUE COPY_PLUGIN_AFTER_BUILD FALSE)
 target_sources(WorldOfCakeTimeSliders PRIVATE timeslider/PluginProcessor.cpp timeslider/PluginProcessor.h timeslider/PluginEditor.cpp timeslider/PluginEditor.h "${WOC_ROOT}/bridge/native/ControlThread.cpp" "${WOC_ROOT}/bridge/native/TimeSliderControlRunner.cpp" ${WOC_TIMESLIDER_HXCPP_OBJECTS})
-target_include_directories(WorldOfCakeTimeSliders PRIVATE common timeslider "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/bridge/haxe" "${WOC_TIMESLIDER_HXCPP_DIR}" "${WOC_TIMESLIDER_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
+target_include_directories(WorldOfCakeTimeSliders PRIVATE common timeslider "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/generated/juce/native" "${WOC_ROOT}/bridge/haxe" "${WOC_TIMESLIDER_HXCPP_DIR}" "${WOC_TIMESLIDER_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
 target_compile_definitions(WorldOfCakeTimeSliders PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_DISPLAY_SPLASH_SCREEN=0 HX_WINDOWS HXCPP_M64 HXCPP_VISIT_ALLOCS HX_SMART_STRINGS HXCPP_API_LEVEL=430)
 target_link_libraries(WorldOfCakeTimeSliders PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 if(WIN32)
@@ -112,7 +120,7 @@ endif()
 
 juce_add_plugin(WorldOfCakeGoldenpond COMPANY_NAME "GLR" BUNDLE_ID "net.glr.worldofcake.goldenpond" PLUGIN_MANUFACTURER_CODE GlrW PLUGIN_CODE GldP FORMATS VST3 Standalone PRODUCT_NAME "WorldOfCake Goldenpond" DESCRIPTION "Experimental MIDI score sequencer" IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT TRUE IS_MIDI_EFFECT TRUE EDITOR_WANTS_KEYBOARD_FOCUS TRUE COPY_PLUGIN_AFTER_BUILD FALSE)
 target_sources(WorldOfCakeGoldenpond PRIVATE goldenpond/PluginProcessor.cpp goldenpond/PluginProcessor.h goldenpond/PluginEditor.cpp goldenpond/PluginEditor.h "${WOC_ROOT}/bridge/native/ControlThread.cpp" "${WOC_ROOT}/bridge/native/GoldenpondControlRunner.cpp" ${WOC_GOLDENPOND_HXCPP_OBJECTS})
-target_include_directories(WorldOfCakeGoldenpond PRIVATE common goldenpond "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/bridge/haxe" "${WOC_GOLDENPOND_HXCPP_DIR}" "${WOC_GOLDENPOND_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
+target_include_directories(WorldOfCakeGoldenpond PRIVATE common goldenpond "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/generated/juce/native" "${WOC_ROOT}/bridge/haxe" "${WOC_GOLDENPOND_HXCPP_DIR}" "${WOC_GOLDENPOND_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
 target_compile_definitions(WorldOfCakeGoldenpond PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_DISPLAY_SPLASH_SCREEN=0 HX_WINDOWS HXCPP_M64 HXCPP_VISIT_ALLOCS HX_SMART_STRINGS HXCPP_API_LEVEL=430)
 target_link_libraries(WorldOfCakeGoldenpond PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 if(WIN32)
@@ -121,11 +129,20 @@ endif()
 
 juce_add_plugin(WorldOfCakeKDiagram COMPANY_NAME "GLR" BUNDLE_ID "net.glr.worldofcake.kdiagram" PLUGIN_MANUFACTURER_CODE GlrW PLUGIN_CODE KDgm FORMATS VST3 Standalone PRODUCT_NAME "WorldOfCake K-Diagram" DESCRIPTION "Experimental MIDI note and control sequencer" IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT TRUE IS_MIDI_EFFECT TRUE EDITOR_WANTS_KEYBOARD_FOCUS TRUE COPY_PLUGIN_AFTER_BUILD FALSE)
 target_sources(WorldOfCakeKDiagram PRIVATE kdiagram/PluginProcessor.cpp kdiagram/PluginProcessor.h kdiagram/PluginEditor.cpp kdiagram/PluginEditor.h "${WOC_ROOT}/bridge/native/ControlThread.cpp" "${WOC_ROOT}/bridge/native/KDiagramControlRunner.cpp" ${WOC_KDIAGRAM_HXCPP_OBJECTS})
-target_include_directories(WorldOfCakeKDiagram PRIVATE common kdiagram "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/bridge/haxe" "${WOC_KDIAGRAM_HXCPP_DIR}" "${WOC_KDIAGRAM_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
+target_include_directories(WorldOfCakeKDiagram PRIVATE common kdiagram "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/generated/juce/native" "${WOC_ROOT}/bridge/haxe" "${WOC_KDIAGRAM_HXCPP_DIR}" "${WOC_KDIAGRAM_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
 target_compile_definitions(WorldOfCakeKDiagram PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_DISPLAY_SPLASH_SCREEN=0 HX_WINDOWS HXCPP_M64 HXCPP_VISIT_ALLOCS HX_SMART_STRINGS HXCPP_API_LEVEL=430)
 target_link_libraries(WorldOfCakeKDiagram PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 if(WIN32)
  target_link_libraries(WorldOfCakeKDiagram PRIVATE ws2_32 winmm)
+endif()
+
+juce_add_plugin(WorldOfCakeZewp COMPANY_NAME "GLR" BUNDLE_ID "net.glr.worldofcake.zewp" PLUGIN_MANUFACTURER_CODE GlrW PLUGIN_CODE Zewp FORMATS VST3 Standalone PRODUCT_NAME "WorldOfCake Zewp" DESCRIPTION "Experimental MIDI control sequencer" IS_SYNTH TRUE NEEDS_MIDI_OUTPUT TRUE IS_MIDI_EFFECT TRUE EDITOR_WANTS_KEYBOARD_FOCUS TRUE COPY_PLUGIN_AFTER_BUILD FALSE)
+target_sources(WorldOfCakeZewp PRIVATE zewp/PluginProcessor.cpp zewp/PluginProcessor.h zewp/PluginEditor.cpp zewp/PluginEditor.h "${WOC_ROOT}/bridge/native/ControlThread.cpp" "${WOC_ROOT}/bridge/native/ZewpControlRunner.cpp" ${WOC_ZEWP_HXCPP_OBJECTS})
+target_include_directories(WorldOfCakeZewp PRIVATE common zewp "${WOC_ROOT}/bridge/native" "${WOC_ROOT}/generated/juce/native" "${WOC_ROOT}/bridge/haxe" "${WOC_ZEWP_HXCPP_DIR}" "${WOC_ZEWP_HXCPP_DIR}/include" "${WOC_HXCPP_ROOT}/include")
+target_compile_definitions(WorldOfCakeZewp PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0 JUCE_DISPLAY_SPLASH_SCREEN=0 HX_WINDOWS HXCPP_M64 HXCPP_VISIT_ALLOCS HX_SMART_STRINGS HXCPP_API_LEVEL=430)
+target_link_libraries(WorldOfCakeZewp PRIVATE juce::juce_audio_utils PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
+if(WIN32)
+ target_link_libraries(WorldOfCakeZewp PRIVATE ws2_32 winmm)
 endif()
 
 # Shared native note scheduler used by every host adapter; plain C++, no JUCE.

@@ -82,30 +82,16 @@ Two shared-framework headless suites are also available: `hxml/tests/test-sequen
 The bundled JAR includes Layla, the WorldOfCake generator, Clojure, and Instaparse. It requires only Java:
 
 ```bash
-./docker/docker-run-linux-build.sh java -jar vendor/layla/worldofcake-laylagen.jar \
-  --input layouts/openfl/gbloink.layla \
-  --config layouts/openfl/gbloink.edn \
-  --output Source \
-  --native-output bridge/native
+./docker/docker-run-linux-build.sh bash ./generate.sh gbloink all
 ```
 
 Use `--check` instead of generating files. To check all OpenFL layouts:
 
 ```bash
-./docker/docker-run-linux-build.sh bash -lc '
-  set -e
-  for app in gbloink timeslider kdiagram tileland zewp; do
-    java -jar vendor/layla/worldofcake-laylagen.jar \
-      --input layouts/openfl/$app.layla \
-      --config layouts/openfl/$app.edn \
-      --output Source \
-      --native-output bridge/native \
-      --check
-  done
-'
+./docker/docker-run-linux-build.sh bash ./generate.sh all openfl --check
 ```
 
-Generated files under `Source/generated/` and `bridge/native/worldofcake/generated/` should not be hand-edited.
+Generated files under `generated/<target>/` should not be hand-edited.
 
 ## OpenFL builds
 

@@ -7,7 +7,8 @@ WOC_MODULE := kdiagram
 WOC_HXML := haxe/kdiagram.hxml
 WOC_RUNNER_CPP := KDiagramControlRunner.cpp
 WOC_PANEL_SVG := generated/KDiagram.svg
-WOC_PANEL_TITLE := 1
+# All panel text is already outlined by Layla/EDN generation.
+WOC_PANEL_TITLE := 0
 DISTRIBUTABLES += generated
 
 include ../common/plugin.mk

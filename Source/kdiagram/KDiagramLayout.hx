@@ -2,7 +2,7 @@ package kdiagram;
 
 import generated.kdiagram.KDiagramLayoutGenerated;
 
-// Maintained compatibility facade. Geometry is generated from layouts/openfl/kdiagram.layla.
+// Maintained compatibility facade. Geometry is generated from apps/kdiagram/openfl.layla.
 class KDiagramLayout {
     public static inline var PANEL_WIDTH:Int = Std.int(KDiagramLayoutGenerated.PANEL_WIDTH);
     public static inline var PANEL_HEIGHT:Int = Std.int(KDiagramLayoutGenerated.PANEL_HEIGHT);

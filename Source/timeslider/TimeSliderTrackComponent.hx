@@ -14,13 +14,15 @@ class TimeSliderTrackComponent extends Sprite implements IComponent {
 
     public function new(uid:Int, panelPos:PanelPoint, panelSize:PanelPoint, windowToPanelMapper:CoordinateMapper, sequencer:ISequencerControl) {
         super();
+        // The lane's own space: x from 0 (left) to 1 (right), y from 1 (top) to 0 (bottom), so a
+        // click reaches the model as (time fraction, target value) with no panel geometry.
         componentCommon = new ComponentCommon(
             uid,
             panelPos,
             panelSize,
             windowToPanelMapper,
-            new LocalPoint(0, 0),
-            new LocalPoint(panelSize.x, panelSize.y),
+            new LocalPoint(0, 1),
+            new LocalPoint(1, 0),
             sequencer
         );
 

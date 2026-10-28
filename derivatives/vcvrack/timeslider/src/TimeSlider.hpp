@@ -2,6 +2,7 @@
 #include <rack.hpp>
 #include <atomic>
 #include <memory>
+#include <string>
 #include <TimeSliderControlRunner.h>
 using namespace rack;
 struct TimeSlider : Module
@@ -40,6 +41,8 @@ struct TimeSlider : Module
     void dataFromJson(json_t*) override;
     void process(const ProcessArgs&) override;
     void trackClick(int, float, float);
+    /** Submit a text control's new text (a lane label) to the model. */
+    void sendText(int controlId, const std::string& text);
     void enqueueHostValue(int, double);
 };
 struct TimeSliderWidget : ModuleWidget

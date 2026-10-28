@@ -8,8 +8,9 @@ OpenFL panels: Gbloink, Goldenpond, KDiagram, TileLand, TimeSliders, and Zewp.
 
 Open PowerShell and run:
 
+From the repository root:
+
 ```powershell
-Set-Location 'G:\PRODUCTION\MAIN_MUSIC_IDS\gilbert_lister_research\worldofcake'
 .\panel-editor\run.ps1
 ```
 
@@ -28,37 +29,38 @@ Java 17 or later and the Clojure CLI must be installed. No Haxe, OpenFL, Node,
 or Python process is required to run this editor. On first use, Clojure may need
 to download compiler dependencies, so startup can take longer.
 
-The launcher expects the Layla source checkout at:
-
-```text
-G:\PRODUCTION\MAIN_PROJECTS\language_oriented\langdev\layla
-```
-
-If it moves, supply the new location:
-
-```powershell
-.\panel-editor\run.ps1 -LaylaRoot 'D:\projects\layla'
-```
+The Layla parser and the target resolver come from the bundled generator JAR
+(`vendor/layla/worldofcake-laylagen.jar`); no other checkout is needed.
 
 ## 2. Choose a panel
 
 Use the **Panel** menu at the top right. Gbloink opens initially.
 
-The left side has two source tabs:
+The source tabs depend on whether that app has moved to the new `apps/` structure.
+The filename beside the tabs always shows the file you are actually editing.
 
-- **Layla** controls the arrangement: rows, columns, nesting, names, and relative
-  proportions.
-- **EDN** controls component details: labels, colours, ranges, defaults, widget
-  kinds, panel dimensions, gaps, and padding.
+For a migrated app such as TimeSliders:
 
-The filename beside the tabs tells you which source you are editing. For example,
-Gbloink uses `layouts/openfl/gbloink.layla` and `layouts/openfl/gbloink.edn` in the
-WoC repository.
+- **Layla** — `apps/timeslider/openfl.layla`: arrangement and proportions.
+- **OpenFL EDN** — `apps/timeslider/openfl.edn`: geometry and presentation,
+  including colours, icons, padding, boxes and view hooks.
+- **App EDN** — `apps/timeslider/app.edn`: semantics shared with the other
+  targets, including labels, ranges, defaults, choices, outputs and model settings.
+
+The preview combines the app definition and OpenFL overlay using the same target
+resolver as the build, including any `:extends` chain. Presentation changes
+usually belong in OpenFL EDN; semantic changes belong in App EDN and may affect
+VST and Rack as well. The editor does not move properties between files for you.
+
+Apps not yet migrated retain two tabs, **Layla** and **EDN**, using
+`layouts/openfl/<app>.layla` and `.edn`. As soon as `apps/<app>/app.edn` exists,
+the editor switches to the new files on load. It never saves the obsolete
+`layouts/` copies for a migrated app.
 
 ## 3. Edit and preview
 
 Type directly into either source tab. The preview updates shortly after you
-pause typing. Switching tabs retains the text in both.
+pause typing. Switching tabs retains the text in every source.
 
 For a first experiment, open Gbloink's EDN tab and change the `"Speed"` heading
 text. You should see the new heading in the preview. Restore it or reload the
@@ -99,10 +101,10 @@ containers and spacers.
 
 ## 5. Save your changes
 
-Click **Save pair**, or press **Ctrl+S** on Windows (**Cmd+S** on macOS).
+Click **Save sources** (**Save pair** for legacy apps), or press **Ctrl+S** on Windows (**Cmd+S** on macOS).
 
-This writes both sources directly to their existing files under
-`layouts/openfl/`. There is no separate editor copy to export. Typing alone does
+This writes the changed sources to the paths shown in the tabs: all three
+`apps/<app>/` sources for migrated apps, or the legacy pair under `layouts/openfl/`. There is no separate editor copy to export. Typing alone does
 not write anything to disk.
 
 The indicator at the top shows **Unsaved edits** while your text differs from
@@ -116,21 +118,21 @@ not previewed by this version of the editor.
 
 ## 6. Handle errors or discard an experiment
 
-If either source becomes invalid, the editor shows an error banner and an orange
+If a source or the merged result becomes invalid, the editor shows an error banner and an orange
 outline around the last valid preview. **Preview out of date** means the picture
 does not reflect your current source text. Fix the reported problem; the preview
-updates and saving becomes available again once both sources are valid.
+updates and saving becomes available again once the resolved panel is valid.
 
 Common causes include a missing closing bracket, a Layla component without its
 EDN entry, an unused EDN entry, or padding and gaps that leave no space for a
 component. EDN must contain one complete top-level form; extra text after it is
 an error, although comments are allowed.
 
-Click **Reload** to read the current pair from disk and discard your unsaved
+Click **Reload** to read the current source set from disk and discard your unsaved
 edits. The editor asks before discarding changes when reloading or switching
 panels. The browser also warns before leaving a page with unsaved edits.
 
-If another program changes either file after you loaded it, Save refuses to
+If another program changes a source or inherited overlay after you loaded it, Save refuses to
 overwrite the newer disk version. Copy any edits you want to keep, click Reload,
 and then reapply them to the updated sources.
 
@@ -146,7 +148,7 @@ For a faster launch after the browser application has already been built:
 ```
 
 You can use `-SkipBuild` while changing panel Layla/EDN files; these are read at
-runtime. After changing the editor's ClojureScript code or the Layla parser,
+runtime, including app definitions and target overlays. After changing the editor's ClojureScript code or the Layla parser,
 launch without `-SkipBuild` to rebuild, then refresh the browser.
 
 To build without starting a server:
@@ -187,9 +189,6 @@ policy.
 
 **Java or Clojure is not recognised:** check `java -version` and `clojure -Sdescribe`
 in your terminal, and ensure their installations are available on `PATH`.
-
-**Layla source not found:** check the checkout path and use `-LaylaRoot` as shown
-above.
 
 **The page loads but the editor does not start:** if you used `-SkipBuild` before
 the first successful build, stop the server and run the normal launch command.

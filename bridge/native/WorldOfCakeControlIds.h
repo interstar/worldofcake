@@ -47,22 +47,13 @@ namespace worldofcake::control
     namespace tileland
     {
         constexpr int kPlayArea = kPlayarea;
-        constexpr int kSpeedBase = kRedspeed;
         constexpr int kSpeedCount = 3;
 
+        // Speed controls by cursor. Control IDs follow each target's order, so they are listed, not computed.
         constexpr int speedUid(int index)
         {
-            return kSpeedBase + index;
+            return index == 0 ? kRedspeed : (index == 1 ? kGreenspeed : kBluespeed);
         }
     } // namespace tileland
 
-    namespace timeslider
-    {
-        constexpr int kTrackCount = 4;
-
-        constexpr int trackUid(int index)
-        {
-            return index == 0 ? kLane1track : index == 1 ? kLane2track : index == 2 ? kLane3track : kLane4track;
-        }
-    } // namespace timeslider
 } // namespace worldofcake::control

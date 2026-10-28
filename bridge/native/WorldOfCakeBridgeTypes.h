@@ -248,14 +248,12 @@ namespace worldofcake
             double noteLength = 0.05;
         };
 
+        /** One lane: value and target from 0 (bottom) to 1 (top). Views place the lane themselves. */
         struct TimeSliderValueSnapshot
         {
-            double x = 0.0;
-            double y = 0.0;
-            double width = 0.0;
-            double height = 0.0;
-            double current = 0.0;
-            double destination = 0.0;
+            double value = 0.0;
+            double target = 0.0;
+            bool moving = false;
             int channel = 1;
             int ccNumber = 0;
             std::string label;
@@ -268,7 +266,8 @@ namespace worldofcake
             std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             bool paused = false;
-            std::array<TimeSliderValueSnapshot, 4> sliders{};
+            /** One entry per lane; the count is the target's (`:model :lanes`). */
+            std::vector<TimeSliderValueSnapshot> sliders;
         };
 
         struct TileLandCursorSnapshot
@@ -317,6 +316,7 @@ namespace worldofcake
 
         struct KDiagramNodeSnapshot
         {
+            int type = 0; // circle=0, triangle=1, square=2, terminus=3; matches NodeType.hx
             double x = 0.0;
             double y = 0.0;
         };
@@ -339,6 +339,7 @@ namespace worldofcake
             std::uint64_t stateRevision = 0;
             double logicalTime = 0.0;
             bool paused = false;
+            bool terminusEnabled = true;
             double radius = 0.9;
             int selectedCursor = 0;
             int scaleIndex = 0;

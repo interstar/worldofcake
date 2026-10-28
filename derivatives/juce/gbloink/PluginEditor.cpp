@@ -12,13 +12,6 @@ namespace
     namespace metadata = worldofcake::metadata::gbloink;
     namespace host = worldofcake::jucehost;
 
-    juce::Colour snapshotColour(int rgb, float alpha = 1.0f)
-    {
-        return juce::Colour(static_cast<juce::uint8>((rgb >> 16) & 0xff),
-                            static_cast<juce::uint8>((rgb >> 8) & 0xff),
-                            static_cast<juce::uint8>(rgb & 0xff)).withAlpha(alpha);
-    }
-
     const std::array<const metadata::Knob*, 3> speedMetadata{&metadata::kRedspeed, &metadata::kGreenspeed, &metadata::kBluespeed};
     const std::array<const juce::Rectangle<double>*, 3> speedRegions{&layout::kRedspeed, &layout::kGreenspeed, &layout::kBluespeed};
     const std::array<const metadata::Knob*, 3> velocityMetadata{&metadata::kRedvelocity, &metadata::kGreenvelocity, &metadata::kBluevelocity};
@@ -30,6 +23,12 @@ GbloinkAudioProcessorEditor::GbloinkAudioProcessorEditor(GbloinkAudioProcessor& 
 {
     setOpaque(true);
     setLookAndFeel(&lookAndFeel);
+    addAndMakeVisible(playfield);
+    visualEffects.setButtonText(metadata::kVisual_effects.label);
+    visualEffects.setToggleState(true, juce::dontSendNotification);
+    visualEffects.setTooltip(metadata::kVisual_effects.tooltip);
+    visualEffects.onClick = [this] { playfield.setEffectsEnabled(visualEffects.getToggleState()); };
+    addAndMakeVisible(visualEffects);
 
     for (std::size_t i = 0; i < speedSliders.size(); ++i) {
         auto& slider = speedSliders[i];
@@ -105,6 +104,8 @@ void GbloinkAudioProcessorEditor::sendValue(int controlId, double value)
 void GbloinkAudioProcessorEditor::timerCallback()
 {
     auto next = processor.visualSnapshot();
+    // Presentation time continues even when the model publishes no new state.
+    playfield.update(next);
     if (next.generation == displayedGeneration)
         return;
     displayedGeneration = next.generation;
@@ -134,22 +135,6 @@ void GbloinkAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(host::chrome::playArea);
     g.fillRoundedRectangle(playArea.toFloat(), host::chrome::corner * 1.5f);
 
-    const host::WocJuceCoordinateMapper map(700.0, 500.0, playArea);
-    for (const auto& block : snapshot.blocks) {
-        const auto bounds = map.toView(block.left, block.top,
-                                       block.right - block.left,
-                                       block.bottom - block.top);
-        g.setColour(snapshotColour(block.colour, 0.78f));
-        g.fillRect(bounds);
-    }
-    for (const auto& ball : snapshot.balls) {
-        const auto centre = map.toView(ball.x, ball.y);
-        const auto edge = map.toView(ball.x + ball.radius, ball.y + ball.radius);
-        const float radius = std::min(std::abs(edge.x - centre.x),
-                                      std::abs(edge.y - centre.y));
-        g.setColour(snapshotColour(ball.colour));
-        g.fillEllipse(centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f);
-    }
 }
 
 void GbloinkAudioProcessorEditor::resized()
@@ -159,6 +144,7 @@ void GbloinkAudioProcessorEditor::resized()
         component.setBounds(host::panelRegion(map, region).toNearestInt());
     };
     playArea = host::panelRegion(map, layout::kPlayarea).toNearestInt();
+    playfield.setBounds(playArea);
     for (std::size_t i = 0; i < speedSliders.size(); ++i)
     {
         place(speedSliders[i], *speedRegions[i]);
@@ -170,12 +156,14 @@ void GbloinkAudioProcessorEditor::resized()
     place(pause, layout::kPause);
     place(mute, layout::kMute);
     place(edgeNotes, layout::kEdge_notes);
+    place(visualEffects, layout::kVisual_effects);
 }
 
 void GbloinkAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 {
     if (!playArea.contains(event.getPosition()))
         return;
+    if (event.mods.isPopupMenu()) return;
 
     worldofcake::bridge::ControlCommand command;
     command.kind = worldofcake::bridge::CommandKind::playAreaClick;

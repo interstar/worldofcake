@@ -4,15 +4,6 @@
 
 namespace
 {
-    float clampUnit(float value)
-    {
-        if (value < 0.f)
-            return 0.f;
-        if (value > 1.f)
-            return 1.f;
-        return value;
-    }
-
     float clampRange(float value, float lo, float hi)
     {
         if (value < lo)
@@ -51,7 +42,7 @@ void KDiagram::dataFromJson(json_t* root)
     }
     runner->importStateJson(state);
     const auto snapshot = runner->latestVisualSnapshot();
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < static_cast<int>(kCursorCount); ++i) {
         const float speed = static_cast<float>(snapshot.cursors[i].speed);
         const auto* parameter = std::array<const worldofcake::metadata::kdiagram::Knob*, 3>{
             &worldofcake::metadata::kdiagram::kRedspeed,
@@ -60,14 +51,11 @@ void KDiagram::dataFromJson(json_t* root)
         params[SPEED_CURSOR1_PARAM + i].setValue(static_cast<float>(worldofcake::metadata::kdiagram::normalize(*parameter, speed)));
         lastSpeed[i] = speed;
     }
-    const int channelParam =
-        static_cast<int>(clampRange(static_cast<float>(snapshot.cursors[0].channel - 1), 0.f, 13.f));
-    params[CHANNEL_BASE_PARAM].setValue(static_cast<float>(channelParam));
-    lastChannel = channelParam;
-    const int selected = static_cast<int>(clampRange(static_cast<float>(snapshot.selectedCursor), 0.f, 2.f));
+    baseMidiChannel = snapshot.cursors[0].channel;
+    const int selected = static_cast<int>(clampRange(static_cast<float>(snapshot.selectedCursor), 0.f, static_cast<float>(worldofcake::metadata::kdiagram::kSelectcursor.choiceCount - 1)));
     params[CURSOR_SELECT_PARAM].setValue(static_cast<float>(selected));
     lastCursor = selected;
-    const int scale = static_cast<int>(clampRange(static_cast<float>(snapshot.scaleIndex), 0.f, 5.f));
+    const int scale = static_cast<int>(clampRange(static_cast<float>(snapshot.scaleIndex), 0.f, static_cast<float>(worldofcake::metadata::kdiagram::kScaleselect.choiceCount - 1)));
     params[SCALE_PARAM].setValue(static_cast<float>(scale));
     lastScaleIdx = scale;
     params[NOTE_LENGTH_PARAM].setValue(static_cast<float>(
@@ -75,6 +63,8 @@ void KDiagram::dataFromJson(json_t* root)
     lastNoteLength = static_cast<float>(snapshot.noteLength);
     params[PAUSE_PARAM].setValue(snapshot.paused ? 1.f : 0.f);
     lastPause = snapshot.paused ? 1 : 0;
+    params[TERMINUS_PARAM].setValue(snapshot.terminusEnabled ? 1.f : 0.f);
+    lastTerminus = snapshot.terminusEnabled ? 1 : 0;
     lastReset = 0.f;
     lastL = 0.f;
     lastR = 0.f;

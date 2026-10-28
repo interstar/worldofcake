@@ -1,6 +1,7 @@
 package zewp;
 
 import generated.zewp.ZewpControlIdsGenerated;
+import generated.zewp.ZewpModelGenerated;
 import worldofcake.Event;
 import worldofcake.ISequencerControl;
 import worldofcake.SequencerCore;
@@ -31,15 +32,17 @@ class ZewpSequencer extends SequencerCore implements ISequencerControl {
     private var dragOffsetY:Float;
     private var random:IRandomSource;
     private var speedMultiplier:Float;
-    private static var COLORS:Array<Int> = [0xFF4040, 0x40FF40, 0x4040FF, 0xFFFF40, 0xFF40FF, 0x40FFFF, 0xFF8040, 0x80FF40, 0x4080FF, 0xFFFFFF];
+    /** Zewp colours in creation order (the :zewps palette in apps/zewp/app.edn). */
+    private static var COLORS:Array<Int> = ZewpModelGenerated.PALETTE_ZEWPS;
 
-    public function new(width:Int, height:Int, ?random:IRandomSource) {
+    /** The world is the model's own fixed space (apps/zewp/app.edn :model), the same on every target. */
+    public function new(?random:IRandomSource) {
         this.random = random == null ? new SystemRandomSource() : random;
         super(true);
         bindLifecycleControls(PAUSE_UID);
         maxStepSeconds = SequencerCore.PHYSICS_STEP_SECONDS;
-        areaWidth = width;
-        areaHeight = height;
+        areaWidth = ZewpModelGenerated.WORLD_WIDTH;
+        areaHeight = ZewpModelGenerated.WORLD_HEIGHT;
         speedMultiplier = 1.0;
         repopulateWorld();
     }

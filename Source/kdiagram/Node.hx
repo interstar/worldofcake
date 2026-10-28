@@ -4,6 +4,7 @@ import worldofcake.LocalPoint;
 import worldofcake.IRandomSource;
 
 class Node {
+    public var type:NodeType;
     public var pos:LocalPoint;
     public var angle:Float;
     public var distanceFromCenter:Float;  // Renamed from radius
@@ -11,7 +12,8 @@ class Node {
     public var arcs:Array<Arc>;
     public static inline var HIT_RADIUS:Float = 0.04;  // In local coordinates (-1 to 1)
     
-    public function new(angle:Float, distanceFromCenter:Float) {
+    public function new(angle:Float, distanceFromCenter:Float, type:NodeType = Circle) {
+        this.type = type;
         this.angle = angle;
         this.distanceFromCenter = distanceFromCenter;  // Renamed
         this.pos = new LocalPoint(0, 0);
@@ -72,6 +74,7 @@ class Node {
     public function hit(point:LocalPoint):Bool {
         var dx = pos.x - point.x;
         var dy = pos.y - point.y;
+        if (type == NodeType.Terminus) return Math.abs(dx) / (HIT_RADIUS * 1.35) + Math.abs(dy) / (HIT_RADIUS * 0.65) < 1;
         var distance = Math.sqrt(dx * dx + dy * dy);
         
         return distance < HIT_RADIUS;

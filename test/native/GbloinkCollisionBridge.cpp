@@ -2,6 +2,7 @@
 #include <hx/Native.h>
 #include <HaxeRuntimeBoot.h>
 #include <GbloinkControlRunner.h>
+#include <WorldOfCakeControlIds.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -26,6 +27,12 @@ int main(int argc, char** argv) {
         state << input.rdbuf();
         if (state.str().empty() || !runner.start(0.001)) return 4;
         runner.importStateJson(state.str());
+    } else {
+        worldofcake::bridge::ControlCommand command;
+        command.kind = worldofcake::bridge::CommandKind::setValue;
+        command.controlId = worldofcake::control::gbloink::kEdgeNotes;
+        command.value = 1;
+        if (!runner.enqueueGuiCommand(command)) return 7;
     }
     int lastSerial = 0, seen = 0, blockHits = 0;
     for (int step = 0; step < (argc > 1 ? 400 : 1500); ++step) {

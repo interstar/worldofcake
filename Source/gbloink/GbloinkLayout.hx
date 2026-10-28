@@ -2,7 +2,7 @@ package gbloink;
 
 import generated.gbloink.GbloinkLayoutGenerated;
 
-// Maintained compatibility facade. Geometry is generated from layouts/openfl/gbloink.layla.
+// Maintained layout facade. Geometry comes from this target's apps/gbloink layout.
 class GbloinkLayout {
     public static inline var WINDOW_WIDTH:Float = GbloinkLayoutGenerated.WINDOW_WIDTH;
     public static inline var WINDOW_HEIGHT:Float = GbloinkLayoutGenerated.WINDOW_HEIGHT;

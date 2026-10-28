@@ -2,7 +2,7 @@ param(
     [ValidateSet("Release", "Debug")]
     [string]$Config = "Release",
     [string]$Target = "WorldOfCakeGbloink_All",
-[ValidateSet("Gbloink", "TimeSliders", "Goldenpond", "KDiagram")]
+[ValidateSet("Gbloink", "TimeSliders", "Goldenpond", "KDiagram", "Zewp")]
 [string]$Plugin = "Gbloink",
     [string]$JuceDir = "G:\PRODUCTION\MUSIC\music-software\falling sand 2026\sandsonify-vst\JUCE"
 )
@@ -19,10 +19,11 @@ $CMake = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Co
 $VsDev = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $BuildRoot = Join-Path $Root "build\juce"
-$pluginDir = if ($Plugin -eq "TimeSliders") { "timeslider" } elseif ($Plugin -eq "Goldenpond") { "goldenpond" } elseif ($Plugin -eq "KDiagram") { "kdiagram" } else { "gbloink" }
+$pluginDir = if ($Plugin -eq "TimeSliders") { "timeslider" } elseif ($Plugin -eq "Goldenpond") { "goldenpond" } elseif ($Plugin -eq "KDiagram") { "kdiagram" } elseif ($Plugin -eq "Zewp") { "zewp" } else { "gbloink" }
 $HxcppOutput = Join-Path $BuildRoot ("{0}\hxcpp" -f $pluginDir)
 $CMakeBuild = Join-Path $BuildRoot "cmake-vs2022"
-$HxmlDir = Join-Path $Root ("derivatives\vcvrack\{0}" -f $pluginDir)
+# Each plugin compiles its own Haxe build against the JUCE generated tree (generated\juce).
+$HxmlDir = Join-Path $Root ("derivatives\juce\{0}" -f $pluginDir)
 
 foreach ($Path in @($CMake, $VsDev, (Join-Path $JuceDir "CMakeLists.txt"))) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -43,7 +44,7 @@ $HxcppCommand = "call `"$VsDev`" -arch=x64 -host_arch=x64 && haxe haxe\$hxmlName
 Push-Location $HxmlDir
 try {
     & cmd.exe /d /c $HxcppCommand
-    if ($LASTEXITCODE -ne 0) { throw "Gbloink hxcpp build failed" }
+    if ($LASTEXITCODE -ne 0) { throw "$Plugin hxcpp build failed" }
 } finally {
     Pop-Location
 }
@@ -67,7 +68,9 @@ if ($null -eq $HxcppObjectDir) {
     "-DWOC_GOLDENPOND_HXCPP_DIR=$((Join-Path $BuildRoot 'goldenpond\hxcpp'))" `
     "-DWOC_GOLDENPOND_HXCPP_OBJECT_DIR=$((Join-Path $BuildRoot 'goldenpond\hxcpp\obj'))" `
     "-DWOC_KDIAGRAM_HXCPP_DIR=$((Join-Path $BuildRoot 'kdiagram\hxcpp'))" `
-    "-DWOC_KDIAGRAM_HXCPP_OBJECT_DIR=$((Join-Path $BuildRoot 'kdiagram\hxcpp\obj'))"
+    "-DWOC_KDIAGRAM_HXCPP_OBJECT_DIR=$((Join-Path $BuildRoot 'kdiagram\hxcpp\obj'))" `
+    "-DWOC_ZEWP_HXCPP_DIR=$((Join-Path $BuildRoot 'zewp\hxcpp'))" `
+    "-DWOC_ZEWP_HXCPP_OBJECT_DIR=$((Join-Path $BuildRoot 'zewp\hxcpp\obj'))"
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 
 & $CMake --build $CMakeBuild --config $Config --target $Target

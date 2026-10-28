@@ -2,7 +2,9 @@
 param(
     [ValidateRange(1, 65535)]
     [int]$Port = 8765,
-    [string]$LaylaRoot = 'G:\PRODUCTION\MAIN_PROJECTS\language_oriented\langdev\layla',
+    # Source directories placed ahead of the bundled generator JAR (which already
+    # provides the Layla parser and the target resolver). Normally none.
+    [string[]]$ExtraSource = @(),
     [switch]$BuildOnly,
     [switch]$SkipBuild,
     [switch]$Test
@@ -10,13 +12,12 @@ param(
 $ErrorActionPreference = 'Stop'
 Push-Location $PSScriptRoot
 try {
-    if (-not (Test-Path -LiteralPath (Join-Path $LaylaRoot 'src/layla/core.cljc'))) {
-        throw "Layla source not found at $LaylaRoot. Pass -LaylaRoot with its repository path."
+    foreach ($path in $ExtraSource) {
+        if (-not (Test-Path -LiteralPath $path)) { throw "Extra source directory not found: $path" }
     }
-    # The live canonical .cljc source takes precedence over the bundled generator's copy.
-    $laylaSource = (Join-Path $LaylaRoot 'src').Replace('\', '/')
+    $extraPaths = ($ExtraSource | ForEach-Object { '"' + (Resolve-Path -LiteralPath $_).Path.Replace('\', '/') + '"' }) -join ' '
     $mavenCache = (Join-Path $env:USERPROFILE '.m2/repository').Replace('\', '/')
-    $extraDeps = '{:mvn/local-repo "' + $mavenCache + '" :aliases {:live {:extra-paths ["' + $laylaSource + '"]}}}'
+    $extraDeps = '{:mvn/local-repo "' + $mavenCache + '" :aliases {:live {:extra-paths [' + $extraPaths + ']}}}'
     # Windows PowerShell 5.1 strips embedded quotes in native arguments. Preserve
     # EDN string quotes for clojure.exe; PS7's Standard argument mode does this itself.
     if ($PSVersionTable.PSVersion.Major -lt 7 -or

@@ -8,7 +8,7 @@ class TestZewpHeadless {
     static var failures=0;
     static function check(n:String,c:Bool):Void { Sys.println((c?"PASS ":"FAIL ")+n); if(!c) failures++; }
     static function near(a:Float,b:Float,e:Float=0.000001):Bool return Math.abs(a-b)<=e;
-    static function make(seed:Int=12345):ZewpSequencer return new ZewpSequencer(600,560,new SeededRandomSource(seed));
+    static function make(seed:Int=12345):ZewpSequencer return new ZewpSequencer(new SeededRandomSource(seed));
     static function testSeedAndDelta():Void {
         var a=make(), b=make(), d=make(54321);
         check("zewp same seed world",a.exportStateJson()==b.exportStateJson());

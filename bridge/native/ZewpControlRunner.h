@@ -11,7 +11,8 @@ namespace worldofcake::bridge
     class ZewpControlRunner : public HarnessControlRunner<ZewpHarness_obj>
     {
       public:
-        ZewpControlRunner(int width, int height, int seed);
+        /** The model's world size is fixed by the app (metadata::zewp::model). */
+        explicit ZewpControlRunner(int seed);
         ~ZewpControlRunner();
         ZewpControlRunner(const ZewpControlRunner&) = delete;
         ZewpControlRunner& operator=(const ZewpControlRunner&) = delete;
@@ -28,7 +29,7 @@ namespace worldofcake::bridge
         void pump(double) override;
         void applyAppCommand(const ControlCommand&) override;
         void publish();
-        int width, height;
+        double width, height;
         int seed;
         std::uint64_t generation = 1;
         bool modelCreated = false;

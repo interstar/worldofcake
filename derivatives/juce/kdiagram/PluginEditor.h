@@ -41,6 +41,7 @@ class KDiagramAudioProcessorEditor final : public juce::AudioProcessorEditor, pr
     worldofcake::jucehost::IconButton pause{worldofcake::metadata::kdiagram::kPause};
     worldofcake::jucehost::IconButton rotateLeft{worldofcake::metadata::kdiagram::kRotate_left};
     worldofcake::jucehost::IconButton rotateRight{worldofcake::metadata::kdiagram::kRotate_right};
+    worldofcake::jucehost::IconButton terminus{worldofcake::metadata::kdiagram::kTerminus};
     std::array<worldofcake::jucehost::ModelMirror<double>, 3> shownSpeeds;
     worldofcake::jucehost::ModelMirror<double> shownNoteLength;
     worldofcake::jucehost::ModelMirror<int> shownScale, shownChannel;

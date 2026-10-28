@@ -1,6 +1,6 @@
 # TimeSlider — outputs
 
-The Rack socket metadata for this module is `layouts/rack/timeslider.edn`. It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
+The Rack socket metadata for this module is in `apps/timeslider/rack.edn`. It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
 
 
 Four **CV** jacks (CC1…CC4 top-to-bottom in widget order).

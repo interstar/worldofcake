@@ -1,9 +1,7 @@
 #include "PluginEditor.h"
-#include "WorldOfCakeControlIds.h"
 #include "WocJuceCoordinateMapper.h"
 #include "WocJuceEditorSupport.h"
 #include "worldofcake/generated/juce/timeslider/LayoutGenerated.h"
-#include "worldofcake/generated/timeslider/TimeSliderControlIdsGenerated.h"
 #include "worldofcake/generated/timeslider/TimesliderControlMetadataGenerated.h"
 
 #include <cstring>
@@ -14,21 +12,10 @@ namespace
     namespace metadata = worldofcake::metadata::timeslider;
     namespace host = worldofcake::jucehost;
 
-    constexpr std::size_t kLanes = 4;
-    const std::array<const metadata::Track*, kLanes> trackMetadata{&metadata::kLane1track, &metadata::kLane2track,
-                                                                   &metadata::kLane3track, &metadata::kLane4track};
-    const std::array<const metadata::TextInput*, kLanes> labelMetadata{&metadata::kLane1label, &metadata::kLane2label,
-                                                                       &metadata::kLane3label, &metadata::kLane4label};
-    const std::array<const juce::Rectangle<double>*, kLanes> labelRegions{&layout::kLane1label, &layout::kLane2label,
-                                                                          &layout::kLane3label, &layout::kLane4label};
-    const std::array<const metadata::SemanticSelect*, kLanes> channelMetadata{
-        &metadata::kLane1channel, &metadata::kLane2channel, &metadata::kLane3channel, &metadata::kLane4channel};
-    const std::array<const juce::Rectangle<double>*, kLanes> channelRegions{
-        &layout::kLane1channel, &layout::kLane2channel, &layout::kLane3channel, &layout::kLane4channel};
-    const std::array<const metadata::SemanticSelect*, kLanes> ccMetadata{
-        &metadata::kLane1cc, &metadata::kLane2cc, &metadata::kLane3cc, &metadata::kLane4cc};
-    const std::array<const juce::Rectangle<double>*, kLanes> ccRegions{
-        &layout::kLane1cc, &layout::kLane2cc, &layout::kLane3cc, &layout::kLane4cc};
+    // Each lane's controls (metadata::kLanes) and where they go (layout::kLaneRegions), in lane order.
+    static_assert(metadata::kLaneCount == std::tuple_size<std::remove_cv_t<decltype(layout::kLaneRegions)>>::value,
+                  "metadata and layout must agree on the lanes");
+
     // Matches the OpenFL TimeSliderView.
     const juce::Colour laneColour{0xff13161c};
     constexpr float fillAlpha = 0.35f;
@@ -55,27 +42,30 @@ TimeSliderAudioProcessorEditor::TimeSliderAudioProcessorEditor(TimeSliderAudioPr
     setLookAndFeel(&lookAndFeel);
 
     for (std::size_t i = 0; i < kLanes; ++i) {
+        const auto& lane = metadata::kLanes[i];
         auto& label = labels[i];
         label.setMultiLine(false);
-        label.setTooltip(host::tooltipFor(labelMetadata[i]->tooltip, labelMetadata[i]->label));
-        auto commit = [this, i] { sendText(labelMetadata[i]->controlId, labels[i].getText()); };
+        label.setTooltip(host::tooltipFor(lane.label->tooltip, lane.label->label));
+        auto commit = [this, i] { sendText(metadata::kLanes[i].label->controlId, labels[i].getText()); };
         label.onReturnKey = commit;
         label.onFocusLostCallback = commit;
         addAndMakeVisible(label);
 
-        fillChoices(channelSelects[i], *channelMetadata[i]);
+        fillChoices(channelSelects[i], *lane.channel);
         channelSelects[i].onChange = [this, i] {
+            const auto& select = *metadata::kLanes[i].channel;
             const int index = channelSelects[i].getSelectedItemIndex();
             if (index >= 0)
-                sendValue(channelMetadata[i]->controlId, channelMetadata[i]->choices[static_cast<std::size_t>(index)].value);
+                sendValue(select.controlId, select.choices[static_cast<std::size_t>(index)].value);
         };
         addAndMakeVisible(channelSelects[i]);
 
-        fillChoices(ccSelects[i], *ccMetadata[i]);
+        fillChoices(ccSelects[i], *lane.cc);
         ccSelects[i].onChange = [this, i] {
+            const auto& select = *metadata::kLanes[i].cc;
             const int index = ccSelects[i].getSelectedItemIndex();
             if (index >= 0)
-                sendValue(ccMetadata[i]->controlId, ccMetadata[i]->choices[static_cast<std::size_t>(index)].value);
+                sendValue(select.controlId, select.choices[static_cast<std::size_t>(index)].value);
         };
         addAndMakeVisible(ccSelects[i]);
     }
@@ -133,9 +123,10 @@ void TimeSliderAudioProcessorEditor::resized()
 {
     const auto map = panelMapper();
     for (std::size_t i = 0; i < kLanes; ++i) {
-        labels[i].setBounds(host::textFieldBounds(host::panelRegion(map, *labelRegions[i])));
-        channelSelects[i].setBounds(host::panelRegion(map, *channelRegions[i]).toNearestInt());
-        ccSelects[i].setBounds(host::panelRegion(map, *ccRegions[i]).toNearestInt());
+        const auto& regions = layout::kLaneRegions[i];
+        labels[i].setBounds(host::textFieldBounds(host::panelRegion(map, regions.label)));
+        channelSelects[i].setBounds(host::panelRegion(map, regions.channel).toNearestInt());
+        ccSelects[i].setBounds(host::panelRegion(map, regions.cc).toNearestInt());
     }
     reset.setBounds(host::panelRegion(map, layout::kReset).toNearestInt());
     pause.setBounds(host::panelRegion(map, layout::kPause).toNearestInt());
@@ -145,22 +136,22 @@ void TimeSliderAudioProcessorEditor::paint(juce::Graphics& g)
 {
     const auto map = panelMapper();
     g.fillAll(host::chrome::background);
-    for (std::size_t i = 0; i < kLanes; ++i) {
-        // Track geometry is in panel coordinates (the model's area is the panel).
+    for (std::size_t i = 0; i < kLanes && i < snap.sliders.size(); ++i) {
+        // The lane's place comes from the generated layout; its value (0 bottom .. 1 top) from the model.
         const auto& s = snap.sliders[i];
-        const auto lane = map.toView(s.x, s.y, s.width, s.height);
-        const auto colour = host::rgb(trackMetadata[i]->colour);
+        const auto lane = host::panelRegion(map, layout::kLaneRegions[i].track);
+        const auto colour = host::rgb(metadata::kLanes[i].track->colour);
         g.setColour(laneColour);
         g.fillRoundedRectangle(lane, host::chrome::corner * 1.5f);
-        const float current = map.toView(s.x, s.y + s.current).y;
+        const float valueY = lane.getY() + static_cast<float>(1.0 - s.value) * lane.getHeight();
         g.setColour(colour.withAlpha(fillAlpha));
-        g.fillRect(lane.withTop(current));
+        g.fillRect(lane.withTop(valueY));
         g.setColour(colour);
-        g.drawLine(lane.getX(), current, lane.getRight(), current, 2.0f);
-        if (s.destination != s.current) {
-            const float target = map.toView(s.x, s.y + s.destination).y;
+        g.drawLine(lane.getX(), valueY, lane.getRight(), valueY, 2.0f);
+        if (s.moving) {
+            const float targetY = lane.getY() + static_cast<float>(1.0 - s.target) * lane.getHeight();
             g.setColour(juce::Colours::white.withAlpha(0.7f));
-            g.drawLine(lane.getX(), target, lane.getRight(), target, 1.0f);
+            g.drawLine(lane.getX(), targetY, lane.getRight(), targetY, 1.0f);
         }
     }
 }
@@ -168,20 +159,17 @@ void TimeSliderAudioProcessorEditor::paint(juce::Graphics& g)
 void TimeSliderAudioProcessorEditor::mouseDown(const juce::MouseEvent& e)
 {
     const auto map = panelMapper();
-    const auto modelPoint = map.toModel(e.position);
     for (std::size_t i = 0; i < kLanes; ++i) {
-        const auto& s = snap.sliders[i];
-        if (!map.toView(s.x, s.y, s.width, s.height).contains(e.position))
+        const auto lane = host::panelRegion(map, layout::kLaneRegions[i].track);
+        if (!lane.contains(e.position))
             continue;
+        // The lane's own space (as OpenFL's lane component): x is the travel-time fraction,
+        // y the target value, 0 at the bottom to 1 at the top.
         worldofcake::bridge::ControlCommand c;
         c.kind = worldofcake::bridge::CommandKind::playAreaClick;
-        c.controlId = worldofcake::control::timeslider::trackUid(static_cast<int>(i));
-        // The shared Haxe component contract receives coordinates local to the
-        // selected track, not panel coordinates. OpenFL/Rack perform this
-        // panel-to-local conversion in ComponentCommon before dispatching
-        // mouseDown; mirror that conversion in the JUCE adapter.
-        c.x = modelPoint.x - s.x;
-        c.y = modelPoint.y - s.y;
+        c.controlId = metadata::kLanes[i].track->controlId;
+        c.x = (e.position.x - lane.getX()) / lane.getWidth();
+        c.y = 1.0 - (e.position.y - lane.getY()) / lane.getHeight();
         processor.enqueue(c);
         return;
     }
@@ -191,13 +179,13 @@ void TimeSliderAudioProcessorEditor::timerCallback()
 {
     snap = processor.snapshot();
     // Follow model changes only, so a pending user edit is never overwritten.
-    for (std::size_t i = 0; i < kLanes; ++i) {
+    for (std::size_t i = 0; i < kLanes && i < snap.sliders.size(); ++i) {
         const auto& s = snap.sliders[i];
         shownChannels[i].update(s.channel, [this, i](int channel) {
-            channelSelects[i].setSelectedItemIndex(choiceIndex(*channelMetadata[i], channel), juce::dontSendNotification);
+            channelSelects[i].setSelectedItemIndex(choiceIndex(*metadata::kLanes[i].channel, channel), juce::dontSendNotification);
         });
         shownCcNumbers[i].update(s.ccNumber, [this, i](int cc) {
-            ccSelects[i].setSelectedItemIndex(choiceIndex(*ccMetadata[i], cc), juce::dontSendNotification);
+            ccSelects[i].setSelectedItemIndex(choiceIndex(*metadata::kLanes[i].cc, cc), juce::dontSendNotification);
         });
         shownLabels[i].update(s.label, [this, i](const std::string& text) {
             labels[i].setText(juce::String::fromUTF8(text.c_str()), juce::dontSendNotification);

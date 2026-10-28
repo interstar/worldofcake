@@ -14,11 +14,11 @@ class KDiagramView extends ControlValueViewBase {
     private var channelSelect:SemanticSelect;
     private var cursorSelect:SemanticSelect;
     private var scaleSelect:SemanticSelect;
-    private var nodeColor:Int = 0x787878;  // Match Rack node fill
-    private var arcColor:Int = 0xFFC864;   // Orange arcs
+    private var nodeColor:Int = 0x292722;  // Match Rack node fill
+    private var arcColor:Int = 0x35332E;   // Orange arcs
     private var cursorColor:Int = 0x32C850; // Green cursor
-    private var networkColor:Int = 0xC8C864; // Yellow-ish network circle
-    private var selectedCursorBorderColor:Int = 0xFFFFFF;  // White border for selected cursor
+    private var networkColor:Int = 0xA7A298; // Yellow-ish network circle
+    private var selectedCursorBorderColor:Int = 0x292722;  // White border for selected cursor
 
     public function new(sequencer:KDiagramSequencer, windowToPanelMapper:CoordinateMapper) {
         super();
@@ -67,7 +67,7 @@ class KDiagramView extends ControlValueViewBase {
         g.clear();
         
         // Draw background
-        g.beginFill(0x13161C);
+        g.beginFill(0xF6F3EA);
         g.drawRoundRect(0, 0, KDiagramLayout.PLAY_AREA_WIDTH, KDiagramLayout.PLAY_AREA_HEIGHT,
             worldofcake.ui.Chrome.CORNER * 1.5, worldofcake.ui.Chrome.CORNER * 1.5);
         g.endFill();
@@ -83,7 +83,14 @@ class KDiagramView extends ControlValueViewBase {
         g.lineStyle(1, networkColor);
         g.drawCircle(centerWindowPoint.x, centerWindowPoint.y, networkWindowRadius);
         
-        // Draw nodes
+        // Draw all connections before the opaque paper-filled symbols.
+        g.lineStyle(1, arcColor);
+        for (node in network.nodes) for (arc in node.arcs) {
+            var from = localToPlayAreaDisplay(node.pos);
+            var to = localToPlayAreaDisplay(network.nodes[arc.destination].pos);
+            g.moveTo(from.x, from.y);
+            g.lineTo(to.x, to.y);
+        }
         for (node in network.nodes) {
             drawNode(g, node, false);
         }
@@ -93,11 +100,12 @@ class KDiagramView extends ControlValueViewBase {
         var cursors = sequencer.getCursors();
         for (i in 0...cursors.length) {
             var cursor = cursors[i];
-            var size = (i == selectedIndex) ? 8 : 6;
+            var size = (i == selectedIndex) ? 5 : 4;
             
             // Convert cursor position to window space
             var cursorWindowPoint = localToPlayAreaDisplay(cursor.pos);
             
+            g.lineStyle();
             g.beginFill(cursor.color);
             g.drawCircle(cursorWindowPoint.x, cursorWindowPoint.y, size);
             g.endFill();
@@ -107,7 +115,7 @@ class KDiagramView extends ControlValueViewBase {
                 g.drawCircle(cursorWindowPoint.x, cursorWindowPoint.y, size + 3);
             }
             
-            if (cursor.isMoving) {
+            if (cursor.isMoving && cursor.waitRemaining <= 0) {
                 // Convert target position to window space
                 var targetWindowPoint = localToPlayAreaDisplay(cursor.target);
                 
@@ -122,19 +130,25 @@ class KDiagramView extends ControlValueViewBase {
         var windowPos = localToPlayAreaDisplay(node.pos);
         var windowRadius = playArea.localLengthToWindowLength(Node.HIT_RADIUS);
         
-        graphics.beginFill(nodeColor);
-        graphics.drawCircle(windowPos.x, windowPos.y, windowRadius);
-        graphics.endFill();
-        
-        // Draw arcs from this node
-        graphics.lineStyle(1, arcColor);
-        for (arc in node.arcs) {
-            var toNode = sequencer.getNetwork().nodes[arc.destination];
-            var toWindowPos = localToPlayAreaDisplay(toNode.pos);
-            
-            graphics.moveTo(windowPos.x, windowPos.y);
-            graphics.lineTo(toWindowPos.x, toWindowPos.y);
+        var x = windowPos.x, y = windowPos.y, r = windowRadius;
+        graphics.lineStyle(1.3, nodeColor);
+        graphics.beginFill(0xF6F3EA);
+        switch (node.type) {
+            case Terminus:
+                graphics.moveTo(x-r*1.35, y);
+                graphics.lineTo(x, y-r*0.65);
+                graphics.lineTo(x+r*1.35, y);
+                graphics.lineTo(x, y+r*0.65);
+                graphics.lineTo(x-r*1.35, y);
+            case Square: graphics.drawRect(x-r, y-r, r*2, r*2);
+            case Triangle:
+                graphics.moveTo(x, y-r);
+                graphics.lineTo(x+r, y+r);
+                graphics.lineTo(x-r, y+r);
+                graphics.lineTo(x, y-r);
+            default: graphics.drawCircle(x, y, r);
         }
+        graphics.endFill();
     }
 
 

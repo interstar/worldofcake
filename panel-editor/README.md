@@ -2,8 +2,9 @@
 
 For launch instructions and a walkthrough, see [How to use the editor](HOW-TO-USE.md).
 
-A local browser editor for the canonical `layouts/openfl/*.layla` and companion
-EDN files. It renders static panels with Canvas 2D, without Haxe or OpenFL in
+A local browser editor for World of Cake app definitions and OpenFL panels.
+It detects `apps/<app>/app.edn` and uses the migrated sources when present;
+otherwise it reads the legacy `layouts/openfl/<app>.layla` and `.edn` pair. It renders static panels with Canvas 2D, without Haxe or OpenFL in
 the preview pipeline. Rack panels are outside v1.
 
 ## Run on Windows
@@ -19,45 +20,65 @@ server with Ctrl+C. Subsequent launches can use `-SkipBuild`; after changing
 editor code, omit that flag to rebuild. `-BuildOnly` compiles without serving.
 `-Port 8766` selects another port.
 
-Requires Java 17+, the Clojure CLI, and the canonical Layla checkout. The default
-checkout is `G:\PRODUCTION\MAIN_PROJECTS\language_oriented\langdev\layla`;
-override with `-LaylaRoot <path>`. The launcher uses that checkout's `.cljc`
-parser for both JVM and browser builds. The bundled WoC generator JAR provides
-Instaparse and the production geometry reference for tests. ClojureScript
-1.11.132 and its compiler dependencies are resolved through the user's Maven
-cache; an initial download may be required. No Node server is needed.
+Requires Java 17+ and the Clojure CLI. The bundled WoC generator JAR
+(`vendor/layla/worldofcake-laylagen.jar`) provides the Layla `.cljc` parser for
+both JVM and browser builds, the target resolver, Instaparse, and the production
+geometry reference for tests. ClojureScript 1.11.132 and its compiler
+dependencies are resolved through the user's Maven cache; an initial download may
+be required. No Node server is needed. `-ExtraSource <dir>,...` puts source
+directories ahead of the JAR on the classpath; normal use does not need it.
 
-For other platforms, from this directory, add the canonical Layla `src` directory
-to the classpath using a CLI alias with `:extra-paths`, then run `clojure -M:build`
-and `clojure -M:serve`. Without that extra path, the parser bundled in WoC's JAR
-is used.
+For other platforms, from this directory, run `clojure -M:build` and
+`clojure -M:serve`.
 
 ## Workflow
 
-Select an app and edit its Layla or EDN tab. Preview updates after a short pause.
-Save pair (Ctrl/Cmd+S) explicitly writes both canonical source files. Nothing is
-written while typing. Invalid edits disable Save, show diagnostics and an orange
-outline, and retain the last valid preview. Switching panels or reloading prompts
-before discarding unsaved edits; leaving the page triggers the browser warning.
+Select an app. Source tabs follow the app's migration status:
 
-The server detects external changes to either file and refuses to overwrite them.
-If a save conflict occurs, copy your edits before reloading, then reapply them.
-Saves validate both sources first and restore the previous pair if an ordinary
-write fails. The two filesystem writes are not a crash-atomic transaction.
+- Migrated (`apps/<app>/app.edn` exists): **Layla** edits `openfl.layla`,
+  **OpenFL EDN** edits `openfl.edn`, and **App EDN** edits `app.edn`.
+  Geometry/presentation normally belong in OpenFL EDN; shared labels, ranges,
+  defaults, choices, outputs and model semantics belong in App EDN. Shared edits
+  can affect JUCE/VST and Rack too. The filename identifies the actual file.
+- Legacy: **Layla** and **EDN** retain the existing `layouts/openfl/` workflow.
 
-Fit displays the design within the preview pane without reflow; 100% uses one CSS
-pixel per design unit. Higher-density screens use a matching canvas backing
-resolution. Bounds displays the layout rectangles for checking geometry. Panel
-widgets are static and display EDN defaults; they do not run the sequencer.
+Migrated previews are resolved by the build's actual
+`worldofcake.laylagen.targets/resolve-target`. Draft sources are staged in a
+short-lived temporary directory along with the app's other overlays. The server
+resolves inheritance, deep merges, deletions and future resolver expansions there;
+the browser uses the resolved config and the real Layla CLJS parser to draw.
+There is no second implementation of target merge rules. Previewing never writes
+real sources. The source text is saved verbatim, not flattened into merged EDN.
+
+**Save sources** (or **Save pair** for legacy apps), Ctrl/Cmd+S, explicitly writes
+changed source files after the merged result validates. Nothing is written while
+typing. Migrated saves never touch `layouts/`, even if obsolete copies exist.
+Revisions cover every editable file plus the migrated app's overlay/layout
+snapshot, detecting inherited dependency changes and migration during editing.
+Copy edits before Reload if a conflict occurs. Ordinary write failures trigger
+restoration of the old source set; this is not a crash-atomic transaction.
+
+Invalid edits disable Save, show diagnostics and an orange outline, and retain
+the last valid preview. Preview requests are debounced, and stale responses are
+ignored. Switching panels or reloading prompts before discarding unsaved edits;
+leaving the page triggers the browser warning.
+
+Fit scales the design without reflow; 100% uses one CSS pixel per design unit.
+Bounds shows layout rectangles. Widgets display EDN defaults, not live model state.
+
+## Generator dependency
+
+The editor uses the target resolver in the bundled JAR
+(`worldofcake.laylagen.targets`); it does not copy, fork or modify it. The JAR
+changes only with the generator, never through the editor.
 
 ## Fidelity and maintenance
 
 `model.cljc` mirrors production `calculate-geometry`: relative weights, outer and
 container padding, depth-specific gaps, and named containers. Regression tests
 compare every node against the bundled generator for all six current panels.
-The generator source is intentionally ignored/owner-maintained in this repo, so
-the editor does not modify it or depend on its untracked working copy. If geometry
-rules change upstream, update this module and the parity tests together.
+If the generator's geometry rules change, update this module and the parity tests
+together.
 
 `render.cljs` translates the drawing rules in `Source/worldofcake/ui/`: Chrome,
 Knob, PanelBox, PanelText, PanelTitle, SemanticSelect, Button/Toggle, Slider, and
@@ -86,8 +107,9 @@ From this directory:
 .\run.ps1 -Test
 ```
 
-Tests cover geometry parity, invalid edits, save roundtrip, UTF-8, and disk conflict
-detection. Save tests use a temporary repository and do not edit real layouts.
+Tests cover resolved geometry parity, legacy and migrated save roundtrips, UTF-8,
+inheritance/deletion/vector replacement, and conflicts across all edited sources
+and inherited dependencies. Save tests use a temporary repository and do not edit real layouts.
 
 The JVM server binds only to `127.0.0.1`, serves editor assets, and exposes an app
 allowlist for file operations. Save requests require a same-origin editor header;

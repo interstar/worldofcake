@@ -15,22 +15,16 @@ namespace worldofcake::bridge
     class TimeSliderControlRunner : public HarnessControlRunner<TimeSliderHarness_obj>
     {
       public:
-        TimeSliderControlRunner(int width, int height, double slowSeconds, double fastSeconds);
+        TimeSliderControlRunner();
         ~TimeSliderControlRunner();
 
         TimeSliderControlRunner(const TimeSliderControlRunner&) = delete;
         TimeSliderControlRunner& operator=(const TimeSliderControlRunner&) = delete;
 
         void pump(double delta) override;
-        /** Real-time-safe continuous-state channel; does not enter Haxe or lock. */
-        bool popControlSnapshot(TimeSliderControlSnapshot& value) noexcept;
         bool popPreparedEvent(PreparedEvent& value) noexcept;
+        /** Latest lane values etc., for editors and widgets (copies under a lock; not for the audio thread). */
         TimeSliderControlSnapshot latestVisualSnapshot() const;
-
-        std::uint64_t droppedSnapshots() const noexcept
-        {
-            return snapshotDrops.load();
-        }
 
       private:
         void createModel() override;
@@ -40,15 +34,11 @@ namespace worldofcake::bridge
         void publishSnapshot();
         void drainEvents();
 
-        SpscRingBuffer<TimeSliderControlSnapshot, 64> controlSnapshots;
         SpscRingBuffer<PreparedEvent, 512> events;
-        std::atomic<std::uint64_t> snapshotDrops{0};
         std::atomic<std::uint64_t> eventDrops{0};
         mutable std::mutex visualMutex;
         TimeSliderControlSnapshot visualSnapshot;
         std::uint64_t nextGeneration = 1;
-        int modelWidth = 0, modelHeight = 0;
-        double modelSlow = 0.0, modelFast = 0.0;
         bool modelCreated = false;
     };
 } // namespace worldofcake::bridge

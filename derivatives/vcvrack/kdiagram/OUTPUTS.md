@@ -1,15 +1,19 @@
-# KDiagram — outputs
+# KDiagram outputs
 
-The Rack socket metadata for this module is `layouts/rack/kdiagram.edn`. It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
+Source: `apps/kdiagram/rack.edn`. The generated header supplies socket labels,
+positions and voltage laws; C++ preserves the existing output IDs and order.
 
+The 44 HP panel has three colored cursor rows. Each row has four outputs,
+left to right:
 
-**44 HP** panel: **four** jacks per cursor row (red / green / blue), left → right:
+- **Gate:** 10 V while that cursor's model note sounds. Note duration follows
+  the node shape: the Circle note control, 0.5-1 second for triangles, or
+  1-2 seconds for squares. The cursor's longer node wait continues afterward.
+- **Y:** continuous vertical position, local -1..1 mapped to 0..10 V.
+- **X:** continuous horizontal position, local -1..1 mapped to 0..10 V.
+- **Pitch:** the model's scale-corrected arrival note as 1 V/oct, held until
+  that cursor's next note.
 
-| Jack | Signal |
-|------|--------|
-| **G** | **Gate** — short pulse when that cursor **arrives** at a node (same as the core’s note event). |
-| **Y** | **CV** — continuous **vertical** position; local **−1…1** mapped to **0…10 V** (`(y+1)*5`). |
-| **X** | **CV** — continuous **horizontal** position; same mapping. |
-| **N** | **Pitch CV** — whenever **G** fires, this output takes the note pitch explicitly calculated by the Haxe sequencer and holds it as **1 V/oct** until the next arrival on that cursor. |
-
-The Haxe sequencer exposes both **cursor position** and **per-arrival note events**. Continuous X/Y match the CC logic in `advanceTime`; note CV uses `NoteCalculator`, mapping the normalized KDiagram play-area height onto the shared WoC note range and selected scale.
+Pause and transport boundaries release sounding notes. Node timing and the
+Terminus setting remain owned by the Haxe model. Rack has no MIDI-channel
+widget; channels in a restored model are internal routing only.

@@ -1,5 +1,6 @@
 #include "TileLandControlRunner.h"
 #include "WorldOfCakeControlIds.h"
+#include <worldofcake/generated/tileland/TilelandControlMetadataGenerated.h>
 #include <algorithm>
 #include <cmath>
 namespace worldofcake::bridge
@@ -44,9 +45,11 @@ namespace worldofcake::bridge
     {
         if (c.kind == CommandKind::playAreaClick)
             harness->click(c.x, c.y);
-        else if (c.kind == CommandKind::setValue && c.controlId >= ControlIds::kSpeedBase &&
-                 c.controlId < ControlIds::kSpeedBase + ControlIds::kSpeedCount)
-            harness->setSpeed(c.controlId - ControlIds::kSpeedBase, c.value);
+        else if (c.kind == CommandKind::setValue) {
+            for (int i = 0; i < ControlIds::kSpeedCount; ++i)
+                if (c.controlId == ControlIds::speedUid(i))
+                    harness->setSpeed(i, c.value);
+        }
     }
     TileLandControlSnapshot TileLandControlRunner::captureControlSnapshot(std::uint64_t g)
     {
@@ -56,8 +59,8 @@ namespace worldofcake::bridge
         n.stateRevision = static_cast<std::uint64_t>(harness->stateRevision());
         n.logicalTime = logicalTime;
         for (int i = 0; i < 3; i++) {
-            n.values[i * 2] = std::max(0, std::min(127, (int)(harness->cursorX(i) / 600. * 127)));
-            n.values[i * 2 + 1] = std::max(0, std::min(127, 127 - (int)(harness->cursorY(i) / 600. * 127)));
+            n.values[i * 2] = std::max(0, std::min(127, (int)(harness->cursorX(i) / worldofcake::metadata::tileland::model::kWorldWidth * 127)));
+            n.values[i * 2 + 1] = std::max(0, std::min(127, 127 - (int)(harness->cursorY(i) / worldofcake::metadata::tileland::model::kWorldHeight * 127)));
         }
         return n;
     }

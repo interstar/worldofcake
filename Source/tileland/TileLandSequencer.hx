@@ -1,6 +1,7 @@
 package tileland;
 
 import generated.tileland.TileLandControlIdsGenerated;
+import generated.tileland.TileLandModelGenerated;
 import haxe.Json;
 import StringTools;
 import worldofcake.Event;
@@ -9,7 +10,6 @@ import tileland.Cursor;
 import tileland.Direction;
 import worldofcake.ISequencerControl;
 import worldofcake.SequencerCore;
-import tileland.TileLandLayout;
 import worldofcake.LocalPoint;
 import worldofcake.IRandomSource;
 import worldofcake.SystemRandomSource;
@@ -17,21 +17,22 @@ import worldofcake.SystemRandomSource;
 class TileLandSequencer extends SequencerCore implements ISequencerControl {
     // Constants
     public static inline var PLAY_AREA_UID:Int = TileLandControlIdsGenerated.PLAYAREA;
-    public static inline var SPEED_UID_BASE:Int = TileLandControlIdsGenerated.REDSPEED;
-    public static inline var SPEED_UID_COUNT:Int = 3;
+    /** Cursor speed controls, by cursor. Control IDs follow each target's order, so they are listed, not computed. */
+    public static var SPEED_UIDS(default, never):Array<Int> = [
+        TileLandControlIdsGenerated.REDSPEED, TileLandControlIdsGenerated.GREENSPEED, TileLandControlIdsGenerated.BLUESPEED];
     public static inline var RESET_UID:Int = TileLandControlIdsGenerated.RESET;
     public static inline var PAUSE_UID:Int = TileLandControlIdsGenerated.PAUSE;
 
     public static inline function speedUid(index:Int):Int {
-        return SPEED_UID_BASE + index;
+        return SPEED_UIDS[index];
     }
 
     public static inline function speedIndexForUid(uid:Int):Int {
-        return uid - SPEED_UID_BASE;
+        return SPEED_UIDS.indexOf(uid);
     }
 
     public static inline function isSpeedUid(uid:Int):Bool {
-        return uid >= SPEED_UID_BASE && uid < SPEED_UID_BASE + SPEED_UID_COUNT;
+        return SPEED_UIDS.indexOf(uid) >= 0;
     }
     
     // Dimensions
@@ -52,11 +53,12 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
     
     public function new(?random:IRandomSource) {
         this.random = random == null ? new SystemRandomSource() : random;
-        this.areaWidth = TileLandLayout.PLAY_AREA_WIDTH;
-        this.areaHeight = TileLandLayout.PLAY_AREA_HEIGHT;
-        this.tileSize = TileLandLayout.TILE_SIZE;
-        this.rows = TileLandLayout.GRID_ROWS;
-        this.cols = TileLandLayout.GRID_COLS;
+        // The world is the model's own fixed space (apps/tileland/app.edn :model), the same on every target.
+        this.areaWidth = TileLandModelGenerated.WORLD_WIDTH;
+        this.areaHeight = TileLandModelGenerated.WORLD_HEIGHT;
+        this.tileSize = TileLandModelGenerated.TILE_SIZE;
+        this.rows = Std.int(areaHeight / tileSize);
+        this.cols = Std.int(areaWidth / tileSize);
         super(true);
         bindLifecycleControls(PAUSE_UID);
         this.visualVersion = 0;
@@ -75,9 +77,9 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
         }
 
         cursors = [
-            new Cursor(2, 2, Direction.East, 1, 0xFF0000),
-            new Cursor(cols - 2, 0, Direction.South, 2, 0x00FF00),
-            new Cursor(cols - 2, rows - 2, Direction.West, 3, 0x0000FF)
+            new Cursor(2, 2, Direction.East, 1, TileLandModelGenerated.PALETTE_CURSORS[0]),
+            new Cursor(cols - 2, 0, Direction.South, 2, TileLandModelGenerated.PALETTE_CURSORS[1]),
+            new Cursor(cols - 2, rows - 2, Direction.West, 3, TileLandModelGenerated.PALETTE_CURSORS[2])
         ];
 
         for (cursor in cursors) {
@@ -230,7 +232,7 @@ class TileLandSequencer extends SequencerCore implements ISequencerControl {
             if (ca == null || ca.length != cursors.length) {
                 return;
             }
-            var colours = [0xFF0000, 0x00FF00, 0x0000FF];
+            var colours = TileLandModelGenerated.PALETTE_CURSORS;
             cursors = [];
             for (i in 0...ca.length) {
                 var c:Dynamic = ca[i];

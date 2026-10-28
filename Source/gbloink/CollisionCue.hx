@@ -1,6 +1,6 @@
 package gbloink;
 
-/** Cosmetic collision history, independent of MIDI output and never serialized. */
+/** Presentation history of note-producing impacts; never serialized. */
 typedef CollisionCue = {
     var serial:Int;
     var time:Float;

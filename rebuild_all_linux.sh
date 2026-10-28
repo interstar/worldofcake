@@ -31,40 +31,13 @@ step() {
 }
 
 step "Clean generated and build outputs"
-rm -rf build derivatives/openfl/Export Source/generated bridge/native/worldofcake/generated
+rm -rf build derivatives/openfl/Export generated
 
-step "Generate Layla UI outputs"
-for app in "${APPS[@]}"; do
-    echo "--- $app ---"
-    java -jar "$JAR" \
-        --input "$ROOT/layouts/openfl/$app.layla" \
-        --config "$ROOT/layouts/openfl/$app.edn" \
-        --output "$ROOT/Source" \
-        --native-output "$ROOT/bridge/native"
-done
+step "Generate every app for every target"
+"$ROOT/generate.sh" all all
 
-if [[ -d "$GOLDENPOND_ROOT/current/haxe/src/goldenpond" ]]; then
-    echo "--- goldenpond ---"
-    java -jar "$JAR" \
-        --input "$ROOT/layouts/openfl/goldenpond.layla" \
-        --config "$ROOT/layouts/openfl/goldenpond.edn" \
-        --output "$ROOT/Source" \
-        --native-output "$ROOT/bridge/native"
-else
-    echo "Goldenpond source not found at $GOLDENPOND_ROOT; skipping Goldenpond UI generation."
-fi
-
-step "Generate Rack metadata outputs"
-"$ROOT/derivatives/vcvrack/generate_rack_metadata.sh"
-
-step "Generate Rack layout outputs"
-"$ROOT/derivatives/vcvrack/generate_rack_layout.sh"
-
-step "Validate Rack metadata"
-"$ROOT/derivatives/vcvrack/check_rack_metadata.sh"
-
-step "Validate Rack layout outputs"
-"$ROOT/derivatives/vcvrack/generate_rack_layout.sh" --check
+step "Verify generated outputs and Rack sources"
+"$ROOT/generate.sh" all all --check
 
 step "Run Haxe headless tests"
 for app in gbloink zewp kdiagram tileland timeslider; do

@@ -43,6 +43,7 @@ SOURCES := $(LOCAL_SOURCES) $(BRIDGE_SOURCES)
 
 CXXFLAGS += -I"$(NATIVE)/include"
 CXXFLAGS += -I"$(PLUGIN_ROOT)/../../../bridge/native"
+CXXFLAGS += -I"$(PLUGIN_ROOT)/../../../generated/rack/native"
 CXXFLAGS += -I"$(PLUGIN_ROOT)/../common"
 ifneq ($(strip $(HXCPP)),)
 CXXFLAGS += -I"$(HXCPP)/include"
@@ -50,7 +51,7 @@ endif
 CXXFLAGS += $(HXCPP_PLATFORM_FLAGS) -DHXCPP_VISIT_ALLOCS -DHX_SMART_STRINGS -DHXCPP_API_LEVEL=430
 
 DISTRIBUTABLES += plugin.json
-DISTRIBUTABLES += res
+DISTRIBUTABLES += $(wildcard res)
 DISTRIBUTABLES += $(wildcard LICENSE*)
 DISTRIBUTABLES += $(wildcard presets)
 

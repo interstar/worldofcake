@@ -5,6 +5,7 @@
 #include <WocRackTransport.hpp>
 #include <WocRackVoltage.hpp>
 #include <WorldOfCakeControlIds.h>
+#include <worldofcake/generated/rack/tileland/TileLandRackLayoutGenerated.h>
 #include <worldofcake/generated/rack/tileland/TileLandRackOutputsGenerated.h>
 #include <worldofcake/generated/tileland/TilelandControlMetadataGenerated.h>
 #include <GLFW/glfw3.h>
@@ -17,7 +18,9 @@ using namespace rack::widget;
 using namespace rack::app;
 namespace
 {
-    constexpr float W = 600, H = 600;
+    // The model's world (apps/tileland/app.edn :model); the play area shows all of it.
+    constexpr float W = worldofcake::metadata::tileland::model::kWorldWidth, H = worldofcake::metadata::tileland::model::kWorldHeight;
+    namespace rackLayout = worldofcake::rack::tileland;
     namespace ControlIds = worldofcake::control::tileland;
     NVGcolor rgb(int c)
     {
@@ -126,16 +129,14 @@ void TileLand::send(int id, double v)
 }
 void TileLand::process(const ProcessArgs&)
 {
-    worldofcake::rack::syncIndexedControlValues(
-        3, ControlIds::kSpeedBase, lastSpeed, 1e-5,
-        [this](int i) {
-            const auto* parameter = std::array<const worldofcake::metadata::tileland::Knob*, 3>{
-                &worldofcake::metadata::tileland::kRedspeed,
-                &worldofcake::metadata::tileland::kGreenspeed,
-                &worldofcake::metadata::tileland::kBluespeed}[static_cast<std::size_t>(i)];
-            return worldofcake::metadata::tileland::denormalize(*parameter, params[SPEED_CURSOR1_PARAM + i].getValue());
-        },
-        [this](int id, double value) { send(id, value); });
+    const auto speeds = std::array<const worldofcake::metadata::tileland::Knob*, 3>{
+        &worldofcake::metadata::tileland::kRedspeed,
+        &worldofcake::metadata::tileland::kGreenspeed,
+        &worldofcake::metadata::tileland::kBluespeed};
+    for (int i = 0; i < ControlIds::kSpeedCount; ++i)
+        worldofcake::rack::syncControlValue(
+            worldofcake::metadata::tileland::denormalize(*speeds[static_cast<std::size_t>(i)], params[SPEED_CURSOR1_PARAM + i].getValue()),
+            lastSpeed[i], 1e-5, ControlIds::speedUid(i), [this](int id, double value) { send(id, value); });
     worldofcake::rack::syncTransport(params[PAUSE_PARAM].getValue(), lastPause, params[RESET_PARAM].getValue(),
                                      lastReset, [this](const worldofcake::bridge::ControlCommand& c) { runner->enqueueHostCommand(c); });
     worldofcake::bridge::TileLandControlSnapshot s;
@@ -153,19 +154,18 @@ TileLandWidget::TileLandWidget(TileLand* m)
     addChild(createWidget<ScrewSilver>({box.size.x - 2 * RACK_GRID_WIDTH, 0}));
     auto* p = new Play;
     p->module = m;
-    p->box.pos = mm2px({34, 18});
-    p->box.size = mm2px({95, 95});
+    // Everything is placed by the generated layout (apps/tileland/rack.layla); its text is in the panel SVG.
+    p->box.pos = mm2px(Vec(rackLayout::kPlayarea.x, rackLayout::kPlayarea.y));
+    p->box.size = mm2px(Vec(rackLayout::kPlayarea.width, rackLayout::kPlayarea.height));
     addChild(p);
-    float ys[3] = {29, 50, 71};
-    addParam(createParamCentered<Rogan2PSRed>(mm2px({12, ys[0]}), m, TileLand::SPEED_CURSOR1_PARAM));
-    addParam(createParamCentered<Rogan2PSGreen>(mm2px({12, ys[1]}), m, TileLand::SPEED_CURSOR2_PARAM));
-    addParam(createParamCentered<Rogan2PSBlue>(mm2px({12, ys[2]}), m, TileLand::SPEED_CURSOR3_PARAM));
-    addParam(createParamCentered<RoundBlackKnob>(mm2px({12, 110}), m, TileLand::SIM_RATE_PARAM));
-    addParam(createParamCentered<LEDButton>(mm2px({12, 122}), m, TileLand::RESET_PARAM));
-    addParam(createParamCentered<VCVLatch>(mm2px({28, 122}), m, TileLand::PAUSE_PARAM));
-    float oy[3] = {30, 52, 74};
-    for (int i = 0; i < 3; ++i) {
-        addOutput(createOutputCentered<PJ301MPort>(mm2px({188, oy[i]}), m, TileLand::CV_CH1_X_OUTPUT + 2 * i));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px({206, oy[i]}), m, TileLand::CV_CH1_Y_OUTPUT + 2 * i));
-    }
+    const auto at = [](rackLayout::RackPoint q) { return mm2px(Vec(q.x, q.y)); };
+    addParam(createParamCentered<Rogan2PSRed>(at(rackLayout::kRedspeedCenter), m, TileLand::SPEED_CURSOR1_PARAM));
+    addParam(createParamCentered<Rogan2PSGreen>(at(rackLayout::kGreenspeedCenter), m, TileLand::SPEED_CURSOR2_PARAM));
+    addParam(createParamCentered<Rogan2PSBlue>(at(rackLayout::kBluespeedCenter), m, TileLand::SPEED_CURSOR3_PARAM));
+    // SIM_RATE_PARAM stays configured for saved patches but has no knob: nothing reads it.
+    addParam(createParamCentered<LEDButton>(at(rackLayout::kResetCenter), m, TileLand::RESET_PARAM));
+    addParam(createParamCentered<VCVLatch>(at(rackLayout::kPauseCenter), m, TileLand::PAUSE_PARAM));
+    static_assert(rackLayout::kLayoutOutputCount == TileLand::NUM_OUTPUTS, "one patch-bay socket per output");
+    for (int i = 0; i < rackLayout::kLayoutOutputCount; ++i)
+        addOutput(createOutputCentered<PJ301MPort>(at(rackLayout::kOutputPositions[i]), m, TileLand::CV_CH1_X_OUTPUT + i));
 }

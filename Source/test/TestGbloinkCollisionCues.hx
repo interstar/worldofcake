@@ -24,19 +24,29 @@ class TestGbloinkCollisionCues {
 
     public static function main():Void {
         var wall = fixture();
-        wall.setMuted(true);
         wall.setNoteVelocity(0, 24);
         wall.balls[0].pos = new LocalPoint(5, 100);
         wall.balls[0].velocity = new LocalPoint(-20, 0);
         wall.advanceTime(0.001);
-        check("muted wall still publishes cosmetic impact", wall.collisionCues.length == 1);
+        check("disabled wall notes produce no cue or note", wall.collisionCues.length == 0 && wall.events.length == 0);
+        wall.setEdgeNotesEnabled(true);
+        wall.setMuted(true);
+        wall.balls[0].pos = new LocalPoint(5,100);
+        wall.balls[0].velocity = new LocalPoint(-20,0);
+        wall.advanceTime(0.001);
+        check("muted wall produces no cue or note", wall.collisionCues.length == 0 && wall.events.length == 0);
+        wall.setMuted(false);
+        wall.balls[0].pos = new LocalPoint(5,100);
+        wall.balls[0].velocity = new LocalPoint(-20,0);
+        wall.advanceTime(0.001);
+        check("enabled wall note publishes impact", wall.collisionCues.length == 1);
         var cue = wall.collisionCues[0];
-        check("wall contact and authoritative timestamp", cue.kind == 0 && near(cue.x, 0) && near(cue.y, 100) && near(cue.time, 0.001));
+        check("wall contact and authoritative timestamp", cue.kind == 0 && near(cue.x, 0) && near(cue.y, 100) && near(cue.time, 0.003));
         check("wall cue has no block target", cue.blockId == -1);
         check("impact captures velocity", cue.velocity == 24);
         wall.setNoteVelocity(0, 120);
         check("velocity edit does not resize an existing impact", cue.velocity == 24);
-        check("cosmetic wall impact does not introduce MIDI", wall.events.length == 0);
+        check("wall cue accompanies note-on", wall.events.length == 1 && wall.events[0].type == 0);
 
         var pair = fixture();
         pair.balls[0].pos = new LocalPoint(100, 100);
@@ -75,8 +85,22 @@ class TestGbloinkCollisionCues {
         var replacement = new Block(new LocalPoint(165,100),new SeededRandomSource(1));
         check("replacement block does not inherit an old flash", replacement.id != block.collisionCues[0].blockId);
         check("block note output is preserved", block.events.length == 1 && block.events[0].type == 0);
+        for (mutedPair in [false,true]) {
+            var silent = fixture();
+            silent.setMuted(true);
+            silent.balls[0].pos = new LocalPoint(mutedPair ? 100 : 144.99,100);
+            silent.balls[0].velocity = new LocalPoint(20,0);
+            if (mutedPair) {
+                silent.balls[1].pos = new LocalPoint(109.9,100);
+                silent.balls[1].velocity = new LocalPoint(-10,0);
+            } else silent.blocks.push(obstacle);
+            silent.advanceTime(0.001);
+            check(mutedPair ? "muted pair produces no cues or notes" : "muted block produces no flash cue or note",
+                silent.collisionCues.length == 0 && silent.events.length == 0);
+        }
 
         var bounded = fixture();
+        bounded.setEdgeNotesEnabled(true);
         for (i in 0...200) {
             bounded.balls[0].pos = new LocalPoint(4.99, 30+(i%30)*12);
             bounded.balls[0].velocity = new LocalPoint(-50, 0);

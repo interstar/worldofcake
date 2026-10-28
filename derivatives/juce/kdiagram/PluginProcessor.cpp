@@ -55,7 +55,8 @@ void KDiagramAudioProcessor::process(juce::AudioBuffer<FloatType>& buffer, juce:
     if (runner == nullptr)
         return;
 
-    bool playing = false;
+    // The standalone has no DAW transport: let it run under its own pause control.
+    bool playing = juce::JUCEApplicationBase::isStandaloneApp();
     if (const auto position = getPlayHead() != nullptr ? getPlayHead()->getPosition() : std::nullopt)
         playing = position->getIsPlaying();
     // The model stops with the host transport and releases its own notes;

@@ -1,6 +1,6 @@
 # TileLand (VCV Rack) — outputs
 
-The Rack socket metadata for this module is `layouts/rack/tileland.edn`. It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
+The Rack socket metadata for this module is `apps/tileland/rack.edn` (with `apps/tileland/app.edn`). It records output IDs, labels, voltage laws, and patch-bay geometry for checker/generator use.
 
 
 The Haxe core emits **`Event` type `1`** (CC-style): `data1` = MIDI channel (cursor 1…3), `data2` = controller **1** (X) or **2** (Y), `data3` = value **0…127** (position mapped across the play area).

@@ -6,6 +6,7 @@
 	<window width="800" height="640" resizable="true" />
 	
 	<source path="../../Source" />
+	<source path="../../generated/openfl/haxe" />
 	
 	<haxelib name="openfl" />
 	

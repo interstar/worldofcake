@@ -1,11 +1,13 @@
 #include "ZewpControlRunner.h"
 #include "WorldOfCakeControlIds.h"
+#include <worldofcake/generated/zewp/ZewpControlMetadataGenerated.h>
 #include <algorithm>
 #include <cmath>
 namespace worldofcake::bridge
 {
     namespace ControlIds = worldofcake::control::zewp;
-    ZewpControlRunner::ZewpControlRunner(int w, int h, int s) : width(w), height(h), seed(s)
+    ZewpControlRunner::ZewpControlRunner(int s)
+        : width(worldofcake::metadata::zewp::model::kWorldWidth), height(worldofcake::metadata::zewp::model::kWorldHeight), seed(s)
     {
     }
     ZewpControlRunner::~ZewpControlRunner()
@@ -16,7 +18,7 @@ namespace worldofcake::bridge
     {
         if (modelCreated)
             return;
-        harness = ZewpHarness_obj::__new(width, height, seed);
+        harness = ZewpHarness_obj::__new(seed);
         modelCreated = true;
         logicalTime = 0;
         publish();

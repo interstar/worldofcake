@@ -2,7 +2,8 @@ package zewp;
 
 import generated.zewp.ZewpLayoutGenerated;
 
-// Maintained compatibility facade. Geometry is generated from layouts/openfl/zewp.layla.
+// OpenFL view geometry, generated from apps/zewp/openfl.layla. The model does not use it:
+// the world's size is ZewpModelGenerated (apps/zewp/app.edn :model).
 class ZewpLayout {
     public static inline var PANEL_WIDTH:Int = Std.int(ZewpLayoutGenerated.PANEL_WIDTH);
     public static inline var PANEL_HEIGHT:Int = Std.int(ZewpLayoutGenerated.PANEL_HEIGHT);

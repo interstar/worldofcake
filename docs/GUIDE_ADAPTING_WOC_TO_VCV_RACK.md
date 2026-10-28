@@ -1,5 +1,7 @@
 # Guide: Adapting a World of Cake app to VCV Rack
 
+> **Start with [`WRITING_WOC_APPS.md`](WRITING_WOC_APPS.md)**, which defines how Rack panels are described (`apps/<app>/rack.edn` + `rack.layla`), generated (SVG, layout and output headers), and how panel text is made (§9.3). This guide covers Rack C++ and build pitfalls only; where its panel advice differs, `WRITING_WOC_APPS.md` wins.
+
 This is a **practical companion** to the Rack plan and the consolidation documents. It captures the current runner-based Rack architecture. Older Rack ports called Haxe directly from `Module::process()` under a mutex; that approach is now historical and should not be copied.
 
 **Reference implementations:** all six modules under `derivatives/vcvrack/` — `gbloink`, `zewp`, `kdiagram`, `tileland`, `timeslider`, `goldenpond` (each: Makefile, `src/`, `haxe/`, `res/`, `plugin.json`).
@@ -27,8 +29,8 @@ Create a sibling of Gbloink, e.g. `derivatives/vcvrack/zewp/`:
 - `plugin.json` — unique plugin **slug** and module entry.
 - `src/` — only Rack glue (`plugin.cpp`, `YourModule.cpp`, …).
 - `haxe/` — small hxml that compiles the shared `worldofcake.bridge.*Harness` for the app.
-- `res/` — `YourModule.svg` (+ assets).
-- `native/` — **generated** by Haxe (`native/include`, `native/src`, `native/obj`); **do not hand-edit** generated C++; `clean` must delete `native/obj` when the Haxe graph changes.
+- `generated/<Slug>.svg` — the panel, **generated** from `apps/<app>/rack.edn` + `rack.layla`; `res/` only for extra assets.
+- hxcpp output is written under `build/vcvrack/<module>/<platform>/`; **do not hand-edit** generated C++; `clean` must delete the object directory when the Haxe graph changes.
 
 Hxml should include **`-cp`** to the shared tree, e.g. `-cp ../../../Source`, and to `bridge/haxe`. It should compile the app's harness class. Legacy direct-Haxe facades have been removed; new work should extend the harness path instead.
 
@@ -125,7 +127,7 @@ Document the mapping in a small `OUTPUTS.md` next to the module.
 
 ## 9. Panel and interaction
 
-- **SVG:** Rack height **128.5 mm**; width in HP. Optional Inkscape **`components`** layer with hidden circles for jack alignment (Gbloink pattern).
+- **SVG:** generated, never hand-drawn: Rack height **128.5 mm**, width in HP, sockets at generated positions (the hidden `components` layer is generated too). Static text is flattened to paths by the generator; never draw static text in C++ (`WRITING_WOC_APPS.md` §9.3).
 - **Playfield:** often an `OpaqueWidget` child with **NanoVG** drawing; map mouse to the **same local width/height** the Haxe world uses (Gbloink: 700×500).
 - **Clip drawing** with `nvgScissor` so balls/blocks don’t paint outside the widget; optionally clamp block bounds in Haxe to the play rectangle.
 - **Screws:** `ScrewSilver` at standard positions from the SDK helper pattern.

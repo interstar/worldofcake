@@ -4,6 +4,7 @@
     <app main="goldenpond.GoldenpondMain" path="Export" file="Goldenpond" />
     <window width="1400" height="580" resizable="true" background="0xF1EFEA" />
     <source path="../../Source" />
+    <source path="../../generated/openfl/haxe" />
     <source path="../../../goldenpond/goldenpond/current/haxe/src/goldenpond" />
     <haxelib name="openfl" />
     <haxedef name="HXCPP_CHECK_POINTER" />
