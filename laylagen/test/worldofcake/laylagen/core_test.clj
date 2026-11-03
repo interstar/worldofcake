@@ -1,0 +1,310 @@
+(ns worldofcake.laylagen.core-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [worldofcake.laylagen.core :as generator]))
+
+(def base-config
+  {:generator-version 1
+   :application {:id "test" :package "gbloink" :generated-package "generated.test"
+                 :composition-class "CompositionGenerated" :layout-class "LayoutGenerated"}
+   :geometry {:panel-width 930.0 :panel-height 600.0 :outer-padding 50.0
+              :root-gap 20.0 :nested-gap 10.0}
+   :components {"playarea" {:kind :play-area
+                            :local-width 700.0 :local-height 500.0}
+                "redspeed" {:kind :slider :minimum 0.5 :maximum 4.0 :default 2.0
+                            :vertical true :colour "0xFF0000"}
+                "greenspeed" {:kind :slider :minimum 0.5 :maximum 4.0 :default 2.0
+                              :vertical true :colour "0x00FF00"}
+                "bluespeed" {:kind :slider :minimum 0.5 :maximum 4.0 :default 2.0
+                             :vertical true :colour "0x0000FF"}
+                "reset" {:kind :button :label "Reset" :colour "0x606874"}
+                "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}}})
+
+(def layout "<playarea/gbloinkplayarea(70) [<redspeed/speedslider greenspeed/speedslider bluespeed/speedslider>(11) <reset/button pause/toggle>(2)](11)>")
+
+(deftest geometry-preserves-gbloink-composition
+  (let [result (generator/parse-and-generate layout base-config)
+        geometry (read-string (get-in result [:files "generated/test/geometry.edn"]))
+        leaves (letfn [(walk [n] (if (= :leaf (:node-type n)) [n] (mapcat walk (:children n))))]
+                 (into {} (map (juxt :id identity) (walk geometry))))]
+    (is (= 50.0 (get-in leaves ["playarea" :x])))
+    (is (= 700.0 (get-in leaves ["playarea" :width])))
+    (is (= 500.0 (get-in leaves ["playarea" :height])))
+    (is (= [770.0 810.0 850.0] (mapv #(get-in leaves [% :x]) ["redspeed" "greenspeed" "bluespeed"])))
+    (is (= [30.0 30.0 30.0] (mapv #(get-in leaves [% :width]) ["redspeed" "greenspeed" "bluespeed"])))))
+
+(deftest deterministic-generated-files
+  (let [a (generator/parse-and-generate layout base-config)
+        b (generator/parse-and-generate layout base-config)]
+    (is (= a b))
+    (is (= #{"generated/test/LayoutGenerated.hx"
+             "generated/test/CompositionGenerated.hx"
+             "generated/test/ControlIdsGenerated.hx"
+             "generated/test/geometry.edn"}
+           (set (keys (:files a)))))
+    (is (= #{"worldofcake/generated/test/ControlIdsGenerated.h"
+             "worldofcake/generated/juce/test/LayoutGenerated.h"
+             "worldofcake/generated/test/TestControlMetadataGenerated.h"}
+           (set (keys (:native-files a)))))
+    (is (re-find #"Do not edit directly" (get-in a [:files "generated/test/LayoutGenerated.hx"])))
+    (is (re-find #"new Slider" (get-in a [:files "generated/test/CompositionGenerated.hx"])))
+    (is (re-find #"ControlIds\.REDSPEED" (get-in a [:files "generated/test/CompositionGenerated.hx"])))
+    (is (re-find #"REDSPEED:Int = 2" (get-in a [:files "generated/test/ControlIdsGenerated.hx"])))
+    (is (re-find #"RESET:Int = 5" (get-in a [:files "generated/test/ControlIdsGenerated.hx"])))
+    (is (re-find #"PAUSE:Int = 6" (get-in a [:files "generated/test/ControlIdsGenerated.hx"])))
+    (is (re-find #"REDRAW_CONTROL_UIDS:Array<Int> = \[2, 3, 4\]" (get-in a [:files "generated/test/ControlIdsGenerated.hx"])))
+    (is (re-find #"constexpr int kRedspeed = 2" (get-in a [:native-files "worldofcake/generated/test/ControlIdsGenerated.h"])))
+    (is (re-find #"constexpr int kReset = 5" (get-in a [:native-files "worldofcake/generated/test/ControlIdsGenerated.h"])))
+    (is (re-find #"constexpr int kPause = 6" (get-in a [:native-files "worldofcake/generated/test/ControlIdsGenerated.h"])))))
+
+(deftest knob-value-mapping-is-generated
+  (let [config (assoc base-config :components
+                      {"rate" {:kind :knob :minimum 0.05 :maximum 4.0 :default 2.0
+                               :mapping :logarithmic :label "Rate" :colour "0x40C0FF"}})
+        result (generator/parse-and-generate "[rate/knob]" config)]
+    (is (re-find #"0.050000, 4.000000, 2.000000" (get-in result [:files "generated/test/CompositionGenerated.hx"])))
+    (is (re-find #"\"logarithmic\"" (get-in result [:files "generated/test/CompositionGenerated.hx"])))))
+
+(deftest quoted-ids-and-safe-symbols
+  (is (= "multi_word_label" (generator/safe-symbol "Multi Word Label")))
+  (is (= "component_12_speed" (generator/safe-symbol "12 Speed"))))
+
+(deftest rejects-missing-and-unknown-components
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Missing component configuration"
+                        (generator/parse-and-generate "[unknown/custom]" (assoc base-config :components {}))))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Unused component configuration"
+                        (generator/parse-and-generate "[playarea/gbloinkplayarea]" base-config))))
+
+(deftest rejects-target-symbol-collisions
+  (let [config (assoc base-config :components
+                      {"a-b" {:kind :slider} "a_b" {:kind :slider}})]
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Target-symbol collision"
+                          (generator/parse-and-generate "[a-b/slider a_b/slider]" config)))))
+
+(def timeslider-layout
+  "[<[cc1label/label(20) cc1track/timeslidertrack(440)] [cc2label/label(20) cc2track/timeslidertrack(440)] [cc3label/label(20) cc3track/timeslidertrack(440)] [cc4label/label(20) cc4track/timeslidertrack(440)]>(470) <reset/button pause/toggle>(42)]")
+
+(def timeslider-components
+  (into {}
+        (mapcat (fn [n]
+                  [[(str "cc" n "label") {:kind :text :text (str "CC" n)}]
+                   [(str "cc" n "track") {:kind :timeslider-track :channel 1 :cc-number n}]])
+                (range 1 5))))
+
+(def timeslider-config
+  {:generator-version 1
+   :application {:id "timeslider" :package "timeslider" :generated-package "generated.timeslider"
+                 :composition-kind :timeslider :composition-class "TimeSliderCompositionGenerated"
+                 :layout-class "TimeSliderLayoutGenerated"}
+   :geometry {:panel-width 800.0 :panel-height 600.0
+              :padding-left 24.0 :padding-right 24.0 :padding-top 28.0 :padding-bottom 48.0
+              :root-gap 12.0 :nested-gap 0.0 :gaps-by-depth {1 12.0 2 0.0}}
+   :sequencer {:minimum-travel-time 120.0 :maximum-travel-time 0.5}
+   :components (assoc timeslider-components
+                      "reset" {:kind :button :label "Reset" :colour "0x606874"}
+                      "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"})})
+
+(deftest timeslider-proves-second-consumer
+  (let [result (generator/parse-and-generate timeslider-layout timeslider-config)
+        geometry (read-string (get-in result [:files "generated/timeslider/geometry.edn"]))
+        leaves (letfn [(walk [n] (if (= :leaf (:node-type n)) [n] (mapcat walk (:children n))))]
+                 (into {} (map (juxt :id identity) (walk geometry))))
+        composition (get-in result [:files "generated/timeslider/TimeSliderCompositionGenerated.hx"])
+        tracks (get-in result [:files "generated/timeslider/TimeSliderTracksGenerated.hx"])]
+    (is (= [24.0 215.0 406.0 597.0]
+           (mapv #(get-in leaves [(str "cc" % "track") :x]) (range 1 5))))
+    (is (< (Math/abs (- 48.434783 (double (get-in leaves ["cc1track" :y])))) 0.00001))
+    (is (= 179.0 (get-in leaves ["cc1track" :width])))
+    (is (< (Math/abs (- 449.565217 (double (get-in leaves ["cc1track" :height])))) 0.00001))
+    (is (= 28.0 (get-in leaves ["cc1label" :y])))
+    (is (re-find #"buildTracks" tracks))
+    (is (re-find #"CC1TRACK:Int = 1" (get-in result [:files "generated/timeslider/TimeSliderControlIdsGenerated.hx"])))
+    (is (re-find #"RESET:Int = 5" (get-in result [:files "generated/timeslider/TimeSliderControlIdsGenerated.hx"])))
+    (is (re-find #"PAUSE:Int = 6" (get-in result [:files "generated/timeslider/TimeSliderControlIdsGenerated.hx"])))
+    (is (re-find #"REDRAW_CONTROL_UIDS:Array<Int> = \[\]" (get-in result [:files "generated/timeslider/TimeSliderControlIdsGenerated.hx"])))
+    (is (re-find #"constexpr int kCc1track = 1" (get-in result [:native-files "worldofcake/generated/timeslider/TimeSliderControlIdsGenerated.h"])))
+    (is (re-find #"TRACK_COUNT:Int = 4" tracks))
+    (is (re-find #"TRACK_UIDS\(default, never\):Array<Int> = \[ControlIds.CC1TRACK, ControlIds.CC2TRACK, ControlIds.CC3TRACK, ControlIds.CC4TRACK\]" tracks))
+    (is (re-find #"for \(uid in TRACK_UIDS\) new TimeSlider\(uid" tracks))
+    (is (= 4 (count (re-seq #"\[TimeSliderLayoutGenerated\.CC\d+TRACK_X" composition))) "views get each track's rectangle")
+    (is (re-find #"kLaneRegions" (get-in result [:native-files "worldofcake/generated/juce/timeslider/LayoutGenerated.h"])))
+    (is (re-find #"constexpr std::size_t kLaneCount = 4" (get-in result [:native-files "worldofcake/generated/timeslider/TimesliderControlMetadataGenerated.h"])))
+    (is (re-find #"buildControls" composition))
+    (is (not (re-find #"import timeslider.TimeSliderView" tracks)) "the model side has no UI imports")))
+
+(def standard-panel-layout
+  "<playarea/custom(600) [controltop/spacer(30) <redspeed/speedslider(3) greenspeed/speedslider(3) bluespeed/speedslider(3) speedend/spacer(2)>(150) controlmiddle/spacer(50) <channel/channelslider(12) channelend/spacer(1)>(30) controlbottom/spacer(340)](140)>")
+
+(defn standard-panel-config [app-name play-hint]
+  {:generator-version 1
+   :application {:id app-name :package app-name :generated-package (str "generated." app-name)
+                 :composition-kind :worldofcake-components :composition-class "CompositionGenerated"
+                 :layout-class "LayoutGenerated" :sequencer-class "Sequencer" :view-class "View"}
+   :geometry {:panel-width 800.0 :panel-height 640.0
+              :padding-left 20.0 :padding-right 20.0 :padding-top 20.0 :padding-bottom 20.0
+              :root-gap 20.0 :nested-gap 0.0 :gaps-by-depth {0 20.0 1 0.0 2 10.0}}
+   :components {"playarea" {:kind :play-area
+                            :local-min-x 0.0 :local-min-y 0.0 :local-max-x 600.0 :local-max-y 600.0}
+                "redspeed" {:kind :slider :minimum 1.0 :maximum 8.0 :default 2.0 :vertical true :colour "0xFF0000"}
+                "greenspeed" {:kind :slider :minimum 1.0 :maximum 8.0 :default 2.0 :vertical true :colour "0x00FF00"}
+                "bluespeed" {:kind :slider :minimum 1.0 :maximum 8.0 :default 2.0 :vertical true :colour "0x0000FF"}
+                "channel" {:kind :slider :minimum 1.0 :maximum 14.0 :default 7.0 :vertical false :colour "0x808080" :view-hook "setChannelSlider"}
+                "controltop" {:kind :spacer} "controlmiddle" {:kind :spacer}
+                "controlbottom" {:kind :spacer} "speedend" {:kind :spacer} "channelend" {:kind :spacer}}})
+
+(deftest standard-worldofcake-panel-reuse
+  (doseq [app ["kdiagram" "tileland"]]
+    (let [result (generator/parse-and-generate standard-panel-layout (standard-panel-config app "custom"))
+          geometry (read-string (get-in result [:files (str "generated/" app "/geometry.edn")]))
+          leaves (letfn [(walk [n] (if (= :leaf (:node-type n)) [n] (mapcat walk (:children n))))]
+                   (into {} (map (juxt :id identity) (walk geometry))))
+          composition (get-in result [:files (str "generated/" app "/CompositionGenerated.hx")])]
+      (is (= [20.0 20.0 600.0 600.0]
+             (mapv #(get-in leaves ["playarea" %]) [:x :y :width :height])))
+      (is (= [640.0 680.0 720.0]
+             (mapv #(get-in leaves [% :x]) ["redspeed" "greenspeed" "bluespeed"])))
+      (is (= [50.0 150.0] (mapv #(get-in leaves ["redspeed" %]) [:y :height])))
+      (is (= [640.0 250.0 120.0 30.0]
+             (mapv #(get-in leaves ["channel" %]) [:x :y :width :height])))
+      (is (= 4 (count (re-seq #"new Slider\(" composition))))
+      (is (re-find #"ControlIds\.CHANNEL" composition))
+      (is (re-find #"view\.setChannelSlider" composition)))))
+
+(deftest semantic-select-generation
+  (let [config {:generator-version 1
+                :application {:id "selecttest" :package "selecttest" :generated-package "generated.selecttest"
+                              :composition-kind :worldofcake-components :composition-class "CompositionGenerated"
+                              :layout-class "LayoutGenerated" :sequencer-class "Sequencer" :view-class "View"}
+                :geometry {:panel-width 120.0 :panel-height 40.0 :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+                :components {"choice" {:kind :semantic-select :default-index 1 :presentation "segmented"
+                                       :choices [{:value 0 :label "One" :colour "0xFF0000"}
+                                                 {:value 1 :label "Two"}]}}}
+        result (generator/parse-and-generate "<choice/semanticselect>" config)
+        composition (get-in result [:files "generated/selecttest/CompositionGenerated.hx"])]
+    (is (re-find #"new SemanticSelect" composition))
+    (is (re-find #"ControlIds\.CHOICE" composition))
+    (is (re-find #"\[\"One\", \"Two\"\]" composition))
+    (is (re-find #"\[0xFF0000, 0x606874\]" composition))
+    (is (re-find #"\"segmented\"" composition))))
+
+
+(deftest button-toggle-knob-generation
+  (let [config {:generator-version 1
+                :application {:id "toolkittest" :package "toolkittest" :generated-package "generated.toolkittest"
+                              :composition-kind :worldofcake-components :composition-class "CompositionGenerated"
+                              :layout-class "LayoutGenerated" :sequencer-class "Sequencer" :view-class "View"}
+                :geometry {:panel-width 180.0 :panel-height 60.0 :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+                :components {"reset" {:kind :button :label "Reset" :colour "0x606874"}
+                             "pause" {:kind :toggle :label "Pause" :default false :colour "0x606874"}
+                             "rate" {:kind :knob :minimum 0.0 :maximum 10.0 :default 5.0 :label "Rate" :colour "0x40C0FF"}}}
+        result (generator/parse-and-generate "<reset/button pause/toggle rate/knob>" config)
+        composition (get-in result [:files "generated/toolkittest/CompositionGenerated.hx"])
+        control-ids (get-in result [:files "generated/toolkittest/ControlIdsGenerated.hx"])
+        native-ids (get-in result [:native-files "worldofcake/generated/toolkittest/ControlIdsGenerated.h"])]
+    (is (re-find #"new Button" composition))
+    (is (re-find #"new Toggle" composition))
+    (is (re-find #"new Knob" composition))
+    (is (re-find #"RESET:Int = 1" control-ids))
+    (is (re-find #"PAUSE:Int = 2" control-ids))
+    (is (re-find #"RATE:Int = 3" control-ids))
+    (is (re-find #"REDRAW_CONTROL_UIDS:Array<Int> = \[3\]" control-ids))
+    (is (re-find #"constexpr int kReset = 1" native-ids))
+    (is (re-find #"constexpr int kPause = 2" native-ids))
+    (is (re-find #"constexpr int kRate = 3" native-ids))))
+
+(def box-config
+  {:generator-version 1
+   :application {:id "boxtest" :package "boxtest" :generated-package "generated.boxtest"
+                 :composition-kind :worldofcake-components :composition-class "CompositionGenerated"
+                 :layout-class "LayoutGenerated" :sequencer-class "Sequencer" :view-class "View"}
+   :geometry {:panel-width 200.0 :panel-height 100.0 :outer-padding 0.0 :root-gap 0.0 :nested-gap 0.0}
+   :components {"red" {:kind :box :fill "0xD4473D" :fill-alpha 0.2 :border "0xD4473D" :padding 10.0}
+                "speed" {:kind :knob :minimum 1.0 :maximum 10.0 :default 2.0 :label "Red speed"
+                         :colour "0xD4473D" :show-label false}
+                "pause" {:kind :toggle :label "Pause" :default false :icon :pause}}})
+
+(def box-layout "<<%red speed> pause>")
+
+(defn- generated [layout config]
+  (let [result (generator/parse-and-generate layout config)]
+    {:layout (get-in result [:files "generated/boxtest/LayoutGenerated.hx"])
+     :composition (get-in result [:files "generated/boxtest/CompositionGenerated.hx"])
+     :juce (get-in result [:native-files "worldofcake/generated/juce/boxtest/LayoutGenerated.h"])
+     :metadata (get-in result [:native-files "worldofcake/generated/boxtest/BoxtestControlMetadataGenerated.h"])}))
+
+(deftest labelled-containers-get-geometry-constants
+  (let [{:keys [layout juce]} (generated box-layout (assoc box-config :components (dissoc (:components box-config) "red")))]
+    (is (re-find #"RED_WIDTH:Float = 100\.000000" layout))
+    (is (re-find #"kRed\{0\.000000, 0\.000000, 100\.000000, 100\.000000\}" juce))
+    (is (re-find #"std::array<Box, 0> kBoxes\{\{\}\}" juce) "an unconfigured label draws nothing")))
+
+(deftest box-on-a-labelled-container
+  (let [{:keys [layout composition juce]} (generated box-layout box-config)]
+    (testing "the box keeps the container's rectangle; :padding insets the children"
+      (is (re-find #"RED_X:Float = 0\.000000" layout))
+      (is (re-find #"SPEED_X:Float = 10\.000000" layout))
+      (is (re-find #"SPEED_WIDTH:Float = 80\.000000" layout)))
+    (testing "boxes are added before controls so they draw behind them"
+      (is (< (.indexOf composition "new PanelBox") (.indexOf composition "new Knob"))))
+    (testing "colours are exactly what the EDN says; nothing is inherited"
+      (is (re-find #"0xD4473D, 0\.200000, 0xD4473D, 1\.000000" composition))
+      (is (re-find #"\"Pause\", false, 0x606874" composition)))
+    (testing "JUCE gets ARGB fill and border"
+      (is (re-find #"kBoxes\{\{\{\{0\.000000, 0\.000000, 100\.000000, 100\.000000\}, 0x33D4473D, 0xFFD4473D\}\}\}" juce)))))
+
+(deftest knob-labels-are-optional
+  (let [{:keys [composition metadata]} (generated box-layout box-config)]
+    (is (re-find #"\"Red speed\", 0xD4473D, \"linear\", false" composition))
+    (is (re-find #"kSpeed\{[^}]*, false\}" metadata))))
+
+(deftest icons-come-from-the-shared-icon-set
+  (let [{:keys [composition metadata]} (generated box-layout box-config)]
+    (is (re-find #"\"Pause\", false, 0x606874, \[0\.000000, 5\.500000, 3\.500000" composition))
+    (is (re-find #"inline constexpr float kPauseIcon\[\] = \{0\.000000f, 5\.500000f" metadata))
+    (is (re-find #"inline constexpr Button kPause\{2, \"Pause\", \"\", 0x606874, kPauseIcon, 12\}" metadata)))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Unknown icon :nope"
+                        (generator/parse-and-generate box-layout (assoc-in box-config [:components "pause" :icon] :nope)))))
+
+(deftest container-config-rules
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Container \"red\" can only be configured as a :box"
+                        (generator/parse-and-generate box-layout (assoc-in box-config [:components "red" :kind] :knob))))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Leaf \"pause\" cannot be a :box"
+                        (generator/parse-and-generate box-layout (assoc-in box-config [:components "pause"] {:kind :box}))))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Unused component configuration for \"blue\""
+                        (generator/parse-and-generate box-layout (assoc-in box-config [:components "blue"] {:kind :box})))))
+
+
+(deftest control-outputs-are-declared-once-for-every-target
+  (let [config (assoc box-config :outputs [{:id "x" :label "Cursor X" :channel 2 :cc 1}
+                                           {:id "y" :label "Cursor Y" :channel 2 :cc 2}])
+        {:keys [metadata]} (generated box-layout config)
+        ids (get-in (generator/parse-and-generate box-layout config) [:files "generated/boxtest/ControlIdsGenerated.hx"])]
+    (is (re-find #"OUTPUT_X:Int = 0" ids))
+    (is (re-find #"OUTPUT_Y:Int = 1" ids))
+    (is (re-find #"new worldofcake\.ControlOutput\(\"y\", \"Cursor Y\", 2, 2\)" ids))
+    (is (re-find #"std::array<ControlOutput, 2> kControlOutputs\{\{\{\"x\", \"Cursor X\", 2, 1\}, \{\"y\", \"Cursor Y\", 2, 2\}\}\}" metadata)))
+  (is (re-find #"std::array<ControlOutput, 0> kControlOutputs\{\{\}\}" (:metadata (generated box-layout box-config))))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Control output \"x\" needs"
+                        (generator/parse-and-generate box-layout (assoc box-config :outputs [{:id "x" :channel 0 :cc 1}]))))
+  (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Duplicate control output \"x\""
+                        (generator/parse-and-generate box-layout (assoc box-config :outputs [{:id "x" :channel 1 :cc 1} {:id "x" :channel 1 :cc 2}])))))
+
+(deftest choice-ranges-expand-to-numbered-choices
+  (let [config (assoc-in box-config [:components "pause"]
+                         {:kind :semantic-select :default-index 2 :presentation "compact"
+                          :choice-range {:from 1 :to 16 :format "Ch %d"}})
+        {:keys [composition metadata]} (generated box-layout config)]
+    (is (re-find #"\"Ch 1\", \"Ch 2\".*\"Ch 16\"\]" composition))
+    (is (re-find #"\[1\.000000, 2\.000000.*16\.000000\]" composition) "each choice is valued by its number")
+    (is (re-find #"\{\"Ch 16\", 16\.000000, " metadata))))
+
+(deftest hxcpp-targets-get-the-harness-build
+  (let [application {:id "zewp" :composition-class "ZewpCompositionGenerated"}
+        hxml (get (generator/hxml-files {:application application} "rack") "zewp.hxml")]
+    (is (re-find #"(?m)^-cp bridge/haxe\n-cp Source\n-cp generated/rack/haxe\n" hxml))
+    (is (re-find #"(?m)^worldofcake\.bridge\.ZewpHarness$" hxml) "the harness follows the composition class")
+    (is (re-find #"(?m)^-cp generated/juce/haxe$" (get (generator/hxml-files {:application application} "juce") "zewp.hxml")))
+    (is (re-find #"(?m)^-cp \.\./lib$"
+                 (get (generator/hxml-files {:application (assoc application :haxe-classpaths ["../lib"])} "juce") "zewp.hxml")))
+    (is (re-find #"(?m)^my\.Harness$"
+                 (get (generator/hxml-files {:application (assoc application :harness-class "my.Harness")} "juce") "zewp.hxml")))
+    (is (nil? (generator/hxml-files {:application application} "openfl")) "OpenFL builds through Lime, not an hxml")))
